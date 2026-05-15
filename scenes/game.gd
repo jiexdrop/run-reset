@@ -17,6 +17,8 @@ func _ready() -> void:
 			var instance = TILE.instantiate()
 			instance.position.x = i * TILE_SIZE
 			instance.position.y = j * TILE_SIZE
+			instance.grid_x = i   # ← set before add_child
+			instance.grid_y = j
 			camera_pos = instance.position
 			if i != 4 or j != 4:
 				instance.visible = false

@@ -1,14 +1,13 @@
 extends Area2D
 
-# Called when the node enters the scene tree for the first time.
-func _ready() -> void:
-	pass # Replace with function body.
+@export var grid_x: int = 0
+@export var grid_y: int = 0
 
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta: float) -> void:
-	pass
-
+func reveal() -> void:
+	visible = true
+	GameState.tiles["%d,%d" % [grid_x, grid_y]]["visible"] = true
+	GameState.mark_dirty()
 
 func _on_input_event(viewport: Node, event: InputEvent, shape_idx: int) -> void:
 	if event is InputEventMouseButton:
