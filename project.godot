@@ -20,6 +20,14 @@ config/icon="res://icon.svg"
 SaveManager="*uid://bxww0a1dev5am"
 GameState="*uid://2dapk0fe1hfb"
 
+[file_customization]
+
+folder_colors={
+"res://assets/": "orange",
+"res://autoloads/": "yellow",
+"res://scenes/": "teal"
+}
+
 [physics]
 
 3d/physics_engine="Jolt Physics"
