@@ -29,4 +29,4 @@ func _on_input_event(viewport: Node, event: InputEvent, shape_idx: int) -> void:
 				var result = space_state.intersect_ray(query)
 				if result:
 					print("Hit at point: ", result.position)
-					result.collider.visible = true
+					result.collider.reveal()

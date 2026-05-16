@@ -3,6 +3,7 @@ extends Node
 const SAVE_PATH = "user://save.json"   # was save.json — must match init.gd
 
 func save() -> void:
+	print("[SAVING]")
 	var data = {
 		"tiles":    GameState.tiles,
 		"monsters": GameState.monsters,
