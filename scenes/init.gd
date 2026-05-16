@@ -1,22 +1,14 @@
 extends Control
 
-const SAVE_PATH = "user://save.dat"
-const GAME_SCENE = "uid://caxkx57v2uspr"
+const GAME_SCENE = "res://scenes/game.tscn"
 
 func _ready() -> void:
-	# Disable Continue if no save exists
-	$VBoxContainer/ContinueButton.disabled = not FileAccess.file_exists(SAVE_PATH)
-
+	$VBoxContainer/ContinueButton.disabled = not FileAccess.file_exists(SaveManager.SAVE_PATH)
 
 func _on_continue_pressed() -> void:
-	var file = FileAccess.open(SAVE_PATH, FileAccess.READ)
-	if file:
-		var save_data = file.get_var()
-		file.close()
-	get_tree().change_scene_to_file("res://scenes/game.tscn")
-
+	SaveManager.load_save()                        # populate GameState before entering game
+	get_tree().change_scene_to_file(GAME_SCENE)
 
 func _on_new_game_pressed() -> void:
-	if FileAccess.file_exists(SAVE_PATH):
-		DirAccess.remove_absolute(SAVE_PATH)
-	get_tree().change_scene_to_file("res://scenes/game.tscn")
+	SaveManager.reset()                            # clear file + GameState
+	get_tree().change_scene_to_file(GAME_SCENE)

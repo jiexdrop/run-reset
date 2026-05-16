@@ -8,6 +8,7 @@ func reveal() -> void:
 	visible = true
 	GameState.tiles["%d,%d" % [grid_x, grid_y]]["visible"] = true
 	GameState.mark_dirty()
+	SaveManager.save()
 
 func _on_input_event(viewport: Node, event: InputEvent, shape_idx: int) -> void:
 	if event is InputEventMouseButton:
