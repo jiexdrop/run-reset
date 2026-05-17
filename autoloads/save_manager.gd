@@ -1,6 +1,6 @@
 extends Node
 
-const SAVE_PATH = "user://save.json"   # was save.json — must match init.gd
+const SAVE_PATH = "user://save.json"
 
 func save() -> void:
 	print("[SAVING]")
@@ -13,7 +13,7 @@ func save() -> void:
 	f.store_string(JSON.stringify(data))
 	GameState.dirty = false
 
-func load_save() -> void:          # renamed from load() — avoids shadowing built-in
+func load_save() -> void:
 	if not FileAccess.file_exists(SAVE_PATH): return
 	var f = FileAccess.open(SAVE_PATH, FileAccess.READ)
 	var parsed = JSON.parse_string(f.get_as_text())
@@ -22,10 +22,19 @@ func load_save() -> void:          # renamed from load() — avoids shadowing bu
 		GameState.monsters = parsed.get("monsters", [])
 		GameState.player   = parsed.get("player",   GameState.player)
 
-func reset() -> void:              # wipe state for a new game
+func reset() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)
 	GameState.tiles    = {}
 	GameState.monsters = []
-	GameState.player   = { "hp": 100, "max_hp": 100, "attack": 10, "level": 1, "xp": 0 }
-	GameState.dirty    = false
+	GameState.player   = {
+		"hp":         10,
+		"max_hp":     10,
+		"attack":      1,
+		"level":       1,
+		"xp":          0,
+		"xp_to_next": 10,
+		"energy":     10,
+		"max_energy": 10,
+	}
+	GameState.dirty = false

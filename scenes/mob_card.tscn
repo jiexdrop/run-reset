@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://mob_card_scene"]
+
+[ext_resource type="Script" path="res://scenes/mob_card.gd" id="1_mobcard"]
+
+[node name="MobCard" type="PanelContainer" unique_id=100000001]
+custom_minimum_size = Vector2(120, 140)
+script = ExtResource("1_mobcard")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=100000002]
+layout_mode = 2
+
+[node name="MobSprite" type="TextureRect" parent="VBoxContainer" unique_id=100000003]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="VBoxContainer" unique_id=100000004]
+layout_mode = 2
+horizontal_alignment = 1
+text = "Mob"
+
+[node name="HPContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=100000005]
+layout_mode = 2
+alignment = 1
+
+[node name="AttackButton" type="Button" parent="VBoxContainer" unique_id=100000006]
+layout_mode = 2
+text = "Attack"
