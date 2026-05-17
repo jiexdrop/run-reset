@@ -49,7 +49,7 @@ func _build_registry() -> void:
 	spider.sprite    = "spider"
 	spider.max_hp    = 3
 	spider.xp_reward = 2
-	spider.attacks   = [bite, venom]
+	spider.attacks.assign([bite, venom])
 	_registry["spider"] = spider
 
 	# ── Sewer Rat ──────────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ func _build_registry() -> void:
 	rat.sprite    = "rat"
 	rat.max_hp    = 2
 	rat.xp_reward = 1
-	rat.attacks   = [gnaw]
+	rat.attacks.assign([gnaw])
 	_registry["rat"] = rat
 
 	# ── Add more mobs here ─────────────────────────────────────────────────────

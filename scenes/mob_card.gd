@@ -14,7 +14,7 @@ signal mob_died(mob_id: int)
 # Add more mobs here; key matches the "sprite" field in the mob dictionary.
 const MOB_SPRITES: Dictionary = {
 	"spider": preload("res://assets/mobs/spider.png"),
-	# "rat": preload("res://assets/mobs/rat.png"),   # uncomment once asset exists
+	"rat": preload("res://assets/mobs/rat.png"),  
 }
 
 const HP_FULL      = preload("res://assets/ui/heart_full.png")
