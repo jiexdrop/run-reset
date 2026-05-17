@@ -7,58 +7,65 @@ const TILE = preload("uid://ceosbosrytods")
 const TILE_SIZE = 70
 const NUM_ROOMS = 20
 
+# Camera tuning
+const CAMERA_PADDING  = 1.5   # extra tiles of breathing room on each side
+const CAMERA_SPEED    = 4.0   # lerp speed for position (units/s feel)
+const ZOOM_SPEED      = 3.0   # lerp speed for zoom
+
+var _target_position: Vector2 = Vector2.ZERO
+var _target_zoom:     Vector2 = Vector2.ONE
+
 
 func _ready() -> void:
 	add_to_group("game")
-	
 	_apply_theme()
-	
+
 	if GameState.tiles.is_empty():
 		generate_tiles()
 	else:
 		restore_tiles()
-	center_camera_on_revealed()
+
+	# Snap instantly on first load — no slide-in from (0,0)
+	_update_camera_target()
+	camera_2d.position = _target_position
+	camera_2d.zoom     = _target_zoom
+
 
 func _apply_theme() -> void:
-	var background_color   = Color(0.796, 0.781, 0.718, 1.0)
-	RenderingServer.set_default_clear_color(background_color)
+	RenderingServer.set_default_clear_color(Color(0.796, 0.781, 0.718, 1.0))
 
 
 # ── Fresh generation (New Game) ───────────────────────────────────────────────
 
 func generate_tiles() -> void:
 	var floor_tiles: Dictionary = {}
-	var room_cells: Dictionary = {}
+	var room_cells:  Dictionary = {}
 
 	var too_close_to_room = func(pos: Vector2i) -> bool:
 		for dx in range(-1, 2):
 			for dy in range(-1, 2):
 				if dx == 0 and dy == 0:
 					continue
-				var neighbour = "%d,%d" % [pos.x + dx, pos.y + dy]
-				if room_cells.has(neighbour):
+				if room_cells.has("%d,%d" % [pos.x + dx, pos.y + dy]):
 					return true
 		return false
 
-	var origin = Vector2i(0, 0)
 	floor_tiles["0,0"] = "room"
-	room_cells["0,0"] = true
-	var rooms: Array = [origin]
+	room_cells["0,0"]  = true
+	var rooms: Array   = [Vector2i(0, 0)]
 
-	var rng = RandomNumberGenerator.new()
+	var rng  = RandomNumberGenerator.new()
 	rng.randomize()
-
-	var dirs = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+	var dirs = [Vector2i(1,0), Vector2i(-1,0), Vector2i(0,1), Vector2i(0,-1)]
 
 	for _i in range(NUM_ROOMS - 1):
 		var placed = false
 		for _attempt in range(100):
 			var base: Vector2i = rooms[rng.randi_range(0, rooms.size() - 1)]
-			var dir: Vector2i  = dirs[rng.randi_range(0, 3)]
+			var dir:  Vector2i = dirs[rng.randi_range(0, 3)]
 			var length         = rng.randi_range(1, 3)
-
-			var room_pos = base + dir * (length + 1)
-			var room_key = "%d,%d" % [room_pos.x, room_pos.y]
+			var room_pos       = base + dir * (length + 1)
+			var room_key       = "%d,%d" % [room_pos.x, room_pos.y]
 
 			if floor_tiles.has(room_key):
 				continue
@@ -68,7 +75,7 @@ func generate_tiles() -> void:
 			var corridor_cells: Array = []
 			var blocked = false
 			for step in range(1, length + 1):
-				var c = base + dir * step
+				var c  = base + dir * step
 				var ck = "%d,%d" % [c.x, c.y]
 				if room_cells.has(ck):
 					blocked = true
@@ -121,7 +128,11 @@ func _spawn_tiles() -> void:
 
 # ── Camera ────────────────────────────────────────────────────────────────────
 
+## Call this whenever revealed tiles change; sets _target_position / _target_zoom.
 func center_camera_on_revealed() -> void:
+	_update_camera_target()
+
+func _update_camera_target() -> void:
 	var revealed: Array = []
 	for key in GameState.tiles:
 		if GameState.tiles[key].get("visible", false):
@@ -129,7 +140,8 @@ func center_camera_on_revealed() -> void:
 			revealed.append(Vector2(parts[0].to_int(), parts[1].to_int()))
 
 	if revealed.is_empty():
-		camera_2d.position = Vector2.ZERO
+		_target_position = Vector2.ZERO
+		_target_zoom     = Vector2.ONE
 		return
 
 	# Bounding box in grid coords
@@ -143,11 +155,23 @@ func center_camera_on_revealed() -> void:
 		min_y = min(min_y, v.y)
 		max_y = max(max_y, v.y)
 
-	# Convert to world coords and centre
+	# World-space bounding box (tile centres), expanded by padding
 	var world_min = Vector2(min_x, min_y) * TILE_SIZE
 	var world_max = Vector2(max_x, max_y) * TILE_SIZE
-	camera_2d.position = (world_min + world_max) / 2.0
+	_target_position = (world_min + world_max) / 2.0
+
+	# Compute zoom so all tiles + padding fit inside the viewport
+	var viewport_size  = get_viewport().get_visible_rect().size
+	var content_width  = (max_x - min_x + 1 + CAMERA_PADDING * 2) * TILE_SIZE
+	var content_height = (max_y - min_y + 1 + CAMERA_PADDING * 2) * TILE_SIZE
+
+	var zoom_x = viewport_size.x / content_width
+	var zoom_y = viewport_size.y / content_height
+	var zoom   = min(zoom_x, zoom_y)          # fit the tighter axis; never crop
+	_target_zoom = Vector2(zoom, zoom)
 
 
-func _process(_delta: float) -> void:
-	pass
+func _process(delta: float) -> void:
+	# Smooth-lerp position and zoom every frame
+	camera_2d.position = camera_2d.position.lerp(_target_position, CAMERA_SPEED * delta)
+	camera_2d.zoom     = camera_2d.zoom.lerp(_target_zoom,         ZOOM_SPEED  * delta)
