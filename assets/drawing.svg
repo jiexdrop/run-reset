@@ -869,7 +869,10 @@
        ry="16.212194"
        inkscape:label="dot" /><g
        id="g2"
-       inkscape:label="mouse"><path
+       inkscape:label="mouse"
+       inkscape:export-filename="mobs\rat.png"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96"><path
          style="fill:#676c53"
          d="m 199.61758,121.78685 21.40517,-19.06347 3.66025,22.81156 z"
          id="path1"
@@ -1070,7 +1073,10 @@
          d="m 66.565197,307.62491 c 2e-6,6.53905 -5.300938,11.83999 -11.83998,11.83999 -6.539042,0 -11.839982,-5.30094 -11.83998,-11.83999 1e-6,-7.74093 6.124127,-0.31578 12.044116,-0.31578 5.91999,0 11.635843,-7.42515 11.635844,0.31578 z"
          sodipodi:nodetypes="cscsc" /></g><g
        id="g3"
-       inkscape:label="spider"><path
+       inkscape:label="spider"
+       inkscape:export-filename="mobs\spider.png"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96"><path
          style="fill:#6c6753;stroke-width:0.497334"
          d="m 364.75801,117.59657 9.20379,4.19413 13.39792,0.34952 8.85428,-3.14561 3.1456,-6.64071 -2.33007,-14.446447 -8.50477,-7.33974 -12.23289,0.23301 -8.50476,4.54365 -5.47568,15.727987 z"
          id="path13"
@@ -1245,7 +1251,7 @@
        style="opacity:1;fill:#800000;stroke:#550000;stroke-width:0.896613;stroke-dasharray:none"
        d="m 253.40947,259.04725 -7.42592,6.5905 -2.87754,1.94931 -2.22778,3.99143 -4.73402,-0.64977 -0.64978,2.6919 -5.3838,2.13495 -2.87753,2.78473 -1.39237,1.39236 -5.01249,2.13495 -4.08427,1.94931 -6.40485,4.45555 -6.12638,2.50625 -2.32061,2.78471 -8.63263,2.97038 -1.11389,1.76365 -1.85648,0.27848 -2.22778,0.92823 h -1.02107 l -0.64976,1.76366 -10.58194,3.71297 -4.45555,1.29953 10.76758,-8.63263 5.19815,-3.71297 2.13495,-0.0928 v -1.67083 l 0.64977,-0.27848 1.39236,-0.0928 1.9493,-1.85649 2.13495,-1.02106 2.50626,-0.0928 -0.46412,-1.39236 1.29953,-2.50625 1.11389,0.0928 1.67084,-1.39236 2.69189,0.3713 0.83542,-2.04213 7.14745,-2.13495 0.55694,-1.20671 1.48519,-0.0928 1.76365,-3.52732 1.02107,0.18565 3.15602,-2.3206 2.41342,0.92824 0.46412,-1.76365 3.89861,-0.0928 2.41342,-2.87754 2.41343,-0.46413 3.80579,-3.80578 z"
        id="path9"
-       inkscape:export-filename="slash.png"
+       inkscape:export-filename="attacks\sword.png"
        inkscape:export-xdpi="96"
        inkscape:export-ydpi="96" /><g
        id="g40"
@@ -1995,7 +2001,10 @@
        x="762.76953"
        y="643.25446" /><g
        id="g10"
-       inkscape:label="experience_outline"><rect
+       inkscape:label="experience_outline"
+       inkscape:export-filename="ui\exp_empty.png"
+       inkscape:export-xdpi="73.948349"
+       inkscape:export-ydpi="73.948349"><rect
          style="fill:none;stroke:none;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;paint-order:stroke fill markers"
          id="rect9"
          width="34.249996"
@@ -2013,7 +2022,10 @@
          ry="4.4086175"
          inkscape:label="experience" /></g><g
        id="g9"
-       inkscape:label="experience"><rect
+       inkscape:label="experience"
+       inkscape:export-filename="ui\exp_full.png"
+       inkscape:export-xdpi="73.948349"
+       inkscape:export-ydpi="73.948349"><rect
          style="fill:#a2a947;stroke:#2e222f;stroke-width:6.43277;stroke-linecap:round;stroke-linejoin:round;paint-order:stroke fill markers"
          id="rect4-8"
          width="27.71884"
