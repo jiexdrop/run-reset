@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bhwyuf84ejc14"]
 
-[ext_resource type="Script" path="res://scenes/combat_ui.gd" id="1_combatui"]
+[ext_resource type="Script" uid="uid://dguq0wgu7kyfu" path="res://scenes/combat_ui.gd" id="1_combatui"]
 
 [node name="CombatUi" type="Control" unique_id=1815585971]
 layout_mode = 3
@@ -11,14 +11,25 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_combatui")
 
+[node name="ColorRect" type="ColorRect" parent="." unique_id=243628040]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.69411767, 0.5803922, 0.5176471, 1)
+
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=200000001]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_constants/margin_left = 8
-theme_override_constants/margin_right = 8
 theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 
 [node name="VBox" type="VBoxContainer" parent="MarginContainer" unique_id=200000002]
@@ -44,8 +55,8 @@ layout_mode = 2
 layout_mode = 2
 
 [node name="CombatSection" type="VBoxContainer" parent="MarginContainer/VBox" unique_id=200000009]
-layout_mode = 2
 visible = false
+layout_mode = 2
 
 [node name="CombatLabel" type="Label" parent="MarginContainer/VBox/CombatSection" unique_id=200000010]
 layout_mode = 2
@@ -66,4 +77,3 @@ alignment = 1
 [node name="LogLabel" type="Label" parent="MarginContainer/VBox" unique_id=200000014]
 layout_mode = 2
 autowrap_mode = 3
-text = ""

@@ -1,3 +1,4 @@
+class_name MobCard
 extends PanelContainer
 
 ## MobCard — one enemy slot in the CombatUI.

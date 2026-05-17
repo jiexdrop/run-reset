@@ -47,12 +47,22 @@ func _refresh_mob_indicator() -> void:
 
 	# We use a Label-based button so it works without extra assets.
 	# Swap this for a proper AnimatedSprite2D / Sprite2D in production.
-	var btn = Button.new()
-	btn.text               = "!"           # replace with mob icon later
-	btn.tooltip_text       = _get_mob_label()
-	btn.custom_minimum_size = Vector2(24, 24)
-	btn.position           = Vector2(-12, -28)   # float above the tile
+	var btn = TextureButton.new()
+
+	var def = MobRegistry.get_def(_mob_key)
+
+	btn.texture_normal = MobCard.MOB_SPRITES.get(def.sprite)
+
+	btn.custom_minimum_size = Vector2(58, 58)
+	btn.position = -btn.custom_minimum_size / 2
+
+	btn.ignore_texture_size = true
+	btn.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+
+	btn.tooltip_text = _get_mob_label()
+
 	btn.pressed.connect(_on_mob_clicked)
+
 	indicator.add_child(btn)
 
 	add_child(indicator)
