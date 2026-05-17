@@ -4,17 +4,24 @@ const TILE = preload("uid://ceosbosrytods")
 
 @onready var camera_2d: Camera2D = $Camera2D
 
-const TILE_SIZE = 78
+const TILE_SIZE = 70
 const NUM_ROOMS = 20
 
 
 func _ready() -> void:
 	add_to_group("game")
+	
+	_apply_theme()
+	
 	if GameState.tiles.is_empty():
 		generate_tiles()
 	else:
 		restore_tiles()
 	center_camera_on_revealed()
+
+func _apply_theme() -> void:
+	var background_color   = Color(0.796, 0.781, 0.718, 1.0)
+	RenderingServer.set_default_clear_color(background_color)
 
 
 # ── Fresh generation (New Game) ───────────────────────────────────────────────
