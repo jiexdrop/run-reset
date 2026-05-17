@@ -1,6 +1,6 @@
 extends Control
 
-const GAME_SCENE = "res://scenes/game.tscn"
+const GAME_SCENE = "res://scenes/main.tscn"
 
 func _ready() -> void:
 	$VBoxContainer/ContinueButton.disabled = not FileAccess.file_exists(SaveManager.SAVE_PATH)
