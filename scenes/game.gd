@@ -7,9 +7,12 @@ const TILE = preload("uid://ceosbosrytods")
 const TILE_SIZE = 70
 const NUM_ROOMS = 20
 
+# Probability that a room tile (other than the start) gets a mob.
+const MOB_SPAWN_CHANCE = 0.6
+
 # Camera tuning
 const CAMERA_PADDING  = 1.5   # extra tiles of breathing room on each side
-const CAMERA_SPEED    = 4.0   # lerp speed for position (units/s feel)
+const CAMERA_SPEED    = 4.0   # lerp speed for position
 const ZOOM_SPEED      = 3.0   # lerp speed for zoom
 
 var _target_position: Vector2 = Vector2.ZERO
@@ -25,7 +28,7 @@ func _ready() -> void:
 	else:
 		restore_tiles()
 
-	# Snap instantly on first load — no slide-in from (0,0)
+	# Snap camera instantly on first load
 	_update_camera_target()
 	camera_2d.position = _target_position
 	camera_2d.zoom     = _target_zoom
@@ -35,7 +38,7 @@ func _apply_theme() -> void:
 	RenderingServer.set_default_clear_color(Color(0.796, 0.781, 0.718, 1.0))
 
 
-# ── Fresh generation (New Game) ───────────────────────────────────────────────
+# ── Fresh generation ──────────────────────────────────────────────────────────
 
 func generate_tiles() -> void:
 	var floor_tiles: Dictionary = {}
@@ -98,13 +101,26 @@ func generate_tiles() -> void:
 		if not placed:
 			print("[gen] could not place room ", _i + 1, " after 100 attempts — skipping")
 
+	# Build tile state; seed mobs on room tiles (skip start room "0,0")
+	var pool = MobRegistry.get_pool()
 	for key in floor_tiles:
-		GameState.tiles[key] = { "visible": key == "0,0", "type": floor_tiles[key] }
+		var tile_type = floor_tiles[key]
+		var mob_key: String = ""
+		if tile_type == "room" and key != "0,0" and not pool.is_empty():
+			if randf() < MOB_SPAWN_CHANCE:
+				mob_key = pool[randi() % pool.size()]
+
+		GameState.tiles[key] = {
+			"visible":  key == "0,0",
+			"type":     tile_type,
+			"mob":      mob_key,       # "" means no mob
+			"mob_dead": false,
+		}
 
 	_spawn_tiles()
 
 
-# ── Restore from save (Continue) ─────────────────────────────────────────────
+# ── Restore from save ─────────────────────────────────────────────────────────
 
 func restore_tiles() -> void:
 	_spawn_tiles()
@@ -123,12 +139,17 @@ func _spawn_tiles() -> void:
 		instance.grid_x     = gx
 		instance.grid_y     = gy
 		instance.visible    = GameState.tiles[key].get("visible", false)
+
+		# Pass mob info to the tile
+		var mob_key  = GameState.tiles[key].get("mob", "")
+		var mob_dead = GameState.tiles[key].get("mob_dead", false)
+		instance.set_mob(mob_key, mob_dead)
+
 		add_child(instance)
 
 
 # ── Camera ────────────────────────────────────────────────────────────────────
 
-## Call this whenever revealed tiles change; sets _target_position / _target_zoom.
 func center_camera_on_revealed() -> void:
 	_update_camera_target()
 
@@ -144,34 +165,25 @@ func _update_camera_target() -> void:
 		_target_zoom     = Vector2.ONE
 		return
 
-	# Bounding box in grid coords
-	var min_x = revealed[0].x
-	var max_x = revealed[0].x
-	var min_y = revealed[0].y
-	var max_y = revealed[0].y
+	var min_x = revealed[0].x;  var max_x = revealed[0].x
+	var min_y = revealed[0].y;  var max_y = revealed[0].y
 	for v in revealed:
-		min_x = min(min_x, v.x)
-		max_x = max(max_x, v.x)
-		min_y = min(min_y, v.y)
-		max_y = max(max_y, v.y)
+		min_x = min(min_x, v.x);  max_x = max(max_x, v.x)
+		min_y = min(min_y, v.y);  max_y = max(max_y, v.y)
 
-	# World-space bounding box (tile centres), expanded by padding
 	var world_min = Vector2(min_x, min_y) * TILE_SIZE
 	var world_max = Vector2(max_x, max_y) * TILE_SIZE
 	_target_position = (world_min + world_max) / 2.0
 
-	# Compute zoom so all tiles + padding fit inside the viewport
 	var viewport_size  = get_viewport().get_visible_rect().size
 	var content_width  = (max_x - min_x + 1 + CAMERA_PADDING * 2) * TILE_SIZE
 	var content_height = (max_y - min_y + 1 + CAMERA_PADDING * 2) * TILE_SIZE
 
 	var zoom_x = viewport_size.x / content_width
 	var zoom_y = viewport_size.y / content_height
-	var zoom   = min(zoom_x, zoom_y)          # fit the tighter axis; never crop
-	_target_zoom = Vector2(zoom, zoom)
+	_target_zoom = Vector2(min(zoom_x, zoom_y), min(zoom_x, zoom_y))
 
 
 func _process(delta: float) -> void:
-	# Smooth-lerp position and zoom every frame
 	camera_2d.position = camera_2d.position.lerp(_target_position, CAMERA_SPEED * delta)
 	camera_2d.zoom     = camera_2d.zoom.lerp(_target_zoom,         ZOOM_SPEED  * delta)

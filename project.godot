@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 SaveManager="*uid://bxww0a1dev5am"
 GameState="*uid://2dapk0fe1hfb"
+MobRegistry="*uid://tokowm5u7v2o"
 
 [file_customization]
 

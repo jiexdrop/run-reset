@@ -62,3 +62,8 @@ layout_mode = 2
 [node name="AttackBar" type="HBoxContainer" parent="MarginContainer/VBox" unique_id=200000013]
 layout_mode = 2
 alignment = 1
+
+[node name="LogLabel" type="Label" parent="MarginContainer/VBox" unique_id=200000014]
+layout_mode = 2
+autowrap_mode = 3
+text = ""

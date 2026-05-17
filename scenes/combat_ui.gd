@@ -1,84 +1,86 @@
 extends Control
 
-## CombatUI — right-hand panel showing player stats and active combat.
+## CombatUI — right-hand panel: player stats + active combat.
 ##
-## ── Wiring ──────────────────────────────────────────────────────────────────
-## Call from game.gd (or wherever combat starts):
+## PUBLIC API
+## ──────────
+##   start_combat(mob_ids, player_attacks, tile_key)
+##     mob_ids        : Array[int]         — indices into GameState.monsters
+##     player_attacks : Array[AttackData]  — player's available attacks
+##     tile_key       : String             — "x,y" of the tile that triggered combat
 ##
-##   CombatUI.start_combat(monsters_subset, attacks)
-##
-## monsters_subset : Array of mob dictionaries (slice of GameState.monsters)
-## attacks         : Array[AttackData]           (from attack_data.gd)
-##
-## ── Extending ───────────────────────────────────────────────────────────────
-## • New mob type  → add its sprite key to mob_card.gd MOB_SPRITES
-## • New attack    → create an AttackData resource and pass it in start_combat()
-## • More hearts / energy / xp slots → just raise max_* in GameState.player
+##   end_combat()      — hide panel, reset state
+##   refresh_stats()   — re-draw player hearts / energy / xp from GameState
 
-# ── Sprite assets ─────────────────────────────────────────────────────────────
-const HEART_FULL  = preload("res://assets/ui/heart_full.png")
-const HEART_EMPTY = preload("res://assets/ui/heart_empty.png")
+# ── Assets ────────────────────────────────────────────────────────────────────
+const HEART_FULL   = preload("res://assets/ui/heart_full.png")
+const HEART_EMPTY  = preload("res://assets/ui/heart_empty.png")
 const ENERGY_FULL  = preload("res://assets/ui/energy_full.png")
 const ENERGY_EMPTY = preload("res://assets/ui/energy_empty.png")
-const EXP_FULL    = preload("res://assets/ui/exp_full.png")
-const EXP_EMPTY   = preload("res://assets/ui/exp_empty.png")
+const EXP_FULL     = preload("res://assets/ui/exp_full.png")
+const EXP_EMPTY    = preload("res://assets/ui/exp_empty.png")
 
 const ICON_SIZE = Vector2(20, 20)
 
-# ── Scene references ──────────────────────────────────────────────────────────
 const MobCardScene = preload("res://scenes/mob_card.tscn")
 
-# ── Nodes (assigned in _ready via $-paths; keep in sync with combat_ui.tscn) ─
-@onready var level_label:     Label         = $MarginContainer/VBox/StatsSection/LevelLabel
-@onready var hearts_row:      HBoxContainer = $MarginContainer/VBox/StatsSection/HeartsRow
-@onready var energy_row:      HBoxContainer = $MarginContainer/VBox/StatsSection/EnergyRow
-@onready var exp_row:         HBoxContainer = $MarginContainer/VBox/StatsSection/ExpRow
-@onready var mob_row:         HBoxContainer = $MarginContainer/VBox/CombatSection/MobRow
-@onready var attack_bar:      HBoxContainer = $MarginContainer/VBox/AttackBar
-@onready var combat_section:  Control       = $MarginContainer/VBox/CombatSection
+# ── Nodes ─────────────────────────────────────────────────────────────────────
+@onready var level_label:    Label         = $MarginContainer/VBox/StatsSection/LevelLabel
+@onready var hearts_row:     HBoxContainer = $MarginContainer/VBox/StatsSection/HeartsRow
+@onready var energy_row:     HBoxContainer = $MarginContainer/VBox/StatsSection/EnergyRow
+@onready var exp_row:        HBoxContainer = $MarginContainer/VBox/StatsSection/ExpRow
+@onready var mob_row:        HBoxContainer = $MarginContainer/VBox/CombatSection/MobRow
+@onready var attack_bar:     HBoxContainer = $MarginContainer/VBox/AttackBar
+@onready var combat_section: Control       = $MarginContainer/VBox/CombatSection
+@onready var log_label:      Label         = $MarginContainer/VBox/LogLabel   # see note below
 
 # ── Runtime state ─────────────────────────────────────────────────────────────
-var _active_mob_ids: Array = []          # indices into GameState.monsters
-var _attacks: Array        = []          # Array[AttackData]
-var _selected_attack: int  = 0           # index into _attacks
+var _active_mob_ids:   Array  = []
+var _attacks:          Array  = []   # Array[AttackData]
+var _selected_attack:  int    = 0
+var _tile_key:         String = ""   # tile that started this combat
+
+# Effects that carry across turns
+var _player_stunned:   bool   = false
 
 
 # ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 func _ready() -> void:
+	add_to_group("combat_ui")
 	refresh_stats()
-	combat_section.visible = false       # hidden until start_combat()
+	combat_section.visible = false
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-## Refresh the player stats display from GameState.
 func refresh_stats() -> void:
 	var p = GameState.player
 	level_label.text = "Level  %d" % p.get("level", 1)
-	_build_icon_row(hearts_row, p.get("hp", 0),     p.get("max_hp", 10),     HEART_FULL,  HEART_EMPTY)
-	_build_icon_row(energy_row, p.get("energy", 10), p.get("max_energy", 10), ENERGY_FULL, ENERGY_EMPTY)
-	_build_icon_row(exp_row,    p.get("xp", 0),      p.get("xp_to_next", 10), EXP_FULL,    EXP_EMPTY)
+	_build_icon_row(hearts_row, p.get("hp", 0),      p.get("max_hp", 10),     HEART_FULL,  HEART_EMPTY)
+	_build_icon_row(energy_row, p.get("energy", 10),  p.get("max_energy", 10), ENERGY_FULL, ENERGY_EMPTY)
+	_build_icon_row(exp_row,    p.get("xp", 0),       p.get("xp_to_next", 10), EXP_FULL,    EXP_EMPTY)
 
 
-## Show the combat panel with the given mobs and attack choices.
-## mob_ids : Array[int] — indices into GameState.monsters
-## attacks : Array[AttackData]
-func start_combat(mob_ids: Array, attacks: Array) -> void:
-	_active_mob_ids = mob_ids
-	_attacks        = attacks
+## tile_key: "x,y" string so we can notify the tile when the mob dies.
+func start_combat(mob_ids: Array, player_attacks: Array, tile_key: String = "") -> void:
+	_active_mob_ids  = mob_ids.duplicate()
+	_attacks         = player_attacks
 	_selected_attack = 0
+	_tile_key        = tile_key
+	_player_stunned  = false
 	combat_section.visible = true
 	_rebuild_mob_cards()
 	_rebuild_attack_bar()
+	_log("")
 
 
-## Hide combat panel (call when all mobs are dead or combat ends).
 func end_combat() -> void:
 	combat_section.visible = false
 	_active_mob_ids = []
 	_clear_children(mob_row)
 	_clear_children(attack_bar)
+	_log("")
 
 
 # ── Icon row builder ──────────────────────────────────────────────────────────
@@ -88,9 +90,9 @@ func _build_icon_row(row: HBoxContainer, current: int, maximum: int,
 	_clear_children(row)
 	for i in range(maximum):
 		var icon = TextureRect.new()
-		icon.texture          = full_tex if i < current else empty_tex
+		icon.texture             = full_tex if i < current else empty_tex
 		icon.custom_minimum_size = ICON_SIZE
-		icon.stretch_mode     = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.stretch_mode        = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		row.add_child(icon)
 
 
@@ -114,21 +116,20 @@ func _rebuild_attack_bar() -> void:
 	_clear_children(attack_bar)
 	for i in range(_attacks.size()):
 		var atk: AttackData = _attacks[i]
-		var btn = Button.new()
+		var btn             = Button.new()
 		btn.icon             = atk.icon
 		btn.text             = "%s\n(%d ⚡)" % [atk.attack_name, atk.energy_cost]
 		btn.tooltip_text     = "Damage: %d  |  Energy: %d" % [atk.damage, atk.energy_cost]
 		btn.custom_minimum_size = Vector2(80, 64)
 		btn.toggle_mode      = true
 		btn.button_pressed   = (i == _selected_attack)
-		var idx = i          # capture for closure
+		var idx = i
 		btn.pressed.connect(func(): _select_attack(idx))
 		attack_bar.add_child(btn)
 
 
 func _select_attack(idx: int) -> void:
 	_selected_attack = idx
-	# Update toggle visuals
 	for i in range(attack_bar.get_child_count()):
 		var btn = attack_bar.get_child(i) as Button
 		if btn:
@@ -137,40 +138,144 @@ func _select_attack(idx: int) -> void:
 
 # ── Signal handlers ───────────────────────────────────────────────────────────
 
-func _on_mob_attacked(mob_id: int, _dmg: int) -> void:
-	# Consume energy from selected attack
+## Player just hit a mob — apply selected attack's energy cost, then mob retaliates.
+func _on_mob_attacked(mob_id: int, base_dmg: int) -> void:
 	if _attacks.is_empty():
 		return
+
+	# 1. Apply selected attack's actual damage (overrides base_dmg from card)
 	var atk: AttackData = _attacks[_selected_attack]
 	var p = GameState.player
+
+	# Reapply correct damage (mob_card used player.attack; use atk.damage instead)
+	var mob = GameState.monsters[mob_id]
+	mob["hp"] = max(0, mob.get("hp", 0) - (atk.damage - base_dmg))   # adjust delta
+	GameState.monsters[mob_id] = mob
+
+	# 2. Consume energy
 	p["energy"] = max(0, p.get("energy", 0) - atk.energy_cost)
 	GameState.player = p
 	refresh_stats()
-	SaveManager.save()
+
+	# 3. Check if mob died from the corrected damage
+	if mob["hp"] <= 0:
+		return   # mob_died signal will fire from mob_card; don't do mob turn
+
+	# 4. Mob retaliates (unless already handled by mob_died)
+	_do_mob_turn(mob_id)
 
 
 func _on_mob_died(mob_id: int) -> void:
-	# Grant XP, handle level-up
+	# Grant XP and handle level-up
 	var xp_gain = GameState.monsters[mob_id].get("xp_reward", 1)
-	var p = GameState.player
-	p["xp"] = p.get("xp", 0) + xp_gain
-	var xp_needed = p.get("xp_to_next", 10)
-	if p["xp"] >= xp_needed:
-		p["xp"]    -= xp_needed
+	var p       = GameState.player
+	p["xp"]     = p.get("xp", 0) + xp_gain
+	if p["xp"] >= p.get("xp_to_next", 10):
+		p["xp"]    -= p["xp_to_next"]
 		p["level"]  = p.get("level", 1) + 1
-		# Optional: expand hearts/energy on level-up here
+		p["max_hp"] = p.get("max_hp", 10) + 1   # level-up bonus: +1 heart
+		p["hp"]     = p["max_hp"]                 # full heal on level-up
+		_log("Level up! Now level %d" % p["level"])
 	GameState.player = p
 	refresh_stats()
 
-	# Remove dead mob card
+	# Notify the tile so it removes the mob indicator
+	_notify_tile_mob_dead(mob_id)
+
 	_active_mob_ids.erase(mob_id)
 	_rebuild_mob_cards()
 
 	if _active_mob_ids.is_empty():
 		end_combat()
+	else:
+		_log("")
+
+
+# ── Mob turn ──────────────────────────────────────────────────────────────────
+
+func _do_mob_turn(mob_id: int) -> void:
+	if _player_stunned:
+		_player_stunned = false
+		_log("You were stunned — mob skips!")
+		return
+
+	# Find the mob card node for this id
+	var card = _get_card_for_mob(mob_id)
+	if card == null:
+		return
+
+	var atk: Dictionary = card.do_mob_turn()
+	if atk.is_empty():
+		return
+
+	var p       = GameState.player
+	var damage  = atk.get("damage", 1)
+	var effect  = atk.get("effect", 0)   # MobAttackData.Effect int
+
+	p["hp"] = max(0, p.get("hp", 0) - damage)
+
+	var msg = "%s hits you for %d!" % [GameState.monsters[mob_id].get("name","Mob"), damage]
+
+	# Handle effects
+	match effect:
+		1:   # POISON — deal 1 extra damage next turn (simple impl)
+			p["hp"] = max(0, p["hp"] - 1)
+			msg += " Poisoned! (-1 extra)"
+		2:   # STUN
+			_player_stunned = true
+			msg += " You are stunned!"
+
+	GameState.player = p
+	GameState.mark_dirty()
+	refresh_stats()
+	_log(msg)
+
+	if p["hp"] <= 0:
+		_on_player_died()
+
+
+func _on_player_died() -> void:
+	_log("You died! Resetting...")
+	# Small delay so the player reads the message, then reset
+	await get_tree().create_timer(1.5).timeout
+	SaveManager.reset()
+	get_tree().change_scene_to_file("res://scenes/init.tscn")
+
+
+# ── Tile notification ─────────────────────────────────────────────────────────
+
+func _notify_tile_mob_dead(mob_id: int) -> void:
+	var tile_key = GameState.monsters[mob_id].get("tile_key", "")
+	if tile_key == "":
+		return
+	# Find the tile node by its grid coords
+	var parts = tile_key.split(",")
+	if parts.size() < 2:
+		return
+	var gx = parts[0].to_int()
+	var gy = parts[1].to_int()
+	for tile in get_tree().get_nodes_in_group("tiles"):
+		if tile.grid_x == gx and tile.grid_y == gy:
+			tile.on_mob_defeated()
+			return
+	# Fallback: update GameState directly if tile node not found
+	if GameState.tiles.has(tile_key):
+		GameState.tiles[tile_key]["mob_dead"] = true
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+func _get_card_for_mob(mob_id: int) -> Node:
+	for card in mob_row.get_children():
+		if card.mob_id == mob_id:
+			return card
+	return null
+
+
+func _log(msg: String) -> void:
+	if log_label:
+		log_label.text = msg
+
 
 func _clear_children(node: Node) -> void:
 	for child in node.get_children():
