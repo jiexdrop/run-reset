@@ -12,8 +12,8 @@
 extends Resource
 class_name MobDef
 
-@export var mob_name:   String              = "Enemy"
-@export var sprite:     String              = ""      # key into mob_card.gd MOB_SPRITES
-@export var max_hp:     int                 = 3
-@export var xp_reward:  int                 = 1
+@export var mob_name:   String               = "Enemy"
+@export var sprite:     String               = ""      # key into mob_card.gd MOB_SPRITES
+@export var max_hp:     int                  = 3
+@export var xp_reward:  int                  = 1
 @export var attacks:    Array[MobAttackData] = []

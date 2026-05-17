@@ -15,6 +15,7 @@ enum Effect {
 	NONE,       # plain damage
 	POISON,     # deal damage + apply poison (extend in combat_ui as needed)
 	STUN,       # skip player next turn
+	BLEED,
 }
 
 @export var attack_name: String        = "Attack"
