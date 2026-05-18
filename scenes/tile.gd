@@ -114,6 +114,10 @@ func _trigger_combat() -> void:
 		GameState.monsters.append(mob_entry)
 		mob_idx = GameState.monsters.size() - 1
 
+	# Persist immediately so a quit before the first attack still saves the mob.
+	GameState.mark_dirty()
+	SaveManager.save()
+
 	# Build the player's sword attack.
 	var sword         = AttackData.new()
 	sword.attack_name = "Sword"
