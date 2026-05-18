@@ -17,6 +17,7 @@ const ZOOM_SPEED      = 3.0   # lerp speed for zoom
 
 var _target_position: Vector2 = Vector2.ZERO
 var _target_zoom:     Vector2 = Vector2.ONE
+var _spawned_tiles: Array = []
 
 
 func _ready() -> void:
@@ -129,8 +130,6 @@ func restore_tiles() -> void:
 # whose hp > 0.  Matches monsters to tiles via the "tile_key" field that
 # tile.gd writes when it first creates the monster entry.
 func restore_combat(combat_ui: Control) -> void:
-
-	# Build a fast lookup: tile_key → monster index
 	var key_to_idx: Dictionary = {}
 	for i in range(GameState.monsters.size()):
 		var tile_key = GameState.monsters[i].get("tile_key", "")
@@ -140,36 +139,28 @@ func restore_combat(combat_ui: Control) -> void:
 	if key_to_idx.is_empty():
 		return
 
-	if combat_ui == null:
-		push_warning("game._restore_combat: no combat_ui in scene")
-		return
-
-	# Walk every tile node; if it's visible and has a live saved monster,
-	# push that monster back into the combat UI without touching GameState.monsters.
-	for tile in get_tree().get_nodes_in_group("tiles"):
-		var tile_key = "%d,%d" % [tile.grid_x, tile.grid_y]
-		if not key_to_idx.has(tile_key):
-			continue
+	for tile in _spawned_tiles:   # <-- use stored refs, grid_x/y are set
+		var tile_key   = "%d,%d" % [tile.grid_x, tile.grid_y]
 		var tile_state = GameState.tiles.get(tile_key, {})
 		if not tile_state.get("visible", false):
 			continue
+		if not key_to_idx.has(tile_key):
+			continue
 		var mob_idx = key_to_idx[tile_key]
 		var monster = GameState.monsters[mob_idx]
+		print("[restore_combat] mob hp: ", monster.get("hp", 0), " | mob_idx: ", mob_idx)
 		if monster.get("hp", 0) <= 0:
 			continue
-
-		# Build sword attack from saved player attack stat
 		var sword         = AttackData.new()
 		sword.attack_name = "Sword"
 		sword.damage      = GameState.player.get("attack", 1)
 		sword.energy_cost = 1
-
 		combat_ui.add_mob_to_combat(mob_idx, [sword])
-
 
 # ── Shared tile spawning ──────────────────────────────────────────────────────
 
 func _spawn_tiles() -> void:
+	_spawned_tiles.clear()
 	for key in GameState.tiles:
 		var parts    = key.split(",")
 		var gx       = parts[0].to_int()
@@ -180,13 +171,11 @@ func _spawn_tiles() -> void:
 		instance.grid_x     = gx
 		instance.grid_y     = gy
 		instance.visible    = GameState.tiles[key].get("visible", false)
-
-		# Pass mob info to the tile
 		var mob_key  = GameState.tiles[key].get("mob", "")
 		var mob_dead = GameState.tiles[key].get("mob_dead", false)
 		instance.set_mob(mob_key, mob_dead)
-
 		add_child(instance)
+		_spawned_tiles.append(instance)
 
 
 # ── Camera ────────────────────────────────────────────────────────────────────
