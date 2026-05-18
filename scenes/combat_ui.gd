@@ -248,17 +248,24 @@ func _notify_tile_mob_dead(mob_id: int) -> void:
 	var tile_key = GameState.monsters[mob_id].get("tile_key", "")
 	if tile_key == "":
 		return
-	# Find the tile node by its grid coords
 	var parts = tile_key.split(",")
 	if parts.size() < 2:
 		return
 	var gx = parts[0].to_int()
 	var gy = parts[1].to_int()
-	for tile in get_tree().get_nodes_in_group("tiles"):
-		if tile.grid_x == gx and tile.grid_y == gy:
+
+	# Tiles live inside a SubViewport so get_nodes_in_group won't find them.
+	# Walk down to the Game node and search its children directly.
+	var game = get_tree().root.find_child("Game", true, false)
+	if game == null:
+		push_warning("_notify_tile_mob_dead: could not find Game node")
+		return
+	for tile in game.get_children():
+		if tile.get("grid_x") == gx and tile.get("grid_y") == gy:
 			tile.on_mob_defeated()
 			return
-	# Fallback: update GameState directly if tile node not found
+
+	# Fallback
 	if GameState.tiles.has(tile_key):
 		GameState.tiles[tile_key]["mob_dead"] = true
 

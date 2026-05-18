@@ -159,6 +159,7 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 # ── Called by CombatUI when the mob on this tile dies ────────────────────────
 
 func on_mob_defeated() -> void:
+	print("ON MOB DEFEATED")
 	_mob_dead = true
 	var key = "%d,%d" % [grid_x, grid_y]
 	if GameState.tiles.has(key):
