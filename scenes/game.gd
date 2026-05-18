@@ -124,16 +124,12 @@ func generate_tiles() -> void:
 
 func restore_tiles() -> void:
 	_spawn_tiles()
-	# Re-enter combat for any visible tile that still has a live monster
-	# in the saved GameState.monsters list. We do this after all tiles are
-	# spawned so the combat_ui node is ready.
-	_restore_combat()
-
 
 # Re-open combat for every saved monster whose tile is already visible and
 # whose hp > 0.  Matches monsters to tiles via the "tile_key" field that
 # tile.gd writes when it first creates the monster entry.
-func _restore_combat() -> void:
+func restore_combat(combat_ui: Control) -> void:
+
 	# Build a fast lookup: tile_key → monster index
 	var key_to_idx: Dictionary = {}
 	for i in range(GameState.monsters.size()):
@@ -144,7 +140,6 @@ func _restore_combat() -> void:
 	if key_to_idx.is_empty():
 		return
 
-	var combat_ui = get_tree().get_first_node_in_group("combat_ui")
 	if combat_ui == null:
 		push_warning("game._restore_combat: no combat_ui in scene")
 		return
