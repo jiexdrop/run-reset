@@ -177,6 +177,10 @@ func _on_mob_attacked(mob_id: int, base_dmg: int) -> void:
 	GameState.player = p
 	refresh_stats()
 
+	# Persist state after player attacks.
+	GameState.mark_dirty()
+	SaveManager.save()
+
 	# If the corrected damage killed the mob, mob_died will fire from mob_card.
 	if mob["hp"] <= 0:
 		return
@@ -198,6 +202,12 @@ func _on_mob_died(mob_id: int) -> void:
 	refresh_stats()
 
 	_notify_tile_mob_dead(mob_id)
+
+	# Mark monster as dead in place so the save retains the entry with hp=0.
+	# (tile_key is preserved so restore_combat skips it correctly on reload.)
+	GameState.monsters[mob_id]["hp"] = 0
+	GameState.mark_dirty()
+	SaveManager.save()
 
 	_active_mob_ids.erase(mob_id)
 	_rebuild_mob_cards()
@@ -242,6 +252,8 @@ func _do_mob_turn(mob_id: int) -> void:
 
 	GameState.player = p
 	GameState.mark_dirty()
+	# Persist after mob attacks player too.
+	SaveManager.save()
 	refresh_stats()
 	_log(msg)
 

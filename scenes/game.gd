@@ -124,6 +124,52 @@ func generate_tiles() -> void:
 
 func restore_tiles() -> void:
 	_spawn_tiles()
+	# Re-enter combat for any visible tile that still has a live monster
+	# in the saved GameState.monsters list. We do this after all tiles are
+	# spawned so the combat_ui node is ready.
+	_restore_combat()
+
+
+# Re-open combat for every saved monster whose tile is already visible and
+# whose hp > 0.  Matches monsters to tiles via the "tile_key" field that
+# tile.gd writes when it first creates the monster entry.
+func _restore_combat() -> void:
+	# Build a fast lookup: tile_key → monster index
+	var key_to_idx: Dictionary = {}
+	for i in range(GameState.monsters.size()):
+		var tile_key = GameState.monsters[i].get("tile_key", "")
+		if tile_key != "":
+			key_to_idx[tile_key] = i
+
+	if key_to_idx.is_empty():
+		return
+
+	var combat_ui = get_tree().get_first_node_in_group("combat_ui")
+	if combat_ui == null:
+		push_warning("game._restore_combat: no combat_ui in scene")
+		return
+
+	# Walk every tile node; if it's visible and has a live saved monster,
+	# push that monster back into the combat UI without touching GameState.monsters.
+	for tile in get_tree().get_nodes_in_group("tiles"):
+		var tile_key = "%d,%d" % [tile.grid_x, tile.grid_y]
+		if not key_to_idx.has(tile_key):
+			continue
+		var tile_state = GameState.tiles.get(tile_key, {})
+		if not tile_state.get("visible", false):
+			continue
+		var mob_idx = key_to_idx[tile_key]
+		var monster = GameState.monsters[mob_idx]
+		if monster.get("hp", 0) <= 0:
+			continue
+
+		# Build sword attack from saved player attack stat
+		var sword         = AttackData.new()
+		sword.attack_name = "Sword"
+		sword.damage      = GameState.player.get("attack", 1)
+		sword.energy_cost = 1
+
+		combat_ui.add_mob_to_combat(mob_idx, [sword])
 
 
 # ── Shared tile spawning ──────────────────────────────────────────────────────
