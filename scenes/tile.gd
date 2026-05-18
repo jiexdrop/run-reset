@@ -28,11 +28,13 @@ func reveal() -> void:
 	SaveManager.save()
 	get_tree().get_first_node_in_group("game").center_camera_on_revealed()
 
+	# If this tile has a live mob, add it to combat automatically.
+	if _mob_key != "" and not _mob_dead:
+		_trigger_combat()
 
-# ── Mob indicator ─────────────────────────────────────────────────────────────
 
+# ── Mob indicator (visual only — no click interaction) ───────────────────────
 func _refresh_mob_indicator() -> void:
-	# Remove old indicator if present
 	if _mob_indicator:
 		_mob_indicator.queue_free()
 		_mob_indicator = null
@@ -40,64 +42,56 @@ func _refresh_mob_indicator() -> void:
 	if _mob_key == "" or _mob_dead:
 		return
 
-	# Build a simple clickable circle as the mob indicator.
-	# Replace with a Sprite2D + proper texture once you have mob tile sprites.
-	var indicator = Node2D.new()
+	var def = MobRegistry.get_def(_mob_key)
+	if def == null:
+		return
+
+	var indicator := Node2D.new()
 	indicator.name = "MobIndicator"
 
-	# We use a Label-based button so it works without extra assets.
-	# Swap this for a proper AnimatedSprite2D / Sprite2D in production.
-	var btn = TextureButton.new()
+	indicator.position = Vector2.ZERO
 
-	var def = MobRegistry.get_def(_mob_key)
+	var sprite : Sprite2D = Sprite2D.new()
+	sprite.texture = MobCard.MOB_SPRITES.get(def.sprite)
 
-	btn.texture_normal = MobCard.MOB_SPRITES.get(def.sprite)
+	# Scale to desired size
+	var icon_size := 50.0
 
-	btn.custom_minimum_size = Vector2(58, 58)
-	btn.position = -btn.custom_minimum_size / 2
+	if sprite.texture:
+		var tex_size = sprite.texture.get_size()
+		var scale_factor = min(
+			icon_size / tex_size.x,
+			icon_size / tex_size.y
+		)
+		sprite.scale = Vector2.ONE * scale_factor
 
-	btn.ignore_texture_size = true
-	btn.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	# Sprite2D is automatically centered by default
+	sprite.centered = true
 
-	btn.tooltip_text = _get_mob_label()
-
-	btn.pressed.connect(_on_mob_clicked)
-
-	indicator.add_child(btn)
-
+	indicator.add_child(sprite)
 	add_child(indicator)
+
 	_mob_indicator = indicator
 
+# ── Combat trigger (called on reveal) ────────────────────────────────────────
 
-func _get_mob_label() -> String:
-	var def = MobRegistry.get_def(_mob_key)
-	return def.mob_name if def else _mob_key
-
-
-# ── Combat trigger ────────────────────────────────────────────────────────────
-
-func _on_mob_clicked() -> void:
-	if _mob_dead:
-		return
-
+func _trigger_combat() -> void:
 	var def: MobDef = MobRegistry.get_def(_mob_key)
 	if def == null:
-		push_warning("tile._on_mob_clicked: unknown mob key '%s'" % _mob_key)
+		push_warning("tile._trigger_combat: unknown mob key '%s'" % _mob_key)
 		return
 
-	# Build a runtime mob entry and store it in GameState.monsters.
-	# We keep the tile key so CombatUI can mark the mob as dead when it falls.
+	# Build a runtime mob entry.
 	var mob_entry = {
 		"name":      def.mob_name,
 		"sprite":    def.sprite,
 		"hp":        def.max_hp,
 		"max_hp":    def.max_hp,
 		"xp_reward": def.xp_reward,
-		"attacks":   [],          # serialised below
+		"attacks":   [],
 		"tile_key":  "%d,%d" % [grid_x, grid_y],
 	}
 
-	# Serialise MobAttackData into plain dicts for GameState (JSON-safe).
 	for atk in def.attacks:
 		mob_entry["attacks"].append({
 			"attack_name": atk.attack_name,
@@ -105,7 +99,7 @@ func _on_mob_clicked() -> void:
 			"effect":      atk.effect,
 		})
 
-	# Replace any existing entry for this tile key (avoid duplicates on re-click).
+	# Replace or append in GameState.monsters.
 	var existing_idx = -1
 	for i in range(GameState.monsters.size()):
 		if GameState.monsters[i].get("tile_key", "") == mob_entry["tile_key"]:
@@ -120,16 +114,16 @@ func _on_mob_clicked() -> void:
 		GameState.monsters.append(mob_entry)
 		mob_idx = GameState.monsters.size() - 1
 
-	# Build player attacks from AttackData resources.
-	# For now we give the player a basic sword. Extend this with your AttackData pool.
-	var sword        = AttackData.new()
+	# Build the player's sword attack.
+	var sword         = AttackData.new()
 	sword.attack_name = "Sword"
 	sword.damage      = GameState.player.get("attack", 1)
 	sword.energy_cost = 1
 
 	var combat_ui = get_tree().get_first_node_in_group("combat_ui")
 	if combat_ui:
-		combat_ui.start_combat([mob_idx], [sword], "%d,%d" % [grid_x, grid_y])
+		# add_mob_to_combat handles both "start fresh" and "append to existing".
+		combat_ui.add_mob_to_combat(mob_idx, [sword])
 	else:
 		push_warning("tile: no node in group 'combat_ui' found")
 
@@ -159,7 +153,6 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 # ── Called by CombatUI when the mob on this tile dies ────────────────────────
 
 func on_mob_defeated() -> void:
-	print("ON MOB DEFEATED")
 	_mob_dead = true
 	var key = "%d,%d" % [grid_x, grid_y]
 	if GameState.tiles.has(key):

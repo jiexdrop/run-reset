@@ -4,10 +4,10 @@ extends Control
 ##
 ## PUBLIC API
 ## ──────────
-##   start_combat(mob_ids, player_attacks, tile_key)
-##     mob_ids        : Array[int]         — indices into GameState.monsters
+##   add_mob_to_combat(mob_idx, player_attacks)
+##     mob_idx        : int                — index into GameState.monsters
 ##     player_attacks : Array[AttackData]  — player's available attacks
-##     tile_key       : String             — "x,y" of the tile that triggered combat
+##     Starts combat if not active; appends the mob if combat is already running.
 ##
 ##   end_combat()      — hide panel, reset state
 ##   refresh_stats()   — re-draw player hearts / energy / xp from GameState
@@ -32,13 +32,12 @@ const MobCardScene = preload("res://scenes/mob_card.tscn")
 @onready var mob_row:        HBoxContainer = $MarginContainer/VBox/CombatSection/MobRow
 @onready var attack_bar:     HBoxContainer = $MarginContainer/VBox/AttackBar
 @onready var combat_section: Control       = $MarginContainer/VBox/CombatSection
-@onready var log_label:      Label         = $MarginContainer/VBox/LogLabel   # see note below
+@onready var log_label:      Label         = $MarginContainer/VBox/LogLabel
 
 # ── Runtime state ─────────────────────────────────────────────────────────────
 var _active_mob_ids:   Array  = []
 var _attacks:          Array  = []   # Array[AttackData]
 var _selected_attack:  int    = 0
-var _tile_key:         String = ""   # tile that started this combat
 
 # Effects that carry across turns
 var _player_stunned:   bool   = false
@@ -62,22 +61,44 @@ func refresh_stats() -> void:
 	_build_icon_row(exp_row,    p.get("xp", 0),       p.get("xp_to_next", 10), EXP_FULL,    EXP_EMPTY)
 
 
-## tile_key: "x,y" string so we can notify the tile when the mob dies.
-func start_combat(mob_ids: Array, player_attacks: Array, tile_key: String = "") -> void:
-	_active_mob_ids  = mob_ids.duplicate()
-	_attacks         = player_attacks
-	_selected_attack = 0
-	_tile_key        = tile_key
-	_player_stunned  = false
-	combat_section.visible = true
+## Adds mob_idx to the active combat.
+## If combat is not yet running, starts it fresh with the given attacks.
+## If combat is already running, appends the mob and merges attack lists.
+func add_mob_to_combat(mob_idx: int, player_attacks: Array) -> void:
+	if _active_mob_ids.has(mob_idx):
+		return   # already in combat, skip duplicate
+
+	if not combat_section.visible:
+		# Starting fresh.
+		_active_mob_ids  = [mob_idx]
+		_attacks         = player_attacks.duplicate()
+		_selected_attack = 0
+		_player_stunned  = false
+		combat_section.visible = true
+		_rebuild_attack_bar()
+		_log("")
+	else:
+		# Append to existing combat.
+		_active_mob_ids.append(mob_idx)
+		# Merge any new attack types (deduplicate by attack_name).
+		for atk in player_attacks:
+			var already_have = false
+			for existing in _attacks:
+				if existing.attack_name == atk.attack_name:
+					already_have = true
+					break
+			if not already_have:
+				_attacks.append(atk)
+		_rebuild_attack_bar()
+		_log("A new enemy joins the fight!")
+
 	_rebuild_mob_cards()
-	_rebuild_attack_bar()
-	_log("")
 
 
 func end_combat() -> void:
 	combat_section.visible = false
 	_active_mob_ids = []
+	_attacks        = []
 	_clear_children(mob_row)
 	_clear_children(attack_bar)
 	_log("")
@@ -143,43 +164,39 @@ func _on_mob_attacked(mob_id: int, base_dmg: int) -> void:
 	if _attacks.is_empty():
 		return
 
-	# 1. Apply selected attack's actual damage (overrides base_dmg from card)
 	var atk: AttackData = _attacks[_selected_attack]
 	var p = GameState.player
 
-	# Reapply correct damage (mob_card used player.attack; use atk.damage instead)
+	# Adjust damage: mob_card already applied player.attack; correct to atk.damage.
 	var mob = GameState.monsters[mob_id]
-	mob["hp"] = max(0, mob.get("hp", 0) - (atk.damage - base_dmg))   # adjust delta
+	mob["hp"] = max(0, mob.get("hp", 0) - (atk.damage - base_dmg))
 	GameState.monsters[mob_id] = mob
 
-	# 2. Consume energy
+	# Consume energy.
 	p["energy"] = max(0, p.get("energy", 0) - atk.energy_cost)
 	GameState.player = p
 	refresh_stats()
 
-	# 3. Check if mob died from the corrected damage
+	# If the corrected damage killed the mob, mob_died will fire from mob_card.
 	if mob["hp"] <= 0:
-		return   # mob_died signal will fire from mob_card; don't do mob turn
+		return
 
-	# 4. Mob retaliates (unless already handled by mob_died)
 	_do_mob_turn(mob_id)
 
 
 func _on_mob_died(mob_id: int) -> void:
-	# Grant XP and handle level-up
 	var xp_gain = GameState.monsters[mob_id].get("xp_reward", 1)
 	var p       = GameState.player
 	p["xp"]     = p.get("xp", 0) + xp_gain
 	if p["xp"] >= p.get("xp_to_next", 10):
 		p["xp"]    -= p["xp_to_next"]
 		p["level"]  = p.get("level", 1) + 1
-		p["max_hp"] = p.get("max_hp", 10) + 1   # level-up bonus: +1 heart
-		p["hp"]     = p["max_hp"]                 # full heal on level-up
+		p["max_hp"] = p.get("max_hp", 10) + 1
+		p["hp"]     = p["max_hp"]
 		_log("Level up! Now level %d" % p["level"])
 	GameState.player = p
 	refresh_stats()
 
-	# Notify the tile so it removes the mob indicator
 	_notify_tile_mob_dead(mob_id)
 
 	_active_mob_ids.erase(mob_id)
@@ -199,7 +216,6 @@ func _do_mob_turn(mob_id: int) -> void:
 		_log("You were stunned — mob skips!")
 		return
 
-	# Find the mob card node for this id
 	var card = _get_card_for_mob(mob_id)
 	if card == null:
 		return
@@ -210,15 +226,14 @@ func _do_mob_turn(mob_id: int) -> void:
 
 	var p       = GameState.player
 	var damage  = atk.get("damage", 1)
-	var effect  = atk.get("effect", 0)   # MobAttackData.Effect int
+	var effect  = atk.get("effect", 0)
 
 	p["hp"] = max(0, p.get("hp", 0) - damage)
 
-	var msg = "%s hits you for %d!" % [GameState.monsters[mob_id].get("name","Mob"), damage]
+	var msg = "%s hits you for %d!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]
 
-	# Handle effects
 	match effect:
-		1:   # POISON — deal 1 extra damage next turn (simple impl)
+		1:   # POISON
 			p["hp"] = max(0, p["hp"] - 1)
 			msg += " Poisoned! (-1 extra)"
 		2:   # STUN
@@ -236,7 +251,6 @@ func _do_mob_turn(mob_id: int) -> void:
 
 func _on_player_died() -> void:
 	_log("You died! Resetting...")
-	# Small delay so the player reads the message, then reset
 	await get_tree().create_timer(1.5).timeout
 	SaveManager.reset()
 	get_tree().change_scene_to_file("res://scenes/init.tscn")
@@ -253,19 +267,10 @@ func _notify_tile_mob_dead(mob_id: int) -> void:
 		return
 	var gx = parts[0].to_int()
 	var gy = parts[1].to_int()
-
-	# Tiles live inside a SubViewport so get_nodes_in_group won't find them.
-	# Walk down to the Game node and search its children directly.
-	var game = get_tree().root.find_child("Game", true, false)
-	if game == null:
-		push_warning("_notify_tile_mob_dead: could not find Game node")
-		return
-	for tile in game.get_children():
-		if tile.get("grid_x") == gx and tile.get("grid_y") == gy:
+	for tile in get_tree().get_nodes_in_group("tiles"):
+		if tile.grid_x == gx and tile.grid_y == gy:
 			tile.on_mob_defeated()
 			return
-
-	# Fallback
 	if GameState.tiles.has(tile_key):
 		GameState.tiles[tile_key]["mob_dead"] = true
 
