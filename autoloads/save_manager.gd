@@ -7,7 +7,8 @@ func save() -> void:
 	var data = {
 		"tiles":    GameState.tiles,
 		"monsters": GameState.monsters,
-		"player":   GameState.player
+		"player":   GameState.player,
+		"level":    GameState.level,
 	}
 	var f = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	f.store_string(JSON.stringify(data))
@@ -21,12 +22,14 @@ func load_save() -> void:
 		GameState.tiles    = parsed.get("tiles",    {})
 		GameState.monsters = parsed.get("monsters", [])
 		GameState.player   = parsed.get("player",   GameState.player)
+		GameState.level    = parsed.get("level",    1)
 
 func reset() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)
 	GameState.tiles    = {}
 	GameState.monsters = []
+	GameState.level    = 1
 	GameState.player   = {
 		"hp":         10,
 		"max_hp":     10,
@@ -38,3 +41,10 @@ func reset() -> void:
 		"max_energy": 10,
 	}
 	GameState.dirty = false
+
+## Advance to the next map level, preserving player stats.
+func next_level() -> void:
+	GameState.tiles    = {}
+	GameState.monsters = []
+	GameState.level   += 1
+	GameState.dirty    = false

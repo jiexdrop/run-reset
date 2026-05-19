@@ -63,7 +63,13 @@ layout_mode = 2
 text = "— Enemies —"
 horizontal_alignment = 1
 
-[node name="MobRow" type="HBoxContainer" parent="MarginContainer/VBox/CombatSection" unique_id=200000011]
+[node name="MobScrollContainer" type="ScrollContainer" parent="MarginContainer/VBox/CombatSection" unique_id=200000015]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 160)
+horizontal_scroll_mode = 1
+vertical_scroll_mode = 0
+
+[node name="MobRow" type="HBoxContainer" parent="MarginContainer/VBox/CombatSection/MobScrollContainer" unique_id=200000011]
 layout_mode = 2
 alignment = 1
 

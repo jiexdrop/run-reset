@@ -1,7 +1,8 @@
 extends Node
 
-var tiles: Dictionary = {}     # key: "x,y"  value: { visible, type, … }
-var monsters: Array = []       # [ { id, name, hp, max_hp, sprite, xp_reward, … }, … ]
+var tiles: Dictionary = {}
+var monsters: Array = []
+var level: int = 1
 var player: Dictionary = {
 	"hp":         10,
 	"max_hp":     10,
@@ -12,7 +13,7 @@ var player: Dictionary = {
 	"energy":     10,
 	"max_energy": 10,
 }
-var dirty: bool = false        # true = unsaved changes
+var dirty: bool = false
 
 func mark_dirty() -> void:
 	dirty = true
