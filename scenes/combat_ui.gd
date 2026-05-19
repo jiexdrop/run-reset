@@ -252,13 +252,25 @@ func _notify_tile_mob_dead(mob_id: int) -> void:
 		return
 	var gx = parts[0].to_int()
 	var gy = parts[1].to_int()
+
+	# get_nodes_in_group is sceneTree-wide, but SubViewport can isolate it.
+	# Walk all scene trees to find the tile.
 	for tile in get_tree().get_nodes_in_group("tiles"):
 		if tile.grid_x == gx and tile.grid_y == gy:
 			tile.on_mob_defeated()
 			return
+
+	# Fallback: SubViewport isolation — find game node directly.
+	var game = get_tree().get_first_node_in_group("game")
+	if game:
+		for tile in game.get_children():
+			if tile.get("grid_x") == gx and tile.get("grid_y") == gy:
+				tile.on_mob_defeated()
+				return
+
+	# Last resort: update state only.
 	if GameState.tiles.has(tile_key):
 		GameState.tiles[tile_key]["mob_dead"] = true
-
 
 func _get_card_for_mob(mob_id: int) -> Node:
 	for card in mob_row.get_children():

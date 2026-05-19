@@ -28,9 +28,10 @@ func reveal() -> void:
 		_trigger_combat()
 
 func _refresh_mob_indicator() -> void:
-	if _mob_indicator:
+	print("_refresh_mob_indicator")
+	if is_instance_valid(_mob_indicator):
 		_mob_indicator.queue_free()
-		_mob_indicator = null
+	_mob_indicator = null
 
 	if _mob_key == "" or _mob_dead:
 		return
@@ -45,6 +46,7 @@ func _refresh_mob_indicator() -> void:
 
 	var sprite : Sprite2D = Sprite2D.new()
 	sprite.texture = MobCard.MOB_SPRITES.get(def.sprite)
+	sprite.centered = true
 
 	var icon_size := 50.0
 	if sprite.texture:
@@ -52,11 +54,9 @@ func _refresh_mob_indicator() -> void:
 		var scale_factor = min(icon_size / tex_size.x, icon_size / tex_size.y)
 		sprite.scale = Vector2.ONE * scale_factor
 
-	sprite.centered = true
 	indicator.add_child(sprite)
 	add_child(indicator)
 	_mob_indicator = indicator
-
 
 func _trigger_combat() -> void:
 	var def: MobDef = MobRegistry.get_def(_mob_key)
