@@ -21,10 +21,11 @@ func reveal() -> void:
 	GameState.mark_dirty()
 	SaveManager.save()
 	get_tree().get_first_node_in_group("game").center_camera_on_revealed()
+	_refresh_mob_indicator()  # show indicator now that tile is visible
 
+	# If this tile has a live mob, add it to combat automatically.
 	if _mob_key != "" and not _mob_dead:
 		_trigger_combat()
-
 
 func _refresh_mob_indicator() -> void:
 	if _mob_indicator:
