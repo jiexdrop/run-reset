@@ -7,10 +7,16 @@ layout_mode = 3
 anchors_preset = 0
 size_flags_horizontal = 3
 size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 120)
 script = ExtResource("1_invui")
 
 [node name="VBox" type="VBoxContainer" parent="." unique_id=400000010]
-layout_mode = 0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 4
@@ -34,6 +40,7 @@ text = "🎒"
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 80)
 
 [node name="SlotGrid" type="GridContainer" parent="VBox/ScrollContainer" unique_id=400000003]
 layout_mode = 2

@@ -57,7 +57,9 @@ func _build_slots() -> void:
 		slot.slot_clicked.connect(_on_slot_clicked)
 		_slots.append(slot)
 
-	# Don't call _update_columns() here — size isn't valid yet at build time.
+	# Fallback: set a safe column count immediately so slots are never hidden
+	# if the deferred _update_columns call fires before size is resolved.
+	slot_grid.columns = SLOT_MIN_COLS
 
 
 func _on_inventory_changed() -> void:
@@ -69,14 +71,17 @@ func _update_columns() -> void:
 	if slot_grid == null:
 		return
 
+	# Try the scroll container width first, then fall back through the hierarchy.
 	var scroll := slot_grid.get_parent() as Control
-	var available: float = scroll.size.x if scroll != null else 0.0
-	if available <= 0:
+	var available: float = 0.0
+
+	if scroll != null and scroll.size.x > 0:
+		available = scroll.size.x
+	elif size.x > 0:
 		available = size.x
-	# Last-resort fallback: use the minimum slot size * SLOT_MIN_COLS so the
-	# grid is never stuck at 0 columns (which hides all children).
-	if available <= 0:
-		slot_grid.columns = SLOT_MIN_COLS
+	else:
+		# Size not resolved yet — try again next frame.
+		call_deferred("_update_columns")
 		return
 
 	var slot_min := 56.0
