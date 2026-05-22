@@ -24,6 +24,8 @@ func _ready() -> void:
 	resized.connect(_update_columns)
 	_build_slots()
 	InventoryState.inventory_changed.connect(_on_inventory_changed)
+	# Defer so the Control has gone through its first layout pass and size is valid.
+	call_deferred("_update_columns")
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -55,7 +57,7 @@ func _build_slots() -> void:
 		slot.slot_clicked.connect(_on_slot_clicked)
 		_slots.append(slot)
 
-	_update_columns()
+	# Don't call _update_columns() here — size isn't valid yet at build time.
 
 
 func _on_inventory_changed() -> void:
@@ -66,12 +68,17 @@ func _on_inventory_changed() -> void:
 func _update_columns() -> void:
 	if slot_grid == null:
 		return
-	var available: float = (slot_grid.get_parent() as Control).size.x
+
+	var scroll := slot_grid.get_parent() as Control
+	var available: float = scroll.size.x if scroll != null else 0.0
 	if available <= 0:
 		available = size.x
+	# Last-resort fallback: use the minimum slot size * SLOT_MIN_COLS so the
+	# grid is never stuck at 0 columns (which hides all children).
 	if available <= 0:
+		slot_grid.columns = SLOT_MIN_COLS
 		return
-	# Use the ItemSlot's minimum size (56px from item_slot.tscn) as the column unit.
+
 	var slot_min := 56.0
 	var cols := int((available + SLOT_SEPARATION) / (slot_min + SLOT_SEPARATION))
 	cols = clampi(cols, SLOT_MIN_COLS, SLOT_MAX_COLS)
