@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bhwyuf84ejc14"]
 
 [ext_resource type="Script" uid="uid://dguq0wgu7kyfu" path="res://scenes/combat_ui.gd" id="1_combatui"]
+[ext_resource type="PackedScene" uid="uid://inv_ui_001" path="res://scenes/inventory_ui.tscn" id="2_invui"]
 
 [node name="CombatUi" type="Control" unique_id=1815585971]
 layout_mode = 3
@@ -63,13 +64,7 @@ layout_mode = 2
 text = "— Enemies —"
 horizontal_alignment = 1
 
-[node name="MobScrollContainer" type="ScrollContainer" parent="MarginContainer/VBox/CombatSection" unique_id=200000015]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 160)
-horizontal_scroll_mode = 1
-vertical_scroll_mode = 0
-
-[node name="MobRow" type="HBoxContainer" parent="MarginContainer/VBox/CombatSection/MobScrollContainer" unique_id=200000011]
+[node name="MobRow" type="HBoxContainer" parent="MarginContainer/VBox/CombatSection" unique_id=200000011]
 layout_mode = 2
 alignment = 1
 
@@ -83,3 +78,9 @@ alignment = 1
 [node name="LogLabel" type="Label" parent="MarginContainer/VBox" unique_id=200000014]
 layout_mode = 2
 autowrap_mode = 3
+
+[node name="Separator3" type="HSeparator" parent="MarginContainer/VBox" unique_id=200000015]
+layout_mode = 2
+
+[node name="InventoryUI" parent="MarginContainer/VBox" instance=ExtResource("2_invui")]
+layout_mode = 2

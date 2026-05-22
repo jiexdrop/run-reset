@@ -1,0 +1,26 @@
+[gd_scene format=3 uid="uid://inv_ui_001"]
+
+[ext_resource type="Script" uid="uid://inv_ui_sc" path="res://scenes/inventory_ui.gd" id="1_invui"]
+
+[node name="InventoryUI" type="Control" unique_id=400000001]
+custom_minimum_size = Vector2(0, 64)
+script = ExtResource("1_invui")
+
+[node name="HBox" type="HBoxContainer" parent="." unique_id=400000002]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="SlotRow" type="HBoxContainer" parent="HBox" unique_id=400000003]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="BagButton" type="Button" parent="HBox" unique_id=400000004]
+custom_minimum_size = Vector2(40, 56)
+layout_mode = 2
+text = "🎒"
+tooltip_text = "Open Bag"
