@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://bush_scene_001"]
+
+[ext_resource type="Script" path="res://scenes/bush.gd" id="1_bush"]
+[ext_resource type="Texture2D" path="res://assets/bush/bush_berries.png" id="2_bush"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_bush"]
+size = Vector2(50, 50)
+
+[node name="Bush" type="Area2D" unique_id=600000001]
+script = ExtResource("1_bush")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=600000002]
+texture = ExtResource("2_bush")
+centered = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=600000003]
+shape = SubResource("RectangleShape2D_bush")
+
+[connection signal="input_event" from="." to="." method="_on_input_event"]
