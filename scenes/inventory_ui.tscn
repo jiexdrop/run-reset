@@ -1,15 +1,16 @@
-[gd_scene format=3 uid="uid://inv_ui_001"]
+[gd_scene format=3 uid="uid://dtbtsin0kra25"]
 
-[ext_resource type="Script" uid="uid://inv_ui_sc" path="res://scenes/inventory_ui.gd" id="1_invui"]
+[ext_resource type="Script" uid="uid://gqaovbnhdhau" path="res://scenes/inventory_ui.gd" id="1_invui"]
 
 [node name="InventoryUI" type="Control" unique_id=400000001]
-layout_mode = 2
-size_flags_vertical = 3
 custom_minimum_size = Vector2(0, 120)
+layout_mode = 3
+anchors_preset = 0
+size_flags_vertical = 3
 script = ExtResource("1_invui")
 
 [node name="VBox" type="VBoxContainer" parent="." unique_id=400000010]
-layout_mode = 2
+layout_mode = 0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 4
@@ -26,17 +27,17 @@ text = "Inventory"
 [node name="BagButton" type="Button" parent="VBox/HeaderRow" unique_id=400000004]
 custom_minimum_size = Vector2(40, 32)
 layout_mode = 2
-text = "🎒"
 tooltip_text = "Open Bag"
+text = "🎒"
 
 [node name="ScrollContainer" type="ScrollContainer" parent="VBox" unique_id=400000020]
+custom_minimum_size = Vector2(0, 112)
 layout_mode = 2
 size_flags_vertical = 3
-custom_minimum_size = Vector2(0, 112)
 
 [node name="SlotGrid" type="GridContainer" parent="VBox/ScrollContainer" unique_id=400000003]
 layout_mode = 2
 size_flags_horizontal = 3
-columns = 5
 theme_override_constants/h_separation = 4
 theme_override_constants/v_separation = 4
+columns = 5
