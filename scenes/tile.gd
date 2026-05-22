@@ -133,7 +133,7 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 				var query = PhysicsRayQueryParameters2D.create(position, position + dir)
 				query.collide_with_areas = true
 				var result = space_state.intersect_ray(query)
-				if result:
+				if result and result.collider.is_in_group("tiles"):
 					result.collider.reveal()
 
 

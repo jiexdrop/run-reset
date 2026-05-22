@@ -1,12 +1,14 @@
 extends Node2D
 
 const TILE = preload("uid://ceosbosrytods")
+const BUSH = preload("res://scenes/bush.tscn")
 
 @onready var camera_2d: Camera2D = $Camera2D
 
 const TILE_SIZE = 70
 const NUM_ROOMS = 20
-const MOB_SPAWN_CHANCE = 0.6
+const MOB_SPAWN_CHANCE  = 0.6
+const BUSH_SPAWN_CHANCE = 0.25   # per room tile (no mob required)
 
 const CAMERA_PADDING  = 1.5
 const CAMERA_SPEED    = 4.0
@@ -26,7 +28,6 @@ func _ready() -> void:
 		generate_tiles()
 	else:
 		restore_tiles()
-		# Restore door if all mobs were already dead when we saved.
 		_check_restore_door()
 
 	_update_camera_target()
@@ -109,11 +110,18 @@ func generate_tiles() -> void:
 			if randf() < MOB_SPAWN_CHANCE:
 				mob_key = pool[randi() % pool.size()]
 
+		# Bushes only on room tiles with no mob, and not the start room.
+		var has_bush: bool = false
+		if tile_type == "room" and key != "0,0" and mob_key == "":
+			has_bush = randf() < BUSH_SPAWN_CHANCE
+
 		GameState.tiles[key] = {
-			"visible":  key == "0,0",
-			"type":     tile_type,
-			"mob":      mob_key,
-			"mob_dead": false,
+			"visible":         key == "0,0",
+			"type":            tile_type,
+			"mob":             mob_key,
+			"mob_dead":        false,
+			"has_bush":        has_bush,
+			"bush_harvested":  false,
 		}
 
 	_spawn_tiles()
@@ -153,14 +161,12 @@ func restore_combat(combat_ui: Control) -> void:
 		combat_ui.add_mob_to_combat(mob_idx, [sword])
 
 
-# ── Door: spawn when all mobs are cleared ─────────────────────────────────────
+# ── Door ──────────────────────────────────────────────────────────────────────
 
-## Called by CombatUI when the last monster on the level dies.
 func spawn_exit_door() -> void:
 	if _door_node != null:
-		return  # already spawned
+		return
 
-	# Place the door at the centroid of all revealed tiles.
 	var revealed: Array = []
 	for key in GameState.tiles:
 		if GameState.tiles[key].get("visible", false):
@@ -175,7 +181,6 @@ func spawn_exit_door() -> void:
 			center += v
 		center /= revealed.size()
 
-	# Snap to the nearest tile position.
 	var best_key := "0,0"
 	var best_dist := INF
 	for key in GameState.tiles:
@@ -193,7 +198,6 @@ func spawn_exit_door() -> void:
 	_door_node = _build_door_node(door_world_pos)
 	add_child(_door_node)
 
-	# Persist door state so a reload knows to show it.
 	GameState.tiles["door_spawned"] = {"door": true}
 	GameState.mark_dirty()
 	SaveManager.save()
@@ -202,9 +206,6 @@ func spawn_exit_door() -> void:
 func _check_restore_door() -> void:
 	if not GameState.tiles.has("door_spawned"):
 		return
-	# All mobs cleared on a saved game — restore the door.
-	# Re-use spawn_exit_door; temporarily remove the sentinel so it doesn't
-	# short-circuit, then remove it from tiles since spawn adds it back.
 	GameState.tiles.erase("door_spawned")
 	spawn_exit_door()
 
@@ -224,7 +225,6 @@ func _build_door_node(world_pos: Vector2) -> Node2D:
 		tex_rect.scale = Vector2(door_display_size / sz.x, door_display_size / sz.y)
 	door.add_child(tex_rect)
 
-	# Label above the door.
 	var lbl               := Label.new()
 	lbl.text              = "Next Floor"
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -232,7 +232,6 @@ func _build_door_node(world_pos: Vector2) -> Node2D:
 	lbl.add_theme_color_override("font_color", Color.WHITE)
 	door.add_child(lbl)
 
-	# Clickable area.
 	var area     := Area2D.new()
 	var shape    := CollisionShape2D.new()
 	var rect_shp := RectangleShape2D.new()
@@ -266,10 +265,9 @@ func _enter_next_level() -> void:
 func _spawn_tiles() -> void:
 	_spawned_tiles.clear()
 	for key in GameState.tiles:
-		# Skip the door sentinel key.
 		if key == "door_spawned":
 			continue
-		var parts    = key.split(",")
+		var parts = key.split(",")
 		if parts.size() < 2:
 			continue
 		var gx       = parts[0].to_int()
@@ -285,6 +283,37 @@ func _spawn_tiles() -> void:
 		instance.set_mob(mob_key, mob_dead)
 		add_child(instance)
 		_spawned_tiles.append(instance)
+
+		# Spawn bush on this tile if flagged (only when tile is visible on load).
+		if GameState.tiles[key].get("has_bush", false):
+			_spawn_bush(key, gx, gy,
+				GameState.tiles[key].get("visible", false),
+				GameState.tiles[key].get("bush_harvested", false))
+
+
+## Spawns a Bush node as a child of the tile so it appears/hides with it.
+func _spawn_bush(tile_key: String, gx: int, gy: int, visible: bool, harvested: bool) -> void:
+	var tile_node: Node2D = null
+	for t in _spawned_tiles:
+		if t.grid_x == gx and t.grid_y == gy:
+			tile_node = t
+			break
+	if tile_node == null:
+		return
+
+	var bush: Bush = BUSH.instantiate()
+	bush.z_index   = 5
+	# Offset slightly so it doesn't overlap the mob indicator perfectly.
+	bush.position  = Vector2(15, -15)
+	bush.visible   = visible
+	tile_node.add_child(bush)
+	bush.setup(tile_key, harvested)
+
+	# When the tile reveals, make the bush visible too.
+	# tile.gd calls reveal() which makes the tile visible — we mirror that.
+	tile_node.visibility_changed.connect(func():
+		bush.visible = tile_node.visible
+	)
 
 
 # ── Camera ────────────────────────────────────────────────────────────────────

@@ -2,20 +2,14 @@ extends Node
 
 ## ItemRegistry — maps item_key strings to item definitions.
 ##
-## Add new items here.  The key must match what you store in InventoryState slots.
-##
-## Example definition:
-##   "health_potion": {
-##       "name":  "Health Potion",
-##       "icon":  preload("res://assets/items/health_potion.png"),
-##       "desc":  "Restores 3 HP.",
-##   }
-##
-## If you haven't created item assets yet, icons will be null and the slot
-## will display empty (no icon shown).
+## Add new items here. The key must match what you store in InventoryState slots.
 
 var _items: Dictionary = {
-	# Populate with your actual items once assets exist, e.g.:
+	"berries": {
+		"name": "Berries",
+		"icon": preload("res://assets/items/berries.png"),
+		"desc": "A handful of wild berries. Restores 1 HP.",
+	},
 	# "sword":         { "name": "Iron Sword",    "icon": preload("res://assets/items/sword.png"),         "desc": "A trusty blade." },
 	# "health_potion": { "name": "Health Potion",  "icon": preload("res://assets/items/health_potion.png"), "desc": "Restores 3 HP." },
 }
