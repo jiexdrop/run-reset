@@ -23,7 +23,7 @@ const MobCardScene = preload("res://scenes/mob_card.tscn")
 @onready var hearts_row:     HBoxContainer = $MarginContainer/VBox/StatsSection/HeartsRow
 @onready var energy_row:     HBoxContainer = $MarginContainer/VBox/StatsSection/EnergyRow
 @onready var exp_row:        HBoxContainer = $MarginContainer/VBox/StatsSection/ExpRow
-@onready var mob_row:        HBoxContainer = $MarginContainer/VBox/CombatSection/MobScrollContainer/MobRow
+@onready var mob_row:        HBoxContainer = $MarginContainer/VBox/CombatSection/MobRow
 @onready var attack_bar:     HBoxContainer = $MarginContainer/VBox/AttackBar
 @onready var combat_section: Control       = $MarginContainer/VBox/CombatSection
 @onready var log_label:      Label         = $MarginContainer/VBox/LogLabel
@@ -97,6 +97,8 @@ func _build_icon_row(row: HBoxContainer, current: int, maximum: int,
 
 
 func _rebuild_mob_cards() -> void:
+	if mob_row == null:
+		return
 	_clear_children(mob_row)
 	for mob_id in _active_mob_ids:
 		if mob_id >= GameState.monsters.size():
@@ -109,6 +111,8 @@ func _rebuild_mob_cards() -> void:
 
 
 func _rebuild_attack_bar() -> void:
+	if attack_bar == null:
+		return
 	_clear_children(attack_bar)
 	for i in range(_attacks.size()):
 		var atk: AttackData = _attacks[i]
@@ -285,5 +289,7 @@ func _log(msg: String) -> void:
 
 
 func _clear_children(node: Node) -> void:
+	if node == null:
+		return
 	for child in node.get_children():
 		child.queue_free()
