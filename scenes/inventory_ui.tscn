@@ -1,11 +1,11 @@
-[gd_scene format=3 uid="uid://dtbtsin0kra25"]
+[gd_scene format=3 uid="uid://bpu8ms8fk3kf1"]
 
 [ext_resource type="Script" uid="uid://gqaovbnhdhau" path="res://scenes/inventory_ui.gd" id="1_invui"]
 
 [node name="InventoryUI" type="Control" unique_id=400000001]
-custom_minimum_size = Vector2(0, 120)
 layout_mode = 3
 anchors_preset = 0
+size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("1_invui")
 
@@ -31,13 +31,14 @@ tooltip_text = "Open Bag"
 text = "🎒"
 
 [node name="ScrollContainer" type="ScrollContainer" parent="VBox" unique_id=400000020]
-custom_minimum_size = Vector2(0, 112)
 layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 3
 
 [node name="SlotGrid" type="GridContainer" parent="VBox/ScrollContainer" unique_id=400000003]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/h_separation = 4
 theme_override_constants/v_separation = 4
 columns = 5

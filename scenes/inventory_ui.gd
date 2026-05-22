@@ -1,78 +1,100 @@
 extends Control
-class_name InventoryUI
 
-## InventoryUI — hotbar strip shown permanently inside CombatUI.
-## Mirrors BagUI's pattern exactly: builds ItemSlot instances, listens to
-## InventoryState.inventory_changed, and forwards drag/drop signals upward.
-
-signal drag_requested(container: String, index: int)
-signal drop_requested(container: String, index: int)
+## Emitted when a slot is clicked. Passes the slot index.
+signal slot_clicked(index: int)
+## Emitted when the bag button is pressed.
 signal bag_opened
 
-const ItemSlotScene = preload("res://scenes/item_slot.tscn")
+# ── Configuration ────────────────────────────────────────────────────────────
+const SLOT_MIN_SIZE  := Vector2(40, 40)  # minimum slot size before shrinking
+const SLOT_MIN_COLS  := 2                # never fewer than this many columns
+const SLOT_MAX_COLS  := 10               # never more than this many columns
+const SLOT_SEPARATION := 4              # must match the scene's h_separation
 
+# ── Node refs ────────────────────────────────────────────────────────────────
 @onready var slot_grid  : GridContainer = $VBox/ScrollContainer/SlotGrid
 @onready var bag_button : Button        = $VBox/HeaderRow/BagButton
 
-var _slots: Array = []
+# ── State ─────────────────────────────────────────────────────────────────────
+var slot_buttons : Array[Button] = []
+var item_data    : Array         = []   # fill from outside; one entry per slot
 
 
 func _ready() -> void:
-	bag_button.pressed.connect(func(): bag_opened.emit())
-	_build_slots()
-	InventoryState.inventory_changed.connect(_on_inventory_changed)
-	# Keep columns responsive to width changes.
+	bag_button.pressed.connect(_on_bag_pressed)
+	# Recalculate columns whenever our width changes.
 	resized.connect(_update_columns)
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
+
+## Call this to (re)build the slot grid with `count` slots.
+func setup(count: int) -> void:
+	_clear_slots()
+	for i in count:
+		var btn := Button.new()
+		btn.custom_minimum_size = SLOT_MIN_SIZE
+		# Expand horizontally AND vertically so slots fill all available space.
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.size_flags_vertical   = Control.SIZE_EXPAND_FILL
+		btn.flat = false
+		btn.name = "Slot%d" % i
+		btn.tooltip_text = "Slot %d" % (i + 1)
+		btn.pressed.connect(_on_slot_pressed.bind(i))
+		slot_grid.add_child(btn)
+		slot_buttons.append(btn)
 	_update_columns()
 
 
-# ── Slot construction ─────────────────────────────────────────────────────────
-
-func _build_slots() -> void:
-	for child in slot_grid.get_children():
-		child.queue_free()
-	_slots.clear()
-
-	for i in range(InventoryState.HOTBAR_SIZE):
-		var slot: ItemSlot = ItemSlotScene.instantiate()
-		slot_grid.add_child(slot)
-		slot.setup("hotbar", i, false)
-		slot.slot_clicked.connect(_on_slot_clicked)
-		slot.drag_started.connect(_on_slot_drag)
-		slot.drop_received.connect(_on_slot_drop)
-		_slots.append(slot)
+## Refresh a single slot's icon/text from `item_data`.
+func refresh_slot(index: int) -> void:
+	if index >= slot_buttons.size():
+		return
+	var btn := slot_buttons[index]
+	if index < item_data.size() and item_data[index] != null:
+		var item = item_data[index]
+		btn.text = item.get("icon_text", "")
+		btn.tooltip_text = item.get("name", "Slot %d" % (index + 1))
+	else:
+		btn.text = ""
+		btn.tooltip_text = "Slot %d" % (index + 1)
 
 
-# ── Responsive columns ────────────────────────────────────────────────────────
+## Refresh every slot at once.
+func refresh_all() -> void:
+	for i in slot_buttons.size():
+		refresh_slot(i)
 
+
+# ── Internal helpers ──────────────────────────────────────────────────────────
+
+func _clear_slots() -> void:
+	for btn in slot_buttons:
+		btn.queue_free()
+	slot_buttons.clear()
+
+
+## Recalculate how many columns fit in the current width.
 func _update_columns() -> void:
 	if slot_grid == null:
 		return
-	const SLOT_W   :       = 56   # ItemSlot custom_minimum_size.x
-	const SEP      :       = 4    # h_separation in the scene
-	var available  : float = slot_grid.get_parent().size.x
+	var available: float = (slot_grid.get_parent() as Control).size.x  # ScrollContainer width
 	if available <= 0:
-		available = size.x
-	var cols := int((available + SEP) / (SLOT_W + SEP))
-	cols = clampi(cols, 2, InventoryState.HOTBAR_SIZE)
+		available = size.x                            # fallback to Control width
+	if available <= 0:
+		return
+	# cols = floor((available + sep) / (min_slot_size + sep))
+	var cols := int((available + SLOT_SEPARATION) / (SLOT_MIN_SIZE.x + SLOT_SEPARATION))
+	cols = clampi(cols, SLOT_MIN_COLS, SLOT_MAX_COLS)
 	if slot_grid.columns != cols:
 		slot_grid.columns = cols
 
 
-# ── Signal forwarding ─────────────────────────────────────────────────────────
+# ── Signal handlers ───────────────────────────────────────────────────────────
 
-func _on_inventory_changed() -> void:
-	for slot in _slots:
-		slot.refresh()
-
-
-func _on_slot_clicked(container: String, index: int) -> void:
-	drop_requested.emit(container, index)
+func _on_slot_pressed(index: int) -> void:
+	slot_clicked.emit(index)
 
 
-func _on_slot_drag(container: String, index: int) -> void:
-	drag_requested.emit(container, index)
-
-
-func _on_slot_drop(container: String, index: int) -> void:
-	drop_requested.emit(container, index)
+func _on_bag_pressed() -> void:
+	bag_opened.emit()

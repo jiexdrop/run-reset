@@ -35,6 +35,8 @@ theme_override_constants/margin_bottom = 8
 
 [node name="VBox" type="VBoxContainer" parent="MarginContainer" unique_id=200000002]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 
 [node name="StatsSection" type="VBoxContainer" parent="MarginContainer/VBox" unique_id=200000003]
 layout_mode = 2
@@ -84,3 +86,5 @@ layout_mode = 2
 
 [node name="InventoryUI" parent="MarginContainer/VBox" unique_id=1195445285 instance=ExtResource("2_invui")]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
