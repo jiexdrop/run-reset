@@ -11,8 +11,8 @@ class_name InventoryUI
 const ItemSlotScene = preload("res://scenes/item_slot.tscn")
 const BagUIScene    = preload("res://scenes/bag_ui.tscn")
 
-@onready var _slot_row:  HBoxContainer = $SlotRow
-@onready var _bag_btn:   Button        = $BagButton
+@onready var _slot_row: HBoxContainer = $HBox/SlotRow
+@onready var _bag_btn:  Button        = $HBox/BagButton
 
 var _slots: Array  = []    # Array[ItemSlot]
 var _bag_ui: Control = null

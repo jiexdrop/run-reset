@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bhwyuf84ejc14"]
 
 [ext_resource type="Script" uid="uid://dguq0wgu7kyfu" path="res://scenes/combat_ui.gd" id="1_combatui"]
-[ext_resource type="PackedScene" uid="uid://inv_ui_001" path="res://scenes/inventory_ui.tscn" id="2_invui"]
+[ext_resource type="PackedScene" path="res://scenes/inventory_ui.tscn" id="2_invui"]
 
 [node name="CombatUi" type="Control" unique_id=1815585971]
 layout_mode = 3
@@ -82,5 +82,5 @@ autowrap_mode = 3
 [node name="Separator3" type="HSeparator" parent="MarginContainer/VBox" unique_id=200000015]
 layout_mode = 2
 
-[node name="InventoryUI" parent="MarginContainer/VBox" instance=ExtResource("2_invui")]
+[node name="InventoryUI" parent="MarginContainer/VBox" unique_id=1195445285 instance=ExtResource("2_invui")]
 layout_mode = 2

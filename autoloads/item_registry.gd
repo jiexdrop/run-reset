@@ -27,7 +27,7 @@ func get_icon(item_key: String) -> Texture2D:
 	return null
 
 
-func get_name(item_key: String) -> String:
+func get_item_name(item_key: String) -> String:
 	if _items.has(item_key):
 		return _items[item_key].get("name", item_key)
 	return item_key
