@@ -1,161 +1,98 @@
 extends Control
-class_name InventoryUI
 
-## InventoryUI — the 8-slot hotbar strip shown inside CombatUI.
-##
-## Layout (left→right):
-##   [Slot0][Slot1]…[Slot7]  [🎒 Bag]
-##
-## The "Bag" button opens the BagUI overlay (spawned as a sibling in the scene tree).
+## Emitted when a slot is clicked. Passes the slot index.
+signal slot_clicked(index: int)
+## Emitted when the bag button is pressed.
+signal bag_opened
 
-const ItemSlotScene = preload("res://scenes/item_slot.tscn")
-const BagUIScene    = preload("res://scenes/bag_ui.tscn")
+# ── Configuration ────────────────────────────────────────────────────────────
+const SLOT_SIZE      := Vector2(48, 48)   # width × height of each slot button
+const SLOT_MIN_COLS  := 2                 # never fewer than this many columns
+const SLOT_MAX_COLS  := 10                # never more than this many columns
+const SLOT_SEPARATION := 4               # must match the scene's h_separation
 
-@onready var _slot_row: HBoxContainer = $HBox/SlotRow
-@onready var _bag_btn:  Button        = $HBox/BagButton
+# ── Node refs ────────────────────────────────────────────────────────────────
+@onready var slot_grid  : GridContainer = $VBox/ScrollContainer/SlotGrid
+@onready var bag_button : Button        = $VBox/HeaderRow/BagButton
 
-var _slots: Array  = []    # Array[ItemSlot]
-var _bag_ui: Control = null
-
-# Drag state
-var _drag_container: String = ""
-var _drag_index:     int    = -1
-var _drag_ghost:     Control = null
+# ── State ─────────────────────────────────────────────────────────────────────
+var slot_buttons : Array[Button] = []
+var item_data    : Array         = []   # fill from outside; one entry per slot
 
 
 func _ready() -> void:
-	_build_slots()
-	InventoryState.inventory_changed.connect(_on_inventory_changed)
-	_bag_btn.pressed.connect(_toggle_bag)
+	bag_button.pressed.connect(_on_bag_pressed)
+	# Recalculate columns whenever our width changes.
+	resized.connect(_update_columns)
 
 
-# ── Build ─────────────────────────────────────────────────────────────────────
+# ── Public API ────────────────────────────────────────────────────────────────
 
-func _build_slots() -> void:
-	for child in _slot_row.get_children():
-		child.queue_free()
-	_slots.clear()
-
-	for i in range(InventoryState.HOTBAR_SIZE):
-		var slot: ItemSlot = ItemSlotScene.instantiate()
-		_slot_row.add_child(slot)
-		slot.setup("hotbar", i, false)
-		slot.slot_clicked.connect(_on_slot_clicked)
-		slot.drag_started.connect(_on_drag_started)
-		slot.drop_received.connect(_on_drop_received)
-		_slots.append(slot)
-
-
-# ── Refresh ───────────────────────────────────────────────────────────────────
-
-func _on_inventory_changed() -> void:
-	for slot in _slots:
-		slot.refresh()
+## Call this to (re)build the slot grid with `count` slots.
+func setup(count: int) -> void:
+	_clear_slots()
+	for i in count:
+		var btn := Button.new()
+		btn.custom_minimum_size = SLOT_SIZE
+		btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		btn.size_flags_vertical   = Control.SIZE_SHRINK_CENTER
+		btn.flat = false
+		btn.name = "Slot%d" % i
+		btn.tooltip_text = "Slot %d" % (i + 1)
+		btn.pressed.connect(_on_slot_pressed.bind(i))
+		slot_grid.add_child(btn)
+		slot_buttons.append(btn)
+	_update_columns()
 
 
-# ── Slot interaction ──────────────────────────────────────────────────────────
-
-func _on_slot_clicked(container: String, index: int) -> void:
-	# If a drag is in progress, treat click as a drop target.
-	if _drag_index >= 0:
-		_complete_drop(container, index)
+## Refresh a single slot's icon/text from `item_data`.
+func refresh_slot(index: int) -> void:
+	if index >= slot_buttons.size():
 		return
-	# Otherwise start drag from this slot (if non-empty and not frozen).
-	var slot_data = InventoryState.hotbar[index] if container == "hotbar" else InventoryState.bag[index]
-	if slot_data.get("item_key", "") == "" or slot_data.get("frozen", false):
+	var btn := slot_buttons[index]
+	if index < item_data.size() and item_data[index] != null:
+		var item = item_data[index]
+		# Adapt these property names to your actual item resource.
+		btn.text = item.get("icon_text", "")
+		btn.tooltip_text = item.get("name", "Slot %d" % (index + 1))
+	else:
+		btn.text = ""
+		btn.tooltip_text = "Slot %d" % (index + 1)
+
+
+## Refresh every slot at once.
+func refresh_all() -> void:
+	for i in slot_buttons.size():
+		refresh_slot(i)
+
+
+# ── Internal helpers ──────────────────────────────────────────────────────────
+
+func _clear_slots() -> void:
+	for btn in slot_buttons:
+		btn.queue_free()
+	slot_buttons.clear()
+
+
+## Recalculate how many columns fit in the current width.
+func _update_columns() -> void:
+	if slot_grid == null:
 		return
-	_start_drag(container, index)
+	var available: float = (slot_grid.get_parent() as Control).size.x  # ScrollContainer width
+	if available <= 0:
+		available = size.x                            # fallback to Control width
+	# cols = floor((available + sep) / (slot_size + sep))
+	var cols := int((available + SLOT_SEPARATION) / (SLOT_SIZE.x + SLOT_SEPARATION))
+	cols = clampi(cols, SLOT_MIN_COLS, SLOT_MAX_COLS)
+	if slot_grid.columns != cols:
+		slot_grid.columns = cols
 
 
-func _on_drag_started(container: String, index: int) -> void:
-	_start_drag(container, index)
+# ── Signal handlers ───────────────────────────────────────────────────────────
+
+func _on_slot_pressed(index: int) -> void:
+	slot_clicked.emit(index)
 
 
-func _on_drop_received(container: String, index: int) -> void:
-	_complete_drop(container, index)
-
-
-func _start_drag(container: String, index: int) -> void:
-	_drag_container = container
-	_drag_index     = index
-	_spawn_ghost(container, index)
-
-
-func _complete_drop(target_container: String, target_index: int) -> void:
-	if _drag_index < 0:
-		return
-	InventoryState.swap_slots(_drag_container, _drag_index, target_container, target_index)
-	_cancel_drag()
-
-
-func _cancel_drag() -> void:
-	_drag_container = ""
-	_drag_index     = -1
-	if _drag_ghost:
-		_drag_ghost.queue_free()
-		_drag_ghost = null
-
-
-# ── Ghost drag visual ─────────────────────────────────────────────────────────
-
-func _spawn_ghost(container: String, index: int) -> void:
-	if _drag_ghost:
-		_drag_ghost.queue_free()
-
-	var slot_data = InventoryState.hotbar[index] if container == "hotbar" else InventoryState.bag[index]
-	var item_key  = slot_data.get("item_key", "")
-	if item_key == "":
-		return
-
-	var ghost      = TextureRect.new()
-	ghost.texture  = ItemRegistry.get_icon(item_key)
-	ghost.custom_minimum_size = Vector2(48, 48)
-	ghost.stretch_mode        = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	ghost.modulate            = Color(1, 1, 1, 0.7)
-	ghost.mouse_filter        = Control.MOUSE_FILTER_IGNORE
-	ghost.z_index             = 100
-	add_child(ghost)
-	_drag_ghost = ghost
-
-
-func _process(_delta: float) -> void:
-	if _drag_ghost and _drag_index >= 0:
-		_drag_ghost.global_position = get_global_mouse_position() - Vector2(24, 24)
-
-
-func _unhandled_input(event: InputEvent) -> void:
-	if _drag_index >= 0 and event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
-			_cancel_drag()
-
-
-# ── Bag toggle ────────────────────────────────────────────────────────────────
-
-func _toggle_bag() -> void:
-	if _bag_ui and is_instance_valid(_bag_ui):
-		_bag_ui.queue_free()
-		_bag_ui = null
-		_bag_btn.text = "🎒"
-		return
-
-	_bag_ui = BagUIScene.instantiate()
-	# Add as sibling so it can float above CombatUI layout.
-	get_parent().add_child(_bag_ui)
-	_bag_ui.drag_requested.connect(_on_bag_drag_requested)
-	_bag_ui.drop_requested.connect(_on_bag_drop_requested)
-	_bag_ui.closed.connect(_on_bag_closed)
-	_bag_btn.text = "✕"
-
-
-func _on_bag_closed() -> void:
-	_bag_ui = null
-	_bag_btn.text = "🎒"
-
-
-# Forwarded from BagUI — treat the same as hotbar drag/drop.
-func _on_bag_drag_requested(container: String, index: int) -> void:
-	_start_drag(container, index)
-
-
-func _on_bag_drop_requested(container: String, index: int) -> void:
-	_complete_drop(container, index)
+func _on_bag_pressed() -> void:
+	bag_opened.emit()

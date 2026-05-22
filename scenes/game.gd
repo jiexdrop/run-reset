@@ -253,10 +253,11 @@ func _on_door_clicked(_viewport: Node, event: InputEvent, _shape_idx: int) -> vo
 
 
 func _enter_next_level() -> void:
-	SaveManager.next_level()
+	GameState.tiles = {}
+	GameState.monsters = []
+	GameState.level += 1
+	GameState.mark_dirty()
 	SaveManager.save()
-	# Reload the main scene — game.gd._ready() will call generate_tiles()
-	# because GameState.tiles is now empty.
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 
