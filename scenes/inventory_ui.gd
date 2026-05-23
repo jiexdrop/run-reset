@@ -51,9 +51,9 @@ func _build_slots() -> void:
 		var slot: ItemSlot = ItemSlotScene.instantiate()
 		slot_grid.add_child(slot)
 		slot.setup("hotbar", i, false)
-		# Expand to fill grid cell.
-		slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		slot.size_flags_vertical   = Control.SIZE_EXPAND_FILL
+		# Do NOT expand the slot — it must stay at its natural square size.
+		slot.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		slot.size_flags_vertical   = Control.SIZE_SHRINK_BEGIN
 		slot.slot_clicked.connect(_on_slot_clicked)
 		_slots.append(slot)
 

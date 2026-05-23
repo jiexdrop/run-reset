@@ -45,7 +45,7 @@ custom_minimum_size = Vector2(0, 80)
 [node name="SlotGrid" type="GridContainer" parent="VBox/ScrollContainer" unique_id=400000003]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
+size_flags_vertical = 0
 theme_override_constants/h_separation = 4
 theme_override_constants/v_separation = 4
 columns = 5
