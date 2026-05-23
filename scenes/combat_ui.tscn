@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bhwyuf84ejc14"]
 
 [ext_resource type="Script" uid="uid://dguq0wgu7kyfu" path="res://scenes/combat_ui.gd" id="1_combatui"]
-[ext_resource type="PackedScene" path="res://scenes/inventory_ui.tscn" id="2_invui"]
+[ext_resource type="PackedScene" uid="uid://bpu8ms8fk3kf1" path="res://scenes/inventory_ui.tscn" id="2_invui"]
 
 [node name="CombatUi" type="Control" unique_id=1815585971]
 layout_mode = 3
@@ -66,16 +66,34 @@ layout_mode = 2
 text = "— Enemies —"
 horizontal_alignment = 1
 
-[node name="MobRow" type="HBoxContainer" parent="MarginContainer/VBox/CombatSection" unique_id=200000011]
+[node name="MobCarousel" type="HBoxContainer" parent="MarginContainer/VBox/CombatSection" unique_id=200000020]
 layout_mode = 2
 alignment = 1
+
+[node name="PrevButton" type="Button" parent="MarginContainer/VBox/CombatSection/MobCarousel" unique_id=200000021]
+custom_minimum_size = Vector2(24, 0)
+layout_mode = 2
+text = "‹"
+
+[node name="MobScroll" type="ScrollContainer" parent="MarginContainer/VBox/CombatSection/MobCarousel" unique_id=200000022]
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_scroll_mode = 0
+
+[node name="MobRow" type="HBoxContainer" parent="MarginContainer/VBox/CombatSection/MobCarousel/MobScroll" unique_id=200000011]
+layout_mode = 2
+alignment = 1
+
+[node name="NextButton" type="Button" parent="MarginContainer/VBox/CombatSection/MobCarousel" unique_id=200000023]
+custom_minimum_size = Vector2(24, 0)
+layout_mode = 2
+text = "›"
 
 [node name="Separator2" type="HSeparator" parent="MarginContainer/VBox" unique_id=200000012]
 layout_mode = 2
 
-[node name="AttackBar" type="HBoxContainer" parent="MarginContainer/VBox" unique_id=200000013]
+[node name="AttackBar" type="HFlowContainer" parent="MarginContainer/VBox" unique_id=200000013]
 layout_mode = 2
-alignment = 1
 
 [node name="LogLabel" type="Label" parent="MarginContainer/VBox" unique_id=200000014]
 layout_mode = 2
@@ -86,5 +104,3 @@ layout_mode = 2
 
 [node name="InventoryUI" parent="MarginContainer/VBox" unique_id=1195445285 instance=ExtResource("2_invui")]
 layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3

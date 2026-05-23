@@ -19,26 +19,32 @@ const ICON_SIZE = Vector2(20, 20)
 
 const MobCardScene = preload("res://scenes/mob_card.tscn")
 
-@onready var level_label:    Label         = $MarginContainer/VBox/StatsSection/LevelLabel
-@onready var hearts_row:     HBoxContainer = $MarginContainer/VBox/StatsSection/HeartsRow
-@onready var energy_row:     HBoxContainer = $MarginContainer/VBox/StatsSection/EnergyRow
-@onready var exp_row:        HBoxContainer = $MarginContainer/VBox/StatsSection/ExpRow
-@onready var mob_row:        HBoxContainer = $MarginContainer/VBox/CombatSection/MobRow
-@onready var attack_bar:     HBoxContainer = $MarginContainer/VBox/AttackBar
-@onready var combat_section: Control       = $MarginContainer/VBox/CombatSection
-@onready var log_label:      Label         = $MarginContainer/VBox/LogLabel
+@onready var level_label:    Label           = $MarginContainer/VBox/StatsSection/LevelLabel
+@onready var hearts_row:     HBoxContainer   = $MarginContainer/VBox/StatsSection/HeartsRow
+@onready var energy_row:     HBoxContainer   = $MarginContainer/VBox/StatsSection/EnergyRow
+@onready var exp_row:        HBoxContainer   = $MarginContainer/VBox/StatsSection/ExpRow
+@onready var mob_scroll:     ScrollContainer = $MarginContainer/VBox/CombatSection/MobCarousel/MobScroll
+@onready var mob_row:        HBoxContainer   = $MarginContainer/VBox/CombatSection/MobCarousel/MobScroll/MobRow
+@onready var prev_button:    Button          = $MarginContainer/VBox/CombatSection/MobCarousel/PrevButton
+@onready var next_button:    Button          = $MarginContainer/VBox/CombatSection/MobCarousel/NextButton
+@onready var attack_bar:     HFlowContainer  = $MarginContainer/VBox/AttackBar
+@onready var combat_section: Control         = $MarginContainer/VBox/CombatSection
+@onready var log_label:      Label           = $MarginContainer/VBox/LogLabel
 
 var _active_mob_ids:   Array  = []
 var _attacks:          Array  = []
 var _selected_attack:  int    = 0
 var _player_stunned:   bool   = false
 
+var _scroll_index: int = 0
+const CARD_WIDTH = 130  # match MobCard's custom_minimum_size.x + separation
 
 func _ready() -> void:
 	add_to_group("combat_ui")
 	refresh_stats()
 	combat_section.visible = false
-
+	prev_button.pressed.connect(_scroll_mobs.bind(-1))
+	next_button.pressed.connect(_scroll_mobs.bind(1))
 
 func refresh_stats() -> void:
 	var p = GameState.player
@@ -97,6 +103,7 @@ func _build_icon_row(row: HBoxContainer, current: int, maximum: int,
 
 
 func _rebuild_mob_cards() -> void:
+	_scroll_index = 0
 	if mob_row == null:
 		return
 	_clear_children(mob_row)
@@ -293,3 +300,10 @@ func _clear_children(node: Node) -> void:
 		return
 	for child in node.get_children():
 		child.queue_free()
+		
+func _scroll_mobs(direction: int) -> void:
+	var card_count = mob_row.get_child_count()
+	_scroll_index = clampi(_scroll_index + direction, 0, max(0, card_count - 1))
+	mob_scroll.scroll_horizontal = _scroll_index * CARD_WIDTH
+	prev_button.disabled = (_scroll_index == 0)
+	next_button.disabled = (_scroll_index >= card_count - 1)
