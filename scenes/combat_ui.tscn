@@ -40,6 +40,7 @@ size_flags_vertical = 3
 
 [node name="StatsSection" type="VBoxContainer" parent="MarginContainer/VBox" unique_id=200000003]
 layout_mode = 2
+size_flags_vertical = 0
 
 [node name="LevelLabel" type="Label" parent="MarginContainer/VBox/StatsSection" unique_id=200000004]
 layout_mode = 2
@@ -56,30 +57,37 @@ layout_mode = 2
 
 [node name="Separator" type="HSeparator" parent="MarginContainer/VBox" unique_id=200000008]
 layout_mode = 2
+size_flags_vertical = 0
 
 [node name="CombatSection" type="VBoxContainer" parent="MarginContainer/VBox" unique_id=200000009]
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_vertical = 0
 
 [node name="CombatLabel" type="Label" parent="MarginContainer/VBox/CombatSection" unique_id=200000010]
 layout_mode = 2
+size_flags_vertical = 0
 text = "— Enemies —"
 horizontal_alignment = 1
 
 [node name="MobCarousel" type="HBoxContainer" parent="MarginContainer/VBox/CombatSection" unique_id=200000020]
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_horizontal = 3
+size_flags_vertical = 0
 alignment = 1
 
 [node name="PrevButton" type="Button" parent="MarginContainer/VBox/CombatSection/MobCarousel" unique_id=200000021]
 custom_minimum_size = Vector2(24, 0)
 layout_mode = 2
+size_flags_vertical = 1
 text = "‹"
 
 [node name="MobScroll" type="ScrollContainer" parent="MarginContainer/VBox/CombatSection/MobCarousel" unique_id=200000022]
+custom_minimum_size = Vector2(0, 160)
 layout_mode = 2
 size_flags_horizontal = 3
-horizontal_scroll_mode = 0
+size_flags_vertical = 0
+horizontal_scroll_mode = 2
+vertical_scroll_mode = 0
 
 [node name="MobRow" type="HBoxContainer" parent="MarginContainer/VBox/CombatSection/MobCarousel/MobScroll" unique_id=200000011]
 layout_mode = 2
@@ -88,20 +96,26 @@ alignment = 1
 [node name="NextButton" type="Button" parent="MarginContainer/VBox/CombatSection/MobCarousel" unique_id=200000023]
 custom_minimum_size = Vector2(24, 0)
 layout_mode = 2
+size_flags_vertical = 1
 text = "›"
 
 [node name="Separator2" type="HSeparator" parent="MarginContainer/VBox" unique_id=200000012]
 layout_mode = 2
+size_flags_vertical = 0
 
 [node name="AttackBar" type="HFlowContainer" parent="MarginContainer/VBox" unique_id=200000013]
 layout_mode = 2
+size_flags_vertical = 0
 
 [node name="LogLabel" type="Label" parent="MarginContainer/VBox" unique_id=200000014]
 layout_mode = 2
+size_flags_vertical = 0
 autowrap_mode = 3
 
 [node name="Separator3" type="HSeparator" parent="MarginContainer/VBox" unique_id=200000015]
 layout_mode = 2
+size_flags_vertical = 0
 
 [node name="InventoryUI" parent="MarginContainer/VBox" unique_id=1195445285 instance=ExtResource("2_invui")]
 layout_mode = 2
+size_flags_vertical = 0
