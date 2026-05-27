@@ -78,7 +78,6 @@ alignment = 1
 [node name="PrevButton" type="Button" parent="MarginContainer/VBox/CombatSection/MobCarousel" unique_id=200000021]
 custom_minimum_size = Vector2(24, 0)
 layout_mode = 2
-size_flags_vertical = 1
 text = "‹"
 
 [node name="MobScroll" type="ScrollContainer" parent="MarginContainer/VBox/CombatSection/MobCarousel" unique_id=200000022]
@@ -96,7 +95,6 @@ alignment = 1
 [node name="NextButton" type="Button" parent="MarginContainer/VBox/CombatSection/MobCarousel" unique_id=200000023]
 custom_minimum_size = Vector2(24, 0)
 layout_mode = 2
-size_flags_vertical = 1
 text = "›"
 
 [node name="Separator2" type="HSeparator" parent="MarginContainer/VBox" unique_id=200000012]
