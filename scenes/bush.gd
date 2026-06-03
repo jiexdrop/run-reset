@@ -61,7 +61,7 @@ func _give_berries() -> void:
 	# Try hotbar first.
 	for i in range(InventoryState.HOTBAR_SIZE):
 		if InventoryState.hotbar[i].get("item_key", "") == "":
-			InventoryState.set_hotbar_item(i, "berries")
+			InventoryState.add_item("berries", 1)
 			return
 	# Fall back to bag.
 	for i in range(InventoryState.BAG_SIZE):
