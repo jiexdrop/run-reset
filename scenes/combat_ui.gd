@@ -267,14 +267,11 @@ func _notify_tile_mob_dead(mob_id: int) -> void:
 	var gx = parts[0].to_int()
 	var gy = parts[1].to_int()
 
-	# get_nodes_in_group is sceneTree-wide, but SubViewport can isolate it.
-	# Walk all scene trees to find the tile.
 	for tile in get_tree().get_nodes_in_group("tiles"):
 		if tile.grid_x == gx and tile.grid_y == gy:
 			tile.on_mob_defeated()
 			return
 
-	# Fallback: SubViewport isolation — find game node directly.
 	var game = get_tree().get_first_node_in_group("game")
 	if game:
 		for tile in game.get_children():
@@ -282,7 +279,6 @@ func _notify_tile_mob_dead(mob_id: int) -> void:
 				tile.on_mob_defeated()
 				return
 
-	# Last resort: update state only.
 	if GameState.tiles.has(tile_key):
 		GameState.tiles[tile_key]["mob_dead"] = true
 
@@ -316,12 +312,13 @@ func _on_inventory_slot_clicked(index: int) -> void:
 	var item_key = slot.get("item_key", "")
 	if slot.get("frozen", false) or item_key == "":
 		return
-	# Handle berries
+
+	# Handle berries — consume one from the stack, restore 3 HP.
 	if item_key == "berries":
 		var p = GameState.player
 		p["hp"] = min(p.get("hp", 0) + 3, p.get("max_hp", 10))
 		GameState.player = p
-		InventoryState.set_hotbar_item(index, "")
+		InventoryState.consume_hotbar_item(index)   # removes 1, clears slot when count hits 0
 		GameState.mark_dirty()
 		SaveManager.save()
 		refresh_stats()

@@ -48,6 +48,7 @@ func setup(p_container: String, p_index: int, p_is_bag: bool = false) -> void:
 	slot_index  = p_index
 	is_bag_slot = p_is_bag
 	_bg.texture = TEX_SLOT_BAG if p_is_bag else TEX_SLOT
+	_style_label()
 	refresh()
 
 
@@ -62,16 +63,18 @@ func refresh() -> void:
 
 	_item_key = slot_data.get("item_key", "")
 	_frozen   = slot_data.get("frozen", false)
+	var count: int = slot_data.get("count", 0)
 
 	# Ice overlay
 	_ice.visible = _frozen
 
-	# Item icon
+	# Item icon + stack count label
 	if _item_key != "":
 		var tex = ItemRegistry.get_icon(_item_key)
 		_icon.texture = tex
 		_icon.visible = (tex != null)
-		_label.text   = ""
+		# Show count only when more than 1 item is stacked.
+		_label.text = str(count) if count > 1 else ""
 	else:
 		_icon.visible = false
 		_label.text   = ""
@@ -99,3 +102,16 @@ func begin_drag() -> void:
 ## Called by the drag-drop manager when something is dropped here.
 func receive_drop() -> void:
 	emit_signal("drop_received", container, slot_index)
+
+
+# ── Private ────────────────────────────────────────────────────────────────────
+
+func _style_label() -> void:
+	# Anchor the count label to the bottom-right corner of the slot.
+	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_label.vertical_alignment   = VERTICAL_ALIGNMENT_BOTTOM
+	_label.add_theme_font_size_override("font_size", 11)
+	_label.add_theme_color_override("font_color",        Color.WHITE)
+	_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+	_label.add_theme_constant_override("shadow_offset_x", 1)
+	_label.add_theme_constant_override("shadow_offset_y", 1)

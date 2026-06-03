@@ -6,10 +6,11 @@ extends Node
 ## Bag    : 24 slots shown in the expandable bag overlay.
 ##
 ## Each slot is a Dictionary:
-##   { "item_key": String, "frozen": bool }
+##   { "item_key": String, "frozen": bool, "count": int }
 ##
-## item_key == "" means the slot is empty.
+## item_key == "" means the slot is empty (count is 0).
 ## frozen   == true means the slot is locked (visually ice-overlaid).
+## count    == how many items are stacked in this slot (1–max_stack).
 
 const HOTBAR_SIZE = 8
 const BAG_SIZE    = 24
@@ -39,16 +40,37 @@ func _init_slots() -> void:
 func _empty_slot() -> Dictionary:
 	return { "item_key": "", "frozen": false, "count": 0 }
 
-## Add `amount` of item_key, stacking up to max_stack.
-## Returns the number of items that didn't fit (overflow).
-func add_item(item_key: String, amount: int = 1) -> int:
-	var max_stack = ItemRegistry.get_max_stack(item_key)
 
-	# Pass 1: fill existing partial stacks in hotbar then bag
+## Place item_key (with optional explicit count) into a hotbar slot (0-7).
+## Prefer add_item() for normal pickups — this is a direct setter.
+func set_hotbar_item(slot_idx: int, item_key: String, count: int = 1) -> void:
+	if slot_idx < 0 or slot_idx >= HOTBAR_SIZE:
+		return
+	hotbar[slot_idx]["item_key"] = item_key
+	hotbar[slot_idx]["count"]    = count if item_key != "" else 0
+	emit_signal("inventory_changed")
+
+
+## Place item_key into a bag slot (0-23).
+func set_bag_item(slot_idx: int, item_key: String, count: int = 1) -> void:
+	if slot_idx < 0 or slot_idx >= BAG_SIZE:
+		return
+	bag[slot_idx]["item_key"] = item_key
+	bag[slot_idx]["count"]    = count if item_key != "" else 0
+	emit_signal("inventory_changed")
+
+
+## Add `amount` of item_key, auto-stacking up to max_stack per slot.
+## Fills hotbar first, then bag.
+## Returns the number of items that did NOT fit (overflow — 0 means all placed).
+func add_item(item_key: String, amount: int = 1) -> int:
+	var max_stack: int = ItemRegistry.get_max_stack(item_key)
+
+	# Pass 1 — top up existing partial stacks (hotbar first, then bag).
 	for arr in [hotbar, bag]:
 		for slot in arr:
 			if slot["item_key"] == item_key and not slot.get("frozen", false):
-				var space = max_stack - slot.get("count", 0)
+				var space: int = max_stack - slot.get("count", 0)
 				if space > 0:
 					var add = min(space, amount)
 					slot["count"] += add
@@ -57,7 +79,7 @@ func add_item(item_key: String, amount: int = 1) -> int:
 						emit_signal("inventory_changed")
 						return 0
 
-	# Pass 2: fill empty slots
+	# Pass 2 — fill empty slots.
 	for arr in [hotbar, bag]:
 		for slot in arr:
 			if slot["item_key"] == "" and not slot.get("frozen", false):
@@ -69,35 +91,22 @@ func add_item(item_key: String, amount: int = 1) -> int:
 					emit_signal("inventory_changed")
 					return 0
 
-	if amount < (ItemRegistry.get_max_stack(item_key) * (HOTBAR_SIZE + BAG_SIZE)):
-		emit_signal("inventory_changed")
-	return amount  # overflow
-	
-## Remove 1 from a hotbar slot. Clears the slot when count hits 0.
+	emit_signal("inventory_changed")
+	return amount  # leftover that didn't fit
+
+
+## Remove 1 of the item in hotbar slot `slot_idx`.
+## Clears the slot automatically when count reaches 0.
 func consume_hotbar_item(slot_idx: int) -> void:
 	if slot_idx < 0 or slot_idx >= HOTBAR_SIZE:
 		return
 	var slot = hotbar[slot_idx]
+	if slot["item_key"] == "":
+		return
 	slot["count"] = max(0, slot.get("count", 1) - 1)
 	if slot["count"] <= 0:
 		slot["item_key"] = ""
 		slot["count"]    = 0
-	emit_signal("inventory_changed")
-
-## Place item_key into a hotbar slot (0-7).
-func set_hotbar_item(slot_idx: int, item_key: String, count: int = 1) -> void:
-	if slot_idx < 0 or slot_idx >= HOTBAR_SIZE:
-		return
-	hotbar[slot_idx]["item_key"] = item_key
-	hotbar[slot_idx]["count"]    = count if item_key != "" else 0
-	emit_signal("inventory_changed")
-
-
-## Place item_key into a bag slot (0-23).
-func set_bag_item(slot_idx: int, item_key: String) -> void:
-	if slot_idx < 0 or slot_idx >= BAG_SIZE:
-		return
-	bag[slot_idx]["item_key"] = item_key
 	emit_signal("inventory_changed")
 
 
@@ -153,7 +162,12 @@ func from_dict(data: Dictionary) -> void:
 	var saved_hotbar = data.get("hotbar", [])
 	for i in range(min(saved_hotbar.size(), HOTBAR_SIZE)):
 		hotbar[i] = saved_hotbar[i]
+		# Back-compat: old saves without "count" field.
+		if not hotbar[i].has("count"):
+			hotbar[i]["count"] = 1 if hotbar[i].get("item_key", "") != "" else 0
 	var saved_bag = data.get("bag", [])
 	for i in range(min(saved_bag.size(), BAG_SIZE)):
 		bag[i] = saved_bag[i]
+		if not bag[i].has("count"):
+			bag[i]["count"] = 1 if bag[i].get("item_key", "") != "" else 0
 	emit_signal("inventory_changed")
