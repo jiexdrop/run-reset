@@ -30,6 +30,7 @@ const MobCardScene = preload("res://scenes/mob_card.tscn")
 @onready var attack_bar:     HFlowContainer  = $MarginContainer/VBox/AttackBar
 @onready var combat_section: Control         = $MarginContainer/VBox/CombatSection
 @onready var log_label:      Label           = $MarginContainer/VBox/LogLabel
+@onready var inv_ui:         Control         = $MarginContainer/VBox/InventoryUI
 
 var _active_mob_ids:   Array  = []
 var _attacks:          Array  = []
@@ -45,6 +46,8 @@ func _ready() -> void:
 	combat_section.visible = false
 	prev_button.pressed.connect(_scroll_mobs.bind(-1))
 	next_button.pressed.connect(_scroll_mobs.bind(1))
+	if inv_ui:
+		inv_ui.slot_clicked.connect(_on_inventory_slot_clicked)
 
 func refresh_stats() -> void:
 	var p = GameState.player
@@ -307,3 +310,19 @@ func _scroll_mobs(direction: int) -> void:
 	mob_scroll.scroll_horizontal = _scroll_index * CARD_WIDTH
 	prev_button.disabled = (_scroll_index == 0)
 	next_button.disabled = (_scroll_index >= card_count - 1)
+
+func _on_inventory_slot_clicked(index: int) -> void:
+	var slot = InventoryState.hotbar[index]
+	var item_key = slot.get("item_key", "")
+	if slot.get("frozen", false) or item_key == "":
+		return
+	# Handle berries
+	if item_key == "berries":
+		var p = GameState.player
+		p["hp"] = min(p.get("hp", 0) + 3, p.get("max_hp", 10))
+		GameState.player = p
+		InventoryState.set_hotbar_item(index, "")
+		GameState.mark_dirty()
+		SaveManager.save()
+		refresh_stats()
+		_log("You eat berries and restore 3 HP.")

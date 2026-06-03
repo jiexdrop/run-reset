@@ -37,7 +37,7 @@ tooltip_text = "Open Bag"
 text = "🎒"
 
 [node name="ScrollContainer" type="ScrollContainer" parent="VBox" unique_id=400000020]
-custom_minimum_size = Vector2(0, 80)
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
