@@ -304,7 +304,7 @@ func _spawn_bush(tile_key: String, gx: int, gy: int, visible: bool, harvested: b
 	var bush: Bush = BUSH.instantiate()
 	bush.z_index   = 5
 	# Offset slightly so it doesn't overlap the mob indicator perfectly.
-	bush.position  = Vector2(15, -15)
+	bush.position  = Vector2(0, 0)
 	bush.visible   = visible
 	tile_node.add_child(bush)
 	bush.setup(tile_key, harvested)
