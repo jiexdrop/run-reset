@@ -167,30 +167,71 @@ func spawn_exit_door() -> void:
 	if _door_node != null:
 		return
 
+	# Only spawn the door once every mob in the dungeon is dead.
+	for key in GameState.tiles:
+		if key == "door_spawned":
+			continue
+		var tdata = GameState.tiles[key]
+		var mob_key: String = tdata.get("mob", "")
+		if mob_key != "" and not tdata.get("mob_dead", false):
+			return
+
 	var revealed: Array = []
 	for key in GameState.tiles:
+		if key == "door_spawned":
+			continue
 		if GameState.tiles[key].get("visible", false):
 			var parts = key.split(",")
 			revealed.append(Vector2(parts[0].to_int(), parts[1].to_int()))
 
 	var center := Vector2.ZERO
-	if revealed.is_empty():
-		center = Vector2.ZERO
-	else:
+	if not revealed.is_empty():
 		for v in revealed:
 			center += v
 		center /= revealed.size()
 
-	var best_key := "0,0"
+	# Returns true when a tile is safe to place the door on:
+	# must be visible, not the start room, no living mob, no unharvested bush.
+	var _is_safe_tile = func(k: String) -> bool:
+		if k == "0,0":
+			return false
+		var td = GameState.tiles[k]
+		if not td.get("visible", false):
+			return false
+		var mk: String = td.get("mob", "")
+		if mk != "" and not td.get("mob_dead", false):
+			return false
+		if td.get("has_bush", false) and not td.get("bush_harvested", false):
+			return false
+		return true
+
+	# Pick the safe tile closest to the centre of revealed tiles.
+	var best_key := ""
 	var best_dist := INF
 	for key in GameState.tiles:
-		if GameState.tiles[key].get("visible", false):
-			var parts = key.split(",")
-			var v = Vector2(parts[0].to_int(), parts[1].to_int())
-			var d = v.distance_to(center)
-			if d < best_dist:
-				best_dist = d
+		if key == "door_spawned":
+			continue
+		if not _is_safe_tile.call(key):
+			continue
+		var parts = key.split(",")
+		var v = Vector2(parts[0].to_int(), parts[1].to_int())
+		var d = v.distance_to(center)
+		if d < best_dist:
+			best_dist = d
+			best_key = key
+
+	# Fallback: any visible room tile (edge case where every tile is blocked).
+	if best_key == "":
+		for key in GameState.tiles:
+			if key == "door_spawned":
+				continue
+			var tdata = GameState.tiles[key]
+			if tdata.get("visible", false) and tdata.get("type", "") == "room":
 				best_key = key
+				break
+
+	if best_key == "":
+		best_key = "0,0"
 
 	var bparts = best_key.split(",")
 	var door_world_pos = Vector2(bparts[0].to_int(), bparts[1].to_int()) * TILE_SIZE
@@ -292,7 +333,7 @@ func _spawn_tiles() -> void:
 
 
 ## Spawns a Bush node as a child of the tile so it appears/hides with it.
-func _spawn_bush(tile_key: String, gx: int, gy: int, visible: bool, harvested: bool) -> void:
+func _spawn_bush(tile_key: String, gx: int, gy: int, tile_visible: bool, harvested: bool) -> void:
 	var tile_node: Node2D = null
 	for t in _spawned_tiles:
 		if t.grid_x == gx and t.grid_y == gy:
@@ -305,7 +346,7 @@ func _spawn_bush(tile_key: String, gx: int, gy: int, visible: bool, harvested: b
 	bush.z_index   = 5
 	# Offset slightly so it doesn't overlap the mob indicator perfectly.
 	bush.position  = Vector2(0, 0)
-	bush.visible   = visible
+	bush.visible   = tile_visible
 	tile_node.add_child(bush)
 	bush.setup(tile_key, harvested)
 
