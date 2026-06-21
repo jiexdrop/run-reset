@@ -6,18 +6,29 @@ const BUSH = preload("res://scenes/bush.tscn")
 @onready var camera_2d: Camera2D = $Camera2D
 
 const TILE_SIZE = 70
-const NUM_ROOMS = 20
+const NUM_ROOMS = 12
 const MOB_SPAWN_CHANCE  = 0.6
-const BUSH_SPAWN_CHANCE = 10   # per room tile (no mob required)
+const BUSH_SPAWN_CHANCE = 0.10
 
 const CAMERA_PADDING  = 1.5
 const CAMERA_SPEED    = 4.0
 const ZOOM_SPEED      = 3.0
 
+# ── Dungeon generation tuning ───────────────────────────────────────────────
+const DIRS: Array = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+const MAX_LEG          = 3   # longest single straight run (either a whole
+							  # straight corridor, or one leg of a bend)
+const MAX_CORRIDOR_LEN = 5   # hard cap on total corridor length (both legs)
+const CANDIDATE_POOL   = 4   # randomly choose among this many best-scoring
+							  # placements, for variety without losing compactness
+
 var _target_position: Vector2 = Vector2.ZERO
 var _target_zoom:     Vector2 = Vector2.ONE
 var _spawned_tiles: Array = []
 var _door_node: Node2D = null
+
+# Scratch dungeon-generation state (only valid while generate_tiles() runs).
+var _gen_floor: Dictionary = {}
 
 
 func _ready() -> void:
@@ -39,89 +50,202 @@ func _apply_theme() -> void:
 	RenderingServer.set_default_clear_color(Color(0.796, 0.781, 0.718, 1.0))
 
 
-# ── Fresh generation ──────────────────────────────────────────────────────────
+# ── Dungeon generation ────────────────────────────────────────────────────────
+#
+# RULES enforced:
+#   1. Room = exactly 1 tile.
+#   2. Corridor = 1-tile-wide path between two rooms. A corridor is either a
+#      straight run, or a single 90° bend (one leg horizontal, one vertical).
+#   3. No diagonal adjacency between unrelated floor tiles.
+#   4. No 2×2 or perpendicular-width clusters. Corridors are single-file.
+#   5. Rooms never touch other rooms directly; only via corridors.
+#
+# ORGANIC + COMPACT STRATEGY:
+#   For each new room we enumerate every valid placement reachable from any
+#   existing room: straight shots in all 4 directions, AND L-shaped paths
+#   (leg in one direction, 90° turn, leg in a perpendicular direction). Each
+#   candidate is scored by total corridor length first, then distance from
+#   the dungeon's centroid, so short/central placements win. We pick randomly
+#   among the tightest few, which keeps growth compact while still branching
+#   and bending naturally — rooms commonly end up with corridors leaving in
+#   more than one direction, and corridors can turn a corner.
+#
+# WHY DIAGONAL ADJACENCY NEEDS AN "ANCHOR" EXEMPTION:
+#   If a room sends one corridor right and another corridor up, those two
+#   corridors' very first tiles are inevitably diagonal neighbours of each
+#   other — that's just grid geometry, not an accident. The same thing
+#   happens at the inner corner of an L-bend. So when validating a new floor
+#   tile, we pass in its "anchor" (the room or corridor tile it's extending
+#   from) and allow diagonal contact with tiles that are themselves
+#   orthogonally touching that anchor. Diagonal contact with anything else
+#   (an unrelated, unconnected part of the dungeon) is still forbidden.
+
+func _key(p: Vector2i) -> String:
+	return "%d,%d" % [p.x, p.y]
+
+
+func _is_orth_neighbor(a: Vector2i, b: Vector2i) -> bool:
+	var d = a - b
+	return (abs(d.x) + abs(d.y)) == 1
+
+
+func _perp_dirs(d: Vector2i) -> Array:
+	if d.x != 0:  # horizontal travel → perpendicular is vertical
+		return [Vector2i(0, 1), Vector2i(0, -1)]
+	else:          # vertical travel → perpendicular is horizontal
+		return [Vector2i(1, 0), Vector2i(-1, 0)]
+
+
+func _diag_clear(pos: Vector2i, anchor: Vector2i) -> bool:
+	for dx in [-1, 1]:
+		for dy in [-1, 1]:
+			var npos = pos + Vector2i(dx, dy)
+			if _gen_floor.has(_key(npos)):
+				# Expected diagonal "kiss" at a branch point or bend — allowed.
+				if _is_orth_neighbor(npos, anchor):
+					continue
+				return false
+	return true
+
+
+# Validate a candidate corridor cell given current travel direction `dir`,
+# extending from `anchor` (the previous cell on this path).
+func _corridor_cell_ok(pos: Vector2i, dir: Vector2i, anchor: Vector2i) -> bool:
+	if _gen_floor.has(_key(pos)):
+		return false
+	if not _diag_clear(pos, anchor):
+		return false
+	# Perpendicular neighbours must be empty (keeps the corridor single-file).
+	for pd in _perp_dirs(dir):
+		if _gen_floor.has(_key(pos + pd)):
+			return false
+	return true
+
+
+# Validate a candidate room cell. Its only allowed orthogonal neighbour is
+# the single incoming corridor tile `entry_key`.
+func _room_cell_ok(pos: Vector2i, entry_key: String, anchor: Vector2i) -> bool:
+	var key = _key(pos)
+	if _gen_floor.has(key):
+		return false
+	if not _diag_clear(pos, anchor):
+		return false
+	for d in DIRS:
+		var nk = _key(pos + d)
+		if _gen_floor.has(nk) and nk != entry_key:
+			return false
+	return true
+
 
 func generate_tiles() -> void:
-	var floor_tiles: Dictionary = {}
-	var room_cells:  Dictionary = {}
+	_gen_floor = {}
 
-	var too_close_to_room = func(pos: Vector2i) -> bool:
-		for dx in range(-1, 2):
-			for dy in range(-1, 2):
-				if dx == 0 and dy == 0:
-					continue
-				if room_cells.has("%d,%d" % [pos.x + dx, pos.y + dy]):
-					return true
-		return false
-
-	floor_tiles["0,0"] = "room"
-	room_cells["0,0"]  = true
-	var rooms: Array   = [Vector2i(0, 0)]
-
-	var rng  = RandomNumberGenerator.new()
+	var rng = RandomNumberGenerator.new()
 	rng.randomize()
-	var dirs = [Vector2i(1,0), Vector2i(-1,0), Vector2i(0,1), Vector2i(0,-1)]
+
+	_gen_floor["0,0"] = "room"
+	var rooms: Array = [Vector2i(0, 0)]
 
 	for _i in range(NUM_ROOMS - 1):
-		var placed = false
-		for _attempt in range(100):
-			var base: Vector2i = rooms[rng.randi_range(0, rooms.size() - 1)]
-			var dir:  Vector2i = dirs[rng.randi_range(0, 3)]
-			var length         = rng.randi_range(1, 3)
-			var room_pos       = base + dir * (length + 1)
-			var room_key       = "%d,%d" % [room_pos.x, room_pos.y]
+		# Centroid of the current dungeon — candidates closer to it score
+		# better, which keeps growth clustered instead of sprawling.
+		var centroid := Vector2.ZERO
+		for r in rooms:
+			centroid += Vector2(r)
+		centroid /= rooms.size()
 
-			if floor_tiles.has(room_key):
-				continue
-			if too_close_to_room.call(room_pos):
-				continue
+		var candidates: Array = []  # { room_pos, cells, score }
 
-			var corridor_cells: Array = []
-			var blocked = false
-			for step in range(1, length + 1):
-				var c  = base + dir * step
-				var ck = "%d,%d" % [c.x, c.y]
-				if room_cells.has(ck):
-					blocked = true
-					break
-				corridor_cells.append(c)
-			if blocked:
-				continue
+		for base in rooms:
+			# ── Straight shots in each of the 4 directions ──
+			for dir in DIRS:
+				var anchor = base
+				var cells: Array = []
+				for step in range(1, MAX_CORRIDOR_LEN + 1):
+					var c = base + dir * step
+					if not _corridor_cell_ok(c, dir, anchor):
+						break
+					cells.append(c)
+					anchor = c
 
-			for c in corridor_cells:
-				var ck = "%d,%d" % [c.x, c.y]
-				if not floor_tiles.has(ck):
-					floor_tiles[ck] = "corridor"
+					var room_pos  = c + dir
+					var entry_key = _key(c)
+					if _room_cell_ok(room_pos, entry_key, c):
+						var dist = Vector2(room_pos).distance_to(centroid)
+						candidates.append({
+							"room_pos": room_pos,
+							"cells":    cells.duplicate(),
+							"score":    cells.size() * 10.0 + dist,
+						})
 
-			floor_tiles[room_key] = "room"
-			room_cells[room_key]  = true
-			rooms.append(room_pos)
-			placed = true
-			break
+			# ── L-shaped paths: leg in dir1, 90° turn, leg in dir2 ──
+			for dir1 in DIRS:
+				var anchor1 = base
+				var cells1: Array = []
+				for len1 in range(1, MAX_LEG + 1):
+					var c1 = base + dir1 * len1
+					if not _corridor_cell_ok(c1, dir1, anchor1):
+						break
+					cells1.append(c1)
+					anchor1 = c1
 
-		if not placed:
-			print("[gen] could not place room ", _i + 1, " after 100 attempts — skipping")
+					for dir2 in _perp_dirs(dir1):
+						var anchor2 = c1
+						var cells2: Array = []
+						for len2 in range(1, MAX_LEG + 1):
+							if cells1.size() + len2 > MAX_CORRIDOR_LEN:
+								break
+							var c2 = c1 + dir2 * len2
+							if not _corridor_cell_ok(c2, dir2, anchor2):
+								break
+							cells2.append(c2)
+							anchor2 = c2
 
+							var room_pos  = c2 + dir2
+							var entry_key = _key(c2)
+							if _room_cell_ok(room_pos, entry_key, c2):
+								var all_cells = cells1 + cells2
+								var dist = Vector2(room_pos).distance_to(centroid)
+								candidates.append({
+									"room_pos": room_pos,
+									"cells":    all_cells,
+									"score":    all_cells.size() * 10.0 + dist,
+								})
+
+		if candidates.is_empty():
+			print("[gen] could not place room ", _i + 1, " — skipping")
+			continue
+
+		candidates.sort_custom(func(a, b): return a["score"] < b["score"])
+		var pool_size = min(CANDIDATE_POOL, candidates.size())
+		var pick = candidates[rng.randi_range(0, pool_size - 1)]
+
+		for c in pick["cells"]:
+			_gen_floor[_key(c)] = "corridor"
+		var rp = pick["room_pos"]
+		_gen_floor[_key(rp)] = "room"
+		rooms.append(rp)
+
+	# Populate GameState.
 	var pool = MobRegistry.get_pool()
-	for key in floor_tiles:
-		var tile_type = floor_tiles[key]
+	for key in _gen_floor:
+		var tile_type = _gen_floor[key]
 		var mob_key: String = ""
 		if tile_type == "room" and key != "0,0" and not pool.is_empty():
 			if randf() < MOB_SPAWN_CHANCE:
 				mob_key = pool[randi() % pool.size()]
 
-		# Bushes only on room tiles with no mob, and not the start room.
 		var has_bush: bool = false
 		if tile_type == "room" and key != "0,0" and mob_key == "":
 			has_bush = randf() < BUSH_SPAWN_CHANCE
 
 		GameState.tiles[key] = {
-			"visible":         key == "0,0",
-			"type":            tile_type,
-			"mob":             mob_key,
-			"mob_dead":        false,
-			"has_bush":        has_bush,
-			"bush_harvested":  false,
+			"visible":        key == "0,0",
+			"type":           tile_type,
+			"mob":            mob_key,
+			"mob_dead":       false,
+			"has_bush":       has_bush,
+			"bush_harvested": false,
 		}
 
 	_spawn_tiles()
@@ -167,7 +291,6 @@ func spawn_exit_door() -> void:
 	if _door_node != null:
 		return
 
-	# Only spawn the door once every mob in the dungeon is dead.
 	for key in GameState.tiles:
 		if key == "door_spawned":
 			continue
@@ -190,8 +313,6 @@ func spawn_exit_door() -> void:
 			center += v
 		center /= revealed.size()
 
-	# Returns true when a tile is safe to place the door on:
-	# must be visible, not the start room, no living mob, no unharvested bush.
 	var _is_safe_tile = func(k: String) -> bool:
 		if k == "0,0":
 			return false
@@ -205,7 +326,6 @@ func spawn_exit_door() -> void:
 			return false
 		return true
 
-	# Pick the safe tile closest to the centre of revealed tiles.
 	var best_key := ""
 	var best_dist := INF
 	for key in GameState.tiles:
@@ -220,7 +340,6 @@ func spawn_exit_door() -> void:
 			best_dist = d
 			best_key = key
 
-	# Fallback: any visible room tile (edge case where every tile is blocked).
 	if best_key == "":
 		for key in GameState.tiles:
 			if key == "door_spawned":
@@ -325,14 +444,12 @@ func _spawn_tiles() -> void:
 		add_child(instance)
 		_spawned_tiles.append(instance)
 
-		# Spawn bush on this tile if flagged (only when tile is visible on load).
 		if GameState.tiles[key].get("has_bush", false):
 			_spawn_bush(key, gx, gy,
 				GameState.tiles[key].get("visible", false),
 				GameState.tiles[key].get("bush_harvested", false))
 
 
-## Spawns a Bush node as a child of the tile so it appears/hides with it.
 func _spawn_bush(tile_key: String, gx: int, gy: int, tile_visible: bool, harvested: bool) -> void:
 	var tile_node: Node2D = null
 	for t in _spawned_tiles:
@@ -344,14 +461,11 @@ func _spawn_bush(tile_key: String, gx: int, gy: int, tile_visible: bool, harvest
 
 	var bush: Bush = BUSH.instantiate()
 	bush.z_index   = 5
-	# Offset slightly so it doesn't overlap the mob indicator perfectly.
 	bush.position  = Vector2(0, 0)
 	bush.visible   = tile_visible
 	tile_node.add_child(bush)
 	bush.setup(tile_key, harvested)
 
-	# When the tile reveals, make the bush visible too.
-	# tile.gd calls reveal() which makes the tile visible — we mirror that.
 	tile_node.visibility_changed.connect(func():
 		bush.visible = tile_node.visible
 	)
