@@ -531,9 +531,30 @@ func _spawn_edge_dot(key: String) -> void:
 	var gx = parts[0].to_int()
 	var gy = parts[1].to_int()
 
-	var dot := Sprite2D.new()
-	dot.texture  = preload("res://assets/tiles/dot.png")
-	dot.position = Vector2(gx, gy) * TILE_SIZE
-	dot.z_index  = 6
+	var dot := Area2D.new()
+	dot.position      = Vector2(gx, gy) * TILE_SIZE
+	dot.z_index       = 6
+	dot.input_pickable = true
+
+	var sprite := Sprite2D.new()
+	sprite.texture = preload("res://assets/tiles/dot.png")
+	dot.add_child(sprite)
+
+	var shape := CollisionShape2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = 20  # generous click target around the dot
+	shape.shape = circle
+	dot.add_child(shape)
+
+	dot.input_event.connect(_on_edge_dot_clicked.bind(key))
+
 	add_child(dot)
 	_edge_dots[key] = dot
+
+
+func _on_edge_dot_clicked(_viewport: Node, event: InputEvent, _shape_idx: int, key: String) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		for tile in _spawned_tiles:
+			if _key(Vector2i(tile.grid_x, tile.grid_y)) == key:
+				tile.reveal()
+				return

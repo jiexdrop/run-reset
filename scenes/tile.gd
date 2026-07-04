@@ -117,26 +117,6 @@ func _trigger_combat() -> void:
 		push_warning("tile: no node in group 'combat_ui' found")
 
 
-func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			var space_state = get_world_2d().direct_space_state
-
-			var directions = [
-				Vector2(50, 0),
-				Vector2(-50, 0),
-				Vector2(0, 50),
-				Vector2(0, -50),
-			]
-
-			for dir in directions:
-				var query = PhysicsRayQueryParameters2D.create(position, position + dir)
-				query.collide_with_areas = true
-				var result = space_state.intersect_ray(query)
-				if result and result.collider.is_in_group("tiles"):
-					result.collider.reveal()
-
-
 func on_mob_defeated() -> void:
 	_mob_dead = true
 	var key = "%d,%d" % [grid_x, grid_y]
