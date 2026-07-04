@@ -22,7 +22,7 @@ signal drop_received(container: String, index: int)
 # Textures — set at runtime by InventoryUI / BagUI.
 const TEX_SLOT     = preload("res://assets/ui/slot.png")
 const TEX_SLOT_ICE = preload("res://assets/ui/slot_ice.png")
-const TEX_SLOT_BAG = preload("res://assets/ui/slot_bag.png")
+const TEX_SLOT_BAG = preload("res://assets/ui/slot.png")
 
 const ICON_SIZE    = Vector2(48, 48)
 
