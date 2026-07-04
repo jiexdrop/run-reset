@@ -53,36 +53,6 @@ func _apply_theme() -> void:
 	RenderingServer.set_default_clear_color(Color(0.796, 0.781, 0.718, 1.0))
 
 
-# ── Dungeon generation ────────────────────────────────────────────────────────
-#
-# RULES enforced:
-#   1. Room = exactly 1 tile.
-#   2. Corridor = 1-tile-wide path between two rooms. A corridor is either a
-#      straight run, or a single 90° bend (one leg horizontal, one vertical).
-#   3. No diagonal adjacency between unrelated floor tiles.
-#   4. No 2×2 or perpendicular-width clusters. Corridors are single-file.
-#   5. Rooms never touch other rooms directly; only via corridors.
-#
-# ORGANIC + COMPACT STRATEGY:
-#   For each new room we enumerate every valid placement reachable from any
-#   existing room: straight shots in all 4 directions, AND L-shaped paths
-#   (leg in one direction, 90° turn, leg in a perpendicular direction). Each
-#   candidate is scored by total corridor length first, then distance from
-#   the dungeon's centroid, so short/central placements win. We pick randomly
-#   among the tightest few, which keeps growth compact while still branching
-#   and bending naturally — rooms commonly end up with corridors leaving in
-#   more than one direction, and corridors can turn a corner.
-#
-# WHY DIAGONAL ADJACENCY NEEDS AN "ANCHOR" EXEMPTION:
-#   If a room sends one corridor right and another corridor up, those two
-#   corridors' very first tiles are inevitably diagonal neighbours of each
-#   other — that's just grid geometry, not an accident. The same thing
-#   happens at the inner corner of an L-bend. So when validating a new floor
-#   tile, we pass in its "anchor" (the room or corridor tile it's extending
-#   from) and allow diagonal contact with tiles that are themselves
-#   orthogonally touching that anchor. Diagonal contact with anything else
-#   (an unrelated, unconnected part of the dungeon) is still forbidden.
-
 func _key(p: Vector2i) -> String:
 	return "%d,%d" % [p.x, p.y]
 

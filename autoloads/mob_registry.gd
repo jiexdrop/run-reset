@@ -47,7 +47,7 @@ func _build_registry() -> void:
 	var spider      = MobDef.new()
 	spider.mob_name  = "Cave Spider"
 	spider.sprite    = "spider"
-	spider.max_hp    = 3
+	spider.max_hp    = 2
 	spider.xp_reward = 2
 	spider.attacks   = [bite, venom] as Array[MobAttackData]
 	_registry["spider"] = spider
@@ -61,7 +61,7 @@ func _build_registry() -> void:
 	var rat         = MobDef.new()
 	rat.mob_name  = "Sewer Rat"
 	rat.sprite    = "rat"
-	rat.max_hp    = 2
+	rat.max_hp    = 1
 	rat.xp_reward = 1
 	rat.attacks   = [gnaw] as Array[MobAttackData]
 	_registry["rat"] = rat
