@@ -29,7 +29,7 @@ var _door_node: Node2D = null
 
 # Scratch dungeon-generation state (only valid while generate_tiles() runs).
 var _gen_floor: Dictionary = {}
-
+var _edge_dots: Dictionary = {} 
 
 func _ready() -> void:
 	add_to_group("game")
@@ -422,6 +422,7 @@ func _spawn_tiles() -> void:
 				GameState.tiles[key].get("visible", false),
 				GameState.tiles[key].get("bush_harvested", false))
 
+	update_edge_dots()
 
 func _spawn_bush(tile_key: String, gx: int, gy: int, tile_visible: bool, harvested: bool) -> void:
 	var tile_node: Node2D = null
@@ -448,7 +449,7 @@ func _spawn_bush(tile_key: String, gx: int, gy: int, tile_visible: bool, harvest
 
 func center_camera_on_revealed() -> void:
 	_update_camera_target()
-
+	update_edge_dots()
 
 func _update_camera_target() -> void:
 	var revealed: Array = []
@@ -493,3 +494,46 @@ func _update_camera_target() -> void:
 func _process(delta: float) -> void:
 	camera_2d.position = camera_2d.position.lerp(_target_position, CAMERA_SPEED * delta)
 	camera_2d.zoom     = camera_2d.zoom.lerp(_target_zoom,         ZOOM_SPEED  * delta)
+
+# ── Edge dots (unrevealed tiles adjacent to a revealed tile) ──────────────────
+
+func update_edge_dots() -> void:
+	for key in GameState.tiles.keys():
+		if key == "door_spawned":
+			continue
+
+		var tdata = GameState.tiles[key]
+		var revealed: bool = tdata.get("visible", false)
+		var should_show := false
+
+		if not revealed:
+			var parts = key.split(",")
+			if parts.size() == 2:
+				var gx = parts[0].to_int()
+				var gy = parts[1].to_int()
+				for d in DIRS:
+					var nk = _key(Vector2i(gx, gy) + d)
+					if GameState.tiles.has(nk) and GameState.tiles[nk].get("visible", false):
+						should_show = true
+						break
+
+		if should_show:
+			if not _edge_dots.has(key):
+				_spawn_edge_dot(key)
+		else:
+			if _edge_dots.has(key):
+				_edge_dots[key].queue_free()
+				_edge_dots.erase(key)
+
+
+func _spawn_edge_dot(key: String) -> void:
+	var parts = key.split(",")
+	var gx = parts[0].to_int()
+	var gy = parts[1].to_int()
+
+	var dot := Sprite2D.new()
+	dot.texture  = preload("res://assets/tiles/dot.png")
+	dot.position = Vector2(gx, gy) * TILE_SIZE
+	dot.z_index  = 6
+	add_child(dot)
+	_edge_dots[key] = dot
