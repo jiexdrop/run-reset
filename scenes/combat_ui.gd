@@ -18,6 +18,7 @@ const EXP_EMPTY    = preload("res://assets/ui/exp_empty.png")
 const ICON_SIZE = Vector2(20, 20)
 
 const MobCardScene = preload("res://scenes/mob_card.tscn")
+const BagUIScene   = preload("res://scenes/bag_ui.tscn")
 
 @onready var level_label:    Label           = $MarginContainer/VBox/StatsSection/LevelLabel
 @onready var hearts_row:     HBoxContainer   = $MarginContainer/VBox/StatsSection/HeartsRow
@@ -40,6 +41,8 @@ var _player_stunned:   bool   = false
 var _scroll_index: int = 0
 const CARD_WIDTH = 130  # match MobCard's custom_minimum_size.x + separation
 
+var _bag_ui: Control = null  # currently open BagUI overlay, if any
+
 func _ready() -> void:
 	add_to_group("combat_ui")
 	refresh_stats()
@@ -48,6 +51,7 @@ func _ready() -> void:
 	next_button.pressed.connect(_scroll_mobs.bind(1))
 	if inv_ui:
 		inv_ui.slot_clicked.connect(_on_inventory_slot_clicked)
+		inv_ui.bag_opened.connect(_on_bag_opened)
 
 func refresh_stats() -> void:
 	var p = GameState.player
@@ -323,3 +327,17 @@ func _on_inventory_slot_clicked(index: int) -> void:
 		SaveManager.save()
 		refresh_stats()
 		_log("You eat berries and restore 3 HP.")
+
+
+func _on_bag_opened() -> void:
+	# Don't stack multiple bag overlays if it's already open.
+	if is_instance_valid(_bag_ui):
+		return
+	_bag_ui = BagUIScene.instantiate()
+	# To center the ui, get the current scene and add to it
+	get_tree().current_scene.add_child(_bag_ui)
+	_bag_ui.closed.connect(_on_bag_closed)
+
+
+func _on_bag_closed() -> void:
+	_bag_ui = null

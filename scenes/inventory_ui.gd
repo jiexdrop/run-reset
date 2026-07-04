@@ -6,23 +6,23 @@ signal slot_clicked(index: int)
 signal bag_opened
 
 # ── Configuration ────────────────────────────────────────────────────────────
-const ItemSlotScene  = preload("res://scenes/item_slot.tscn")
-const SLOT_MIN_COLS  := 2
-const SLOT_MAX_COLS  := 10
-const SLOT_SIZE      := 56.0   # matches ItemSlot custom_minimum_size
-const SLOT_SEPARATION := 4     # must match the scene's h_separation / v_separation
+const ItemSlotScene   = preload("res://scenes/item_slot.tscn")
+const BAG_ICON_TEX    = preload("res://assets/ui/slot_bag.png")
+const SLOT_MIN_COLS   := 2
+const SLOT_MAX_COLS   := 10
+const SLOT_SIZE       := 56.0   # matches ItemSlot custom_minimum_size
+const SLOT_SEPARATION := 4      # must match the scene's h_separation / v_separation
 
 # ── Node refs ────────────────────────────────────────────────────────────────
-@onready var slot_grid  : GridContainer = $VBox/ScrollContainer/SlotGrid
-@onready var bag_button : Button        = $VBox/HeaderRow/BagButton
+@onready var slot_grid: GridContainer = $VBox/ScrollContainer/SlotGrid
 
 # ── State ─────────────────────────────────────────────────────────────────────
 var _slots: Array = []
+var _bag_button: TextureButton = null
 var _columns_dirty: bool = false   # debounce flag
 
 
 func _ready() -> void:
-	bag_button.pressed.connect(_on_bag_pressed)
 	resized.connect(_queue_update_columns)
 	_build_slots()
 	InventoryState.inventory_changed.connect(_on_inventory_changed)
@@ -57,7 +57,24 @@ func _build_slots() -> void:
 		slot.slot_clicked.connect(_on_slot_clicked)
 		_slots.append(slot)
 
+	_build_bag_button()
+
 	slot_grid.columns = SLOT_MIN_COLS
+
+
+## Builds the "open bag" button as a slot-sized tile living in the same grid
+## as the hotbar slots, using the slot_bag texture instead of an emoji.
+func _build_bag_button() -> void:
+	_bag_button = TextureButton.new()
+	_bag_button.texture_normal      = BAG_ICON_TEX
+	_bag_button.ignore_texture_size = true
+	_bag_button.stretch_mode        = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	_bag_button.custom_minimum_size = Vector2(SLOT_SIZE, SLOT_SIZE)
+	_bag_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_bag_button.size_flags_vertical   = Control.SIZE_EXPAND_FILL
+	_bag_button.tooltip_text        = "Open Bag"
+	_bag_button.pressed.connect(_on_bag_pressed)
+	slot_grid.add_child(_bag_button)
 
 
 func _on_inventory_changed() -> void:

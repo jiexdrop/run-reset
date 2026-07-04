@@ -1,6 +1,6 @@
-[gd_scene format=3 uid="uid://bag_ui_001"]
+[gd_scene format=3 uid="uid://cw1qhtq27thgu"]
 
-[ext_resource type="Script" uid="uid://bag_ui_sc" path="res://scenes/bag_ui.gd" id="1_bagui"]
+[ext_resource type="Script" uid="uid://608vq1qwf801" path="res://scenes/bag_ui.gd" id="1_bagui"]
 
 [node name="BagUI" type="Control" unique_id=500000001]
 layout_mode = 3
@@ -43,6 +43,6 @@ layout_mode = 2
 
 [node name="SlotGrid" type="GridContainer" parent="Panel/VBox" unique_id=500000008]
 layout_mode = 2
-columns = 6
 theme_override_constants/h_separation = 3
 theme_override_constants/v_separation = 3
+columns = 6
