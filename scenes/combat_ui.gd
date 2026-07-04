@@ -21,8 +21,8 @@ const MobCardScene = preload("res://scenes/mob_card.tscn")
 const BagUIScene   = preload("res://scenes/bag_ui.tscn")
 
 @onready var level_label:    Label           = $MarginContainer/VBox/StatsSection/LevelLabel
-@onready var hearts_row:     HBoxContainer   = $MarginContainer/VBox/StatsSection/HeartsRow
-@onready var energy_row:     HBoxContainer   = $MarginContainer/VBox/StatsSection/EnergyRow
+@onready var hearts_grid:    GridContainer   = $MarginContainer/VBox/StatsSection/HeartsGrid
+@onready var energy_grid:    GridContainer   = $MarginContainer/VBox/StatsSection/EnergyGrid
 @onready var exp_row:        HBoxContainer   = $MarginContainer/VBox/StatsSection/ExpRow
 @onready var mob_scroll:     ScrollContainer = $MarginContainer/VBox/CombatSection/MobCarousel/MobScroll
 @onready var mob_row:        HBoxContainer   = $MarginContainer/VBox/CombatSection/MobCarousel/MobScroll/MobRow
@@ -42,6 +42,7 @@ var _scroll_index: int = 0
 const CARD_WIDTH = 130  # match MobCard's custom_minimum_size.x + separation
 
 var _bag_ui: Control = null  # currently open BagUI overlay, if any
+const ICONS_PER_ROW = 12
 
 func _ready() -> void:
 	add_to_group("combat_ui")
@@ -56,8 +57,8 @@ func _ready() -> void:
 func refresh_stats() -> void:
 	var p = GameState.player
 	level_label.text = "Level  %d" % p.get("level", 1)
-	_build_icon_row(hearts_row, p.get("hp", 0),      p.get("max_hp", 10),     HEART_FULL,  HEART_EMPTY)
-	_build_icon_row(energy_row, p.get("energy", 10),  p.get("max_energy", 10), ENERGY_FULL, ENERGY_EMPTY)
+	_build_icon_grid(hearts_grid, p.get("hp", 0),      p.get("max_hp", 10),     HEART_FULL,  HEART_EMPTY)
+	_build_icon_grid(energy_grid, p.get("energy", 10),  p.get("max_energy", 10), ENERGY_FULL, ENERGY_EMPTY)
 	_build_icon_row(exp_row,    p.get("xp", 0),       p.get("xp_to_next", 10), EXP_FULL,    EXP_EMPTY)
 
 
@@ -97,6 +98,17 @@ func end_combat() -> void:
 	_clear_children(attack_bar)
 	_log("")
 
+
+func _build_icon_grid(grid: GridContainer, current: int, maximum: int,
+					   full_tex: Texture2D, empty_tex: Texture2D) -> void:
+	_clear_children(grid)
+	grid.columns = ICONS_PER_ROW
+	for i in range(maximum):
+		var icon = TextureRect.new()
+		icon.texture             = full_tex if i < current else empty_tex
+		icon.custom_minimum_size = ICON_SIZE
+		icon.stretch_mode        = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		grid.add_child(icon)
 
 func _build_icon_row(row: HBoxContainer, current: int, maximum: int,
 					  full_tex: Texture2D, empty_tex: Texture2D) -> void:

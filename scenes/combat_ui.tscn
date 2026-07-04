@@ -46,11 +46,13 @@ size_flags_vertical = 0
 layout_mode = 2
 text = "Level 1"
 
-[node name="HeartsRow" type="HBoxContainer" parent="MarginContainer/VBox/StatsSection" unique_id=200000005]
+[node name="HeartsGrid" type="GridContainer" parent="MarginContainer/VBox/StatsSection" unique_id=1283081124]
 layout_mode = 2
+columns = 12
 
-[node name="EnergyRow" type="HBoxContainer" parent="MarginContainer/VBox/StatsSection" unique_id=200000006]
+[node name="EnergyGrid" type="GridContainer" parent="MarginContainer/VBox/StatsSection" unique_id=1040683733]
 layout_mode = 2
+columns = 12
 
 [node name="ExpRow" type="HBoxContainer" parent="MarginContainer/VBox/StatsSection" unique_id=200000007]
 layout_mode = 2
