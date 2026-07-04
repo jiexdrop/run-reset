@@ -41,10 +41,13 @@ func _ready() -> void:
 		restore_tiles()
 		_check_restore_door()
 
+	call_deferred("_snap_camera_initial")
+
+
+func _snap_camera_initial() -> void:
 	_update_camera_target()
 	camera_2d.position = _target_position
 	camera_2d.zoom     = _target_zoom
-
 
 func _apply_theme() -> void:
 	RenderingServer.set_default_clear_color(Color(0.796, 0.781, 0.718, 1.0))
@@ -503,14 +506,19 @@ func _update_camera_target() -> void:
 	var world_max = Vector2(max_x, max_y) * TILE_SIZE
 	_target_position = (world_min + world_max) / 2.0
 
-	var viewport_size  = get_viewport().get_visible_rect().size
+	var viewport_size = get_viewport().get_visible_rect().size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		# Layout hasn't resolved yet (e.g. right after stretch=true is set on
+		# SubViewportContainer). Retry next frame instead of dividing by zero.
+		call_deferred("_update_camera_target")
+		return
+
 	var content_width  = (max_x - min_x + 1 + CAMERA_PADDING * 2) * TILE_SIZE
 	var content_height = (max_y - min_y + 1 + CAMERA_PADDING * 2) * TILE_SIZE
 
 	var zoom_x = viewport_size.x / content_width
 	var zoom_y = viewport_size.y / content_height
 	_target_zoom = Vector2(min(zoom_x, zoom_y), min(zoom_x, zoom_y))
-
 
 func _process(delta: float) -> void:
 	camera_2d.position = camera_2d.position.lerp(_target_position, CAMERA_SPEED * delta)

@@ -22,17 +22,21 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="SubViewportContainer" type="SubViewportContainer" parent="HBoxContainer" unique_id=2138977499]
-custom_minimum_size = Vector2(800, 648)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="HBoxContainer/SubViewportContainer" unique_id=1613080439]
 handle_input_locally = false
 physics_object_picking = true
-size = Vector2i(800, 648)
+size = Vector2i(828, 648)
 render_target_update_mode = 4
 
 [node name="Game" parent="HBoxContainer/SubViewportContainer/SubViewport" unique_id=1830284763 instance=ExtResource("1_o5qli")]
 
 [node name="CombatUi" parent="HBoxContainer" unique_id=1815585971 instance=ExtResource("2_0wfyh")]
+custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
+size_flags_vertical = 3
