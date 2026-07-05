@@ -13,6 +13,8 @@ var player: Dictionary = {
 	"energy":     10,
 	"max_energy": 10,
 }
+var zone: String = "default"
+var zone_stage: int = 1
 var dirty: bool = false
 
 func mark_dirty() -> void:

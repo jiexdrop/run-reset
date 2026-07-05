@@ -9,6 +9,7 @@ const TILE_SIZE = 70
 const NUM_ROOMS = 12
 const MOB_SPAWN_CHANCE  = 0.6
 const BUSH_SPAWN_CHANCE = 0.10
+const ZONE_CYCLE_LENGTH = 3
 
 const CAMERA_PADDING  = 1.5
 const CAMERA_SPEED    = 4.0
@@ -50,7 +51,7 @@ func _snap_camera_initial() -> void:
 	camera_2d.zoom     = _target_zoom
 
 func _apply_theme() -> void:
-	RenderingServer.set_default_clear_color(Color(0.796, 0.781, 0.718, 1.0))
+	RenderingServer.set_default_clear_color(ZoneRegistry.get_bg_color(GameState.zone))
 
 
 func _key(p: Vector2i) -> String:
@@ -200,11 +201,27 @@ func generate_tiles() -> void:
 		rooms.append(rp)
 
 	# Populate GameState.
-	var pool = MobRegistry.get_pool()
+	var pool = MobRegistry.get_pool(GameState.zone)
+	var boss_key: String = ZoneRegistry.get_boss(GameState.zone)
+	var place_boss: bool = (GameState.zone_stage == ZONE_CYCLE_LENGTH) and boss_key != ""
+
+	# Candidate rooms for the boss: any room tile except the entry room "0,0".
+	var boss_candidates: Array = []
+	for key in _gen_floor:
+		if key != "0,0" and _gen_floor[key] == "room":
+			boss_candidates.append(key)
+
+	var boss_room_key: String = ""
+	if place_boss and not boss_candidates.is_empty():
+		boss_room_key = boss_candidates[rng.randi_range(0, boss_candidates.size() - 1)]
+
 	for key in _gen_floor:
 		var tile_type = _gen_floor[key]
 		var mob_key: String = ""
-		if tile_type == "room" and key != "0,0" and not pool.is_empty():
+
+		if key == boss_room_key:
+			mob_key = boss_key
+		elif tile_type == "room" and key != "0,0" and not pool.is_empty():
 			if randf() < MOB_SPAWN_CHANCE:
 				mob_key = pool[randi() % pool.size()]
 
@@ -388,6 +405,20 @@ func _enter_next_level() -> void:
 	GameState.tiles = {}
 	GameState.monsters = []
 	GameState.level += 1
+
+	# ── Zone cycling ──────────────────────────────────────────────────────────
+	# Floors run in fixed-length cycles per zone. Floor 1 is always "default"
+	# (set by GameState's initial values / reset()) — this only advances the
+	# cycle on floors after that.
+	GameState.zone_stage += 1
+	if GameState.zone_stage > ZONE_CYCLE_LENGTH:
+		GameState.zone_stage = 1
+		var choices: Array = ZoneRegistry.get_zone_ids(true)  # exclude "default"
+		# Avoid picking the same zone twice in a row when more than one exists.
+		if choices.size() > 1:
+			choices.erase(GameState.zone)
+		GameState.zone = choices[randi() % choices.size()]
+
 	GameState.mark_dirty()
 	SaveManager.save()
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
@@ -397,6 +428,8 @@ func _enter_next_level() -> void:
 
 func _spawn_tiles() -> void:
 	_spawned_tiles.clear()
+	var zone_tiles: Array = ZoneRegistry.get_tiles(GameState.zone)
+
 	for key in GameState.tiles:
 		if key == "door_spawned":
 			continue
@@ -411,6 +444,8 @@ func _spawn_tiles() -> void:
 		instance.grid_x     = gx
 		instance.grid_y     = gy
 		instance.visible    = GameState.tiles[key].get("visible", false)
+		if not zone_tiles.is_empty():
+			instance.set_tile_texture(zone_tiles[randi() % zone_tiles.size()])
 		var mob_key  = GameState.tiles[key].get("mob", "")
 		var mob_dead = GameState.tiles[key].get("mob_dead", false)
 		instance.set_mob(mob_key, mob_dead)
@@ -532,9 +567,8 @@ func _spawn_edge_dot(key: String) -> void:
 	var gy = parts[1].to_int()
 
 	var dot := Area2D.new()
-	dot.position      = Vector2(gx, gy) * TILE_SIZE
-	dot.z_index       = 6
-	dot.input_pickable = true
+	dot.position = Vector2(gx, gy) * TILE_SIZE
+	dot.z_index  = 6
 
 	var sprite := Sprite2D.new()
 	sprite.texture = preload("res://assets/tiles/dot.png")
@@ -542,10 +576,11 @@ func _spawn_edge_dot(key: String) -> void:
 
 	var shape := CollisionShape2D.new()
 	var circle := CircleShape2D.new()
-	circle.radius = 20  # generous click target around the dot
+	circle.radius = 30.0
 	shape.shape = circle
 	dot.add_child(shape)
 
+	dot.input_pickable = true
 	dot.input_event.connect(_on_edge_dot_clicked.bind(key))
 
 	add_child(dot)
@@ -553,8 +588,9 @@ func _spawn_edge_dot(key: String) -> void:
 
 
 func _on_edge_dot_clicked(_viewport: Node, event: InputEvent, _shape_idx: int, key: String) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		for tile in _spawned_tiles:
-			if _key(Vector2i(tile.grid_x, tile.grid_y)) == key:
-				tile.reveal()
-				return
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			for tile in _spawned_tiles:
+				if "%d,%d" % [tile.grid_x, tile.grid_y] == key:
+					tile.reveal()
+					return

@@ -5,10 +5,12 @@ const SAVE_PATH = "user://save.json"
 func save() -> void:
 	print("[SAVING]")
 	var data = {
-		"tiles":     GameState.tiles,
-		"monsters":  GameState.monsters,
-		"player":    GameState.player,
-		"inventory": InventoryState.to_dict(),
+		"tiles":      GameState.tiles,
+		"monsters":   GameState.monsters,
+		"player":     GameState.player,
+		"inventory":  InventoryState.to_dict(),
+		"zone":       GameState.zone,
+		"zone_stage": GameState.zone_stage,
 	}
 	var f = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	f.store_string(JSON.stringify(data))
@@ -19,18 +21,20 @@ func load_save() -> void:
 	var f = FileAccess.open(SAVE_PATH, FileAccess.READ)
 	var parsed = JSON.parse_string(f.get_as_text())
 	if parsed:
-		GameState.tiles    = parsed.get("tiles",    {})
-		GameState.monsters = parsed.get("monsters", [])
-		GameState.player   = parsed.get("player",   GameState.player)
+		GameState.tiles      = parsed.get("tiles",    {})
+		GameState.monsters   = parsed.get("monsters", [])
+		GameState.player     = parsed.get("player",   GameState.player)
 		if parsed.has("inventory"):
 			InventoryState.from_dict(parsed["inventory"])
+		GameState.zone       = parsed.get("zone", "default")
+		GameState.zone_stage = parsed.get("zone_stage", 1)
 
 func reset() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)
-	GameState.tiles    = {}
-	GameState.monsters = []
-	GameState.player   = {
+	GameState.tiles      = {}
+	GameState.monsters   = []
+	GameState.player     = {
 		"hp":         10,
 		"max_hp":     10,
 		"attack":      1,
@@ -40,5 +44,7 @@ func reset() -> void:
 		"energy":     10,
 		"max_energy": 10,
 	}
-	GameState.dirty = false
+	GameState.zone       = "default"
+	GameState.zone_stage = 1
+	GameState.dirty      = false
 	InventoryState.from_dict({})

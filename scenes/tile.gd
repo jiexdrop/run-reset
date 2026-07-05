@@ -125,3 +125,6 @@ func on_mob_defeated() -> void:
 	GameState.mark_dirty()
 	SaveManager.save()
 	_refresh_mob_indicator()
+	
+func set_tile_texture(tex: Texture2D) -> void:
+	$Sprite2D.texture = tex

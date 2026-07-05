@@ -22,6 +22,7 @@ GameState="*uid://2dapk0fe1hfb"
 MobRegistry="*uid://tokowm5u7v2o"
 InventoryState="*uid://dql2cuaueq8h0"
 ItemRegistry="*uid://8n4shp4swnkm"
+ZoneRegistry="*uid://cqd6aemck54nh"
 
 [file_customization]
 
