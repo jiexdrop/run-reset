@@ -255,6 +255,10 @@ func _do_mob_turn(mob_id: int) -> void:
 		2:
 			_player_stunned = true
 			msg += " You are stunned!"
+		4:
+			var stolen = _steal_random_item()
+			if stolen != "":
+				msg += " Gomelin steals your %s!" % ItemRegistry.get_item_name(stolen)
 
 	GameState.player = p
 	GameState.mark_dirty()
@@ -353,3 +357,16 @@ func _on_bag_opened() -> void:
 
 func _on_bag_closed() -> void:
 	_bag_ui = null
+	
+func _steal_random_item() -> String:
+	var candidates: Array = []
+	for i in range(InventoryState.HOTBAR_SIZE):
+		var slot = InventoryState.hotbar[i]
+		if slot.get("item_key", "") != "" and not slot.get("frozen", false):
+			candidates.append(i)
+	if candidates.is_empty():
+		return ""
+	var idx = candidates[randi() % candidates.size()]
+	var item_key = InventoryState.hotbar[idx]["item_key"]
+	InventoryState.consume_hotbar_item(idx)
+	return item_key

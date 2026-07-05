@@ -103,7 +103,7 @@ func _build_registry() -> void:
 	var pilfer       = MobAttackData.new()
 	pilfer.attack_name = "Pilfer"
 	pilfer.damage      = 2
-	pilfer.effect      = MobAttackData.Effect.BLEED
+	pilfer.effect      = MobAttackData.Effect.STEAL
 
 	var slam         = MobAttackData.new()
 	slam.attack_name = "Slam"
