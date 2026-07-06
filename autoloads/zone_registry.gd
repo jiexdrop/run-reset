@@ -75,7 +75,7 @@ func _build_registry() -> void:
 		"tiles": [
 			preload("res://assets/tiles/pikoterra/tile_0.png"),
 		],
-		"mob_pool": ["gomelin"], #["pikonaut"],
+		"mob_pool": ["pikonaut"],
 		"boss": "gomelin",
 		"bg_color": Color(0.72, 0.80, 0.55, 1.0),
 	}

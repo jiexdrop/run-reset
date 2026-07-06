@@ -14,6 +14,13 @@ extends Node
 const HOTBAR_SIZE = 8
 const BAG_SIZE    = 24
 
+## DEBUG: auto-grant weapons + spells on startup for testing the weapons update.
+## Flip to false when you're done testing.
+const DEBUG_GIVE_WEAPONS := true
+const DEBUG_WEAPON_KEYS: Array[String] = ["iron_sword", "steel_sword", "stone_sword"]
+const DEBUG_SPELL_KEYS:  Array[String] = ["spell_ice", "spell_fire"]
+const DEBUG_SPELL_COUNT := 8
+
 ## Emitted whenever any slot changes so UIs can refresh cheaply.
 signal inventory_changed
 
@@ -72,7 +79,7 @@ func add_item(item_key: String, amount: int = 1) -> int:
 	if amount < (ItemRegistry.get_max_stack(item_key) * (HOTBAR_SIZE + BAG_SIZE)):
 		emit_signal("inventory_changed")
 	return amount  # overflow
-	
+
 ## Remove 1 from a hotbar slot. Clears the slot when count hits 0.
 func consume_hotbar_item(slot_idx: int) -> void:
 	if slot_idx < 0 or slot_idx >= HOTBAR_SIZE:
@@ -137,6 +144,20 @@ func swap_slots(container_a: String, idx_a: int,
 	arr_a[idx_a]["frozen"] = false
 	arr_b[idx_b]["frozen"] = false
 	emit_signal("inventory_changed")
+
+
+# ── Debug ─────────────────────────────────────────────────────────────────────
+
+## DEBUG ONLY: grants 8 of each sword and each spell so the weapons update
+## can be tested without needing pickup/drop logic yet.
+## Public + called from SaveManager (after load_save()/reset()) rather than
+## from _ready(), because from_dict() runs right after _ready() and would
+## otherwise wipe these debug slots back to empty.
+func debug_grant_weapons_and_spells() -> void:
+	for key in DEBUG_WEAPON_KEYS:
+		add_item(key, 1)
+	for key in DEBUG_SPELL_KEYS:
+		add_item(key, DEBUG_SPELL_COUNT)
 
 
 # ── Serialisation ─────────────────────────────────────────────────────────────

@@ -28,6 +28,8 @@ func load_save() -> void:
 			InventoryState.from_dict(parsed["inventory"])
 		GameState.zone       = parsed.get("zone", "default")
 		GameState.zone_stage = parsed.get("zone_stage", 1)
+	if InventoryState.DEBUG_GIVE_WEAPONS:
+		InventoryState.debug_grant_weapons_and_spells()
 
 func reset() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
@@ -48,3 +50,5 @@ func reset() -> void:
 	GameState.zone_stage = 1
 	GameState.dirty      = false
 	InventoryState.from_dict({})
+	if InventoryState.DEBUG_GIVE_WEAPONS:
+		InventoryState.debug_grant_weapons_and_spells()
