@@ -1,31 +1,18 @@
 extends Node
 
-## InventoryState — single source of truth for all inventory data.
-##
-## Hotbar : 8 slots shown permanently in CombatUI.
-## Bag    : 24 slots shown in the expandable bag overlay.
-##
-## Each slot is a Dictionary:
-##   { "item_key": String, "frozen": bool }
-##
-## item_key == "" means the slot is empty.
-## frozen   == true means the slot is locked (visually ice-overlaid).
-
 const HOTBAR_SIZE = 8
 const BAG_SIZE    = 24
 
-## DEBUG: auto-grant weapons + spells on startup for testing the weapons update.
-## Flip to false when you're done testing.
 const DEBUG_GIVE_WEAPONS := true
 const DEBUG_WEAPON_KEYS: Array[String] = ["iron_sword", "steel_sword", "stone_sword"]
 const DEBUG_SPELL_KEYS:  Array[String] = ["spell_ice", "spell_fire"]
 const DEBUG_SPELL_COUNT := 8
 
-## Emitted whenever any slot changes so UIs can refresh cheaply.
 signal inventory_changed
 
-var hotbar: Array = []   # Array[Dictionary]  size = HOTBAR_SIZE
-var bag:    Array = []   # Array[Dictionary]  size = BAG_SIZE
+var hotbar: Array = []
+var bag:    Array = []
+var equipped_index: int = -1   ## hotbar index of the equipped weapon/spell, -1 = none (Fists)
 
 
 func _ready() -> void:
@@ -39,19 +26,16 @@ func _init_slots() -> void:
 	bag.clear()
 	for i in range(BAG_SIZE):
 		bag.append(_empty_slot())
+	equipped_index = -1
 
-
-# ── Slot helpers ──────────────────────────────────────────────────────────────
 
 func _empty_slot() -> Dictionary:
 	return { "item_key": "", "frozen": false, "count": 0 }
 
-## Add `amount` of item_key, stacking up to max_stack.
-## Returns the number of items that didn't fit (overflow).
+
 func add_item(item_key: String, amount: int = 1) -> int:
 	var max_stack = ItemRegistry.get_max_stack(item_key)
 
-	# Pass 1: fill existing partial stacks in hotbar then bag
 	for arr in [hotbar, bag]:
 		for slot in arr:
 			if slot["item_key"] == item_key and not slot.get("frozen", false):
@@ -64,7 +48,6 @@ func add_item(item_key: String, amount: int = 1) -> int:
 						emit_signal("inventory_changed")
 						return 0
 
-	# Pass 2: fill empty slots
 	for arr in [hotbar, bag]:
 		for slot in arr:
 			if slot["item_key"] == "" and not slot.get("frozen", false):
@@ -78,9 +61,9 @@ func add_item(item_key: String, amount: int = 1) -> int:
 
 	if amount < (ItemRegistry.get_max_stack(item_key) * (HOTBAR_SIZE + BAG_SIZE)):
 		emit_signal("inventory_changed")
-	return amount  # overflow
+	return amount
 
-## Remove 1 from a hotbar slot. Clears the slot when count hits 0.
+
 func consume_hotbar_item(slot_idx: int) -> void:
 	if slot_idx < 0 or slot_idx >= HOTBAR_SIZE:
 		return
@@ -89,18 +72,20 @@ func consume_hotbar_item(slot_idx: int) -> void:
 	if slot["count"] <= 0:
 		slot["item_key"] = ""
 		slot["count"]    = 0
+		_unequip_if_empty(slot_idx)
 	emit_signal("inventory_changed")
 
-## Place item_key into a hotbar slot (0-7).
+
 func set_hotbar_item(slot_idx: int, item_key: String, count: int = 1) -> void:
 	if slot_idx < 0 or slot_idx >= HOTBAR_SIZE:
 		return
 	hotbar[slot_idx]["item_key"] = item_key
 	hotbar[slot_idx]["count"]    = count if item_key != "" else 0
+	if item_key == "":
+		_unequip_if_empty(slot_idx)
 	emit_signal("inventory_changed")
 
 
-## Place item_key into a bag slot (0-23).
 func set_bag_item(slot_idx: int, item_key: String) -> void:
 	if slot_idx < 0 or slot_idx >= BAG_SIZE:
 		return
@@ -108,7 +93,6 @@ func set_bag_item(slot_idx: int, item_key: String) -> void:
 	emit_signal("inventory_changed")
 
 
-## Freeze / unfreeze a hotbar slot (e.g. boss ability).
 func set_hotbar_frozen(slot_idx: int, frozen: bool) -> void:
 	if slot_idx < 0 or slot_idx >= HOTBAR_SIZE:
 		return
@@ -116,7 +100,6 @@ func set_hotbar_frozen(slot_idx: int, frozen: bool) -> void:
 	emit_signal("inventory_changed")
 
 
-## Freeze / unfreeze a bag slot.
 func set_bag_frozen(slot_idx: int, frozen: bool) -> void:
 	if slot_idx < 0 or slot_idx >= BAG_SIZE:
 		return
@@ -124,7 +107,6 @@ func set_bag_frozen(slot_idx: int, frozen: bool) -> void:
 	emit_signal("inventory_changed")
 
 
-## Swap two slots (cross-container). container_a/b: "hotbar" or "bag".
 func swap_slots(container_a: String, idx_a: int,
 				container_b: String, idx_b: int) -> void:
 	var arr_a = hotbar if container_a == "hotbar" else bag
@@ -132,27 +114,50 @@ func swap_slots(container_a: String, idx_a: int,
 
 	if idx_a < 0 or idx_a >= arr_a.size(): return
 	if idx_b < 0 or idx_b >= arr_b.size(): return
-
-	# Frozen slots cannot be moved from or into.
 	if arr_a[idx_a]["frozen"] or arr_b[idx_b]["frozen"]:
 		return
 
 	var tmp         = arr_a[idx_a].duplicate()
 	arr_a[idx_a]    = arr_b[idx_b].duplicate()
 	arr_b[idx_b]    = tmp
-	# Preserve frozen state of destination (don't overwrite freeze with source).
 	arr_a[idx_a]["frozen"] = false
 	arr_b[idx_b]["frozen"] = false
+
+	# Equipped weapon follows its item if it was moved between hotbar slots;
+	# if it left the hotbar entirely, unequip.
+	if container_a == "hotbar" and idx_a == equipped_index and container_b != "hotbar":
+		equipped_index = -1
+	elif container_b == "hotbar" and idx_b == equipped_index and container_a != "hotbar":
+		equipped_index = -1
+	elif container_a == "hotbar" and container_b == "hotbar":
+		if equipped_index == idx_a:
+			equipped_index = idx_b
+		elif equipped_index == idx_b:
+			equipped_index = idx_a
+
 	emit_signal("inventory_changed")
 
 
-# ── Debug ─────────────────────────────────────────────────────────────────────
+## Equip/unequip a weapon or spell living in a hotbar slot. Toggling the
+## already-equipped slot unequips it (falls back to Fists in combat).
+func equip_item(slot_idx: int) -> void:
+	if slot_idx < 0 or slot_idx >= HOTBAR_SIZE:
+		return
+	var slot = hotbar[slot_idx]
+	if slot.get("item_key", "") == "" or slot.get("frozen", false):
+		return
+	var item_type = ItemRegistry.get_type(slot["item_key"])
+	if item_type != "weapon" and item_type != "spell":
+		return
+	equipped_index = -1 if equipped_index == slot_idx else slot_idx
+	emit_signal("inventory_changed")
 
-## DEBUG ONLY: grants 8 of each sword and each spell so the weapons update
-## can be tested without needing pickup/drop logic yet.
-## Public + called from SaveManager (after load_save()/reset()) rather than
-## from _ready(), because from_dict() runs right after _ready() and would
-## otherwise wipe these debug slots back to empty.
+
+func _unequip_if_empty(slot_idx: int) -> void:
+	if equipped_index == slot_idx:
+		equipped_index = -1
+
+
 func debug_grant_weapons_and_spells() -> void:
 	for key in DEBUG_WEAPON_KEYS:
 		add_item(key, 1)
@@ -160,12 +165,11 @@ func debug_grant_weapons_and_spells() -> void:
 		add_item(key, DEBUG_SPELL_COUNT)
 
 
-# ── Serialisation ─────────────────────────────────────────────────────────────
-
 func to_dict() -> Dictionary:
 	return {
-		"hotbar": hotbar.duplicate(true),
-		"bag":    bag.duplicate(true),
+		"hotbar":         hotbar.duplicate(true),
+		"bag":            bag.duplicate(true),
+		"equipped_index": equipped_index,
 	}
 
 
@@ -177,4 +181,5 @@ func from_dict(data: Dictionary) -> void:
 	var saved_bag = data.get("bag", [])
 	for i in range(min(saved_bag.size(), BAG_SIZE)):
 		bag[i] = saved_bag[i]
+	equipped_index = data.get("equipped_index", -1)
 	emit_signal("inventory_changed")

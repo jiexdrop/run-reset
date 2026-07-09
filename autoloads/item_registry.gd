@@ -1,15 +1,33 @@
 extends Node
 
-## ItemRegistry — maps item_key strings to item definitions.
-##
-## Add new items here. The key must match what you store in InventoryState slots.
-##
-## Common fields:
-##   name, icon, desc, max_stack
-## Weapon/spell fields (used by combat once wired up):
-##   type      : "consumable" | "weapon" | "spell"
-##   damage    : int   (weapons + spells)
-##   energy_cost : int (spells)
+## ATTACK_TYPES — shared behavior table for weapon/spell "attack_type" tags.
+## hits         : number of sequential strikes
+## damage_mult  : multiplies the item's base `damage`, split across hits
+## energy_mult  : multiplies the item's base `energy_cost`
+## label        : appended to the attack name in the UI (e.g. " x2")
+## effect_scene : VFX played on the mob for each hit
+const ATTACK_TYPES: Dictionary = {
+	"single_swing": {
+		"hits": 1, "damage_mult": 1.0, "energy_mult": 1.0, "label": "",
+		"effect_scene": preload("res://scenes/effects/slash_effect.tscn"),
+	},
+	"double_swing": {
+		"hits": 2, "damage_mult": 0.6, "energy_mult": 1.5, "label": " x2",
+		"effect_scene": preload("res://scenes/effects/slash_effect.tscn"),
+	},
+	"heavy_swing": {
+		"hits": 1, "damage_mult": 1.8, "energy_mult": 2.0, "label": " (Heavy)",
+		"effect_scene": preload("res://scenes/effects/slash_effect.tscn"),
+	},
+	"fire_spell": {
+		"hits": 1, "damage_mult": 1.0, "energy_mult": 1.0, "label": "",
+		"effect_scene": preload("res://scenes/effects/fire_effect.tscn"),
+	},
+	"ice_spell": {
+		"hits": 1, "damage_mult": 0.5, "energy_mult": 1.0, "label": "",
+		"effect_scene": preload("res://scenes/effects/ice_effect.tscn"),
+	},
+}
 
 var _items: Dictionary = {
 	"berries": {
@@ -28,22 +46,25 @@ var _items: Dictionary = {
 		"max_stack": 1,
 		"type": "weapon",
 		"damage": 2,
+		"attack_type": "single_swing",
 	},
 	"steel_sword": {
 		"name": "Steel Sword",
 		"icon": preload("res://assets/items/steel_sword.png"),
-		"desc": "A sharpened steel blade. Hits harder than iron.",
+		"desc": "A sharpened steel blade. Strikes twice in quick succession.",
 		"max_stack": 1,
 		"type": "weapon",
 		"damage": 4,
+		"attack_type": "double_swing",
 	},
 	"stone_sword": {
 		"name": "Stone Sword",
 		"icon": preload("res://assets/items/stone_sword.png"),
-		"desc": "A crude blade chipped from stone.",
+		"desc": "A crude, heavy blade chipped from stone.",
 		"max_stack": 1,
 		"type": "weapon",
-		"damage": 1,
+		"damage": 3,
+		"attack_type": "heavy_swing",
 	},
 
 	# ── Spells ────────────────────────────────────────────────────────────────
@@ -55,6 +76,7 @@ var _items: Dictionary = {
 		"type": "spell",
 		"damage": 2,
 		"energy_cost": 2,
+		"attack_type": "ice_spell",
 	},
 	"spell_fire": {
 		"name": "Fire Spell",
@@ -64,10 +86,8 @@ var _items: Dictionary = {
 		"type": "spell",
 		"damage": 3,
 		"energy_cost": 3,
+		"attack_type": "fire_spell",
 	},
-
-	# "sword":         { "name": "Iron Sword",    "icon": preload("res://assets/items/sword.png"),         "desc": "A trusty blade." },
-	# "health_potion": { "name": "Health Potion",  "icon": preload("res://assets/items/health_potion.png"), "desc": "Restores 3 HP." },
 }
 
 
@@ -76,12 +96,10 @@ func get_icon(item_key: String) -> Texture2D:
 		return _items[item_key].get("icon", null)
 	return null
 
-
 func get_item_name(item_key: String) -> String:
 	if _items.has(item_key):
 		return _items[item_key].get("name", item_key)
 	return item_key
-
 
 func get_desc(item_key: String) -> String:
 	if _items.has(item_key):
@@ -107,6 +125,14 @@ func get_energy_cost(item_key: String) -> int:
 	if _items.has(item_key):
 		return _items[item_key].get("energy_cost", 0)
 	return 0
+
+func get_attack_type(item_key: String) -> String:
+	if _items.has(item_key):
+		return _items[item_key].get("attack_type", "single_swing")
+	return "single_swing"
+
+func get_attack_type_data(attack_type: String) -> Dictionary:
+	return ATTACK_TYPES.get(attack_type, ATTACK_TYPES["single_swing"])
 
 func register(item_key: String, data: Dictionary) -> void:
 	_items[item_key] = data

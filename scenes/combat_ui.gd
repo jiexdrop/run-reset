@@ -1,13 +1,5 @@
 extends Control
 
-## CombatUI — right-hand panel: player stats + active combat.
-##
-## PUBLIC API
-## ──────────
-##   add_mob_to_combat(mob_idx, player_attacks)
-##   end_combat()
-##   refresh_stats()
-
 const HEART_FULL   = preload("res://assets/ui/heart_full.png")
 const HEART_EMPTY  = preload("res://assets/ui/heart_empty.png")
 const ENERGY_FULL  = preload("res://assets/ui/energy_full.png")
@@ -16,6 +8,7 @@ const EXP_FULL     = preload("res://assets/ui/exp_full.png")
 const EXP_EMPTY    = preload("res://assets/ui/exp_empty.png")
 
 const ICON_SIZE = Vector2(20, 20)
+const HIT_DELAY = 0.15   # pause between hits of a multi-hit attack
 
 const MobCardScene = preload("res://scenes/mob_card.tscn")
 const BagUIScene   = preload("res://scenes/bag_ui.tscn")
@@ -33,16 +26,16 @@ const BagUIScene   = preload("res://scenes/bag_ui.tscn")
 @onready var log_label:      Label           = $MarginContainer/VBox/LogLabel
 @onready var inv_ui:         Control         = $MarginContainer/VBox/InventoryUI
 
-var _active_mob_ids:   Array  = []
-var _attacks:          Array  = []
-var _selected_attack:  int    = 0
-var _player_stunned:   bool   = false
+var _active_mob_ids: Array = []
+var _player_stunned: bool  = false
+var _attack_in_progress: bool = false
 
 var _scroll_index: int = 0
-const CARD_WIDTH = 130  # match MobCard's custom_minimum_size.x + separation
+const CARD_WIDTH = 130
 
-var _bag_ui: Control = null  # currently open BagUI overlay, if any
+var _bag_ui: Control = null
 const ICONS_PER_ROW = 12
+
 
 func _ready() -> void:
 	add_to_group("combat_ui")
@@ -53,6 +46,9 @@ func _ready() -> void:
 	if inv_ui:
 		inv_ui.slot_clicked.connect(_on_inventory_slot_clicked)
 		inv_ui.bag_opened.connect(_on_bag_opened)
+	InventoryState.inventory_changed.connect(_rebuild_attack_bar)
+	_rebuild_attack_bar()
+
 
 func refresh_stats() -> void:
 	var p = GameState.player
@@ -62,40 +58,24 @@ func refresh_stats() -> void:
 	_build_icon_row(exp_row,    p.get("xp", 0),       p.get("xp_to_next", 10), EXP_FULL,    EXP_EMPTY)
 
 
-func add_mob_to_combat(mob_idx: int, player_attacks: Array) -> void:
+func add_mob_to_combat(mob_idx: int) -> void:
 	if _active_mob_ids.has(mob_idx):
 		return
-
 	if not combat_section.visible:
 		_active_mob_ids  = [mob_idx]
-		_attacks         = player_attacks.duplicate()
-		_selected_attack = 0
 		_player_stunned  = false
 		combat_section.visible = true
-		_rebuild_attack_bar()
 		_log("")
 	else:
 		_active_mob_ids.append(mob_idx)
-		for atk in player_attacks:
-			var already_have = false
-			for existing in _attacks:
-				if existing.attack_name == atk.attack_name:
-					already_have = true
-					break
-			if not already_have:
-				_attacks.append(atk)
-		_rebuild_attack_bar()
 		_log("A new enemy joins the fight!")
-
 	_rebuild_mob_cards()
 
 
 func end_combat() -> void:
 	combat_section.visible = false
 	_active_mob_ids = []
-	_attacks        = []
 	_clear_children(mob_row)
-	_clear_children(attack_bar)
 	_log("")
 
 
@@ -132,58 +112,110 @@ func _rebuild_mob_cards() -> void:
 		var card = MobCardScene.instantiate()
 		mob_row.add_child(card)
 		card.setup(mob_id, GameState.monsters[mob_id])
-		card.mob_attacked.connect(_on_mob_attacked)
+		card.attack_requested.connect(_on_attack_requested)
 		card.mob_died.connect(_on_mob_died)
+
+
+## Reads the currently equipped hotbar item and returns a normalized attack
+## dict. Falls back to bare-handed "Fists" if nothing valid is equipped.
+func _get_equipped_attack() -> Dictionary:
+	var idx = InventoryState.equipped_index
+	if idx >= 0 and idx < InventoryState.hotbar.size():
+		var slot = InventoryState.hotbar[idx]
+		var key  = slot.get("item_key", "")
+		var item_type = ItemRegistry.get_type(key)
+		if key != "" and (item_type == "weapon" or item_type == "spell"):
+			return {
+				"item_key":     key,
+				"name":         ItemRegistry.get_item_name(key),
+				"damage":       ItemRegistry.get_damage(key),
+				"energy_cost":  ItemRegistry.get_energy_cost(key),
+				"attack_type":  ItemRegistry.get_attack_type(key),
+				"is_spell":     item_type == "spell",
+				"hotbar_index": idx,
+			}
+	return {
+		"item_key": "", "name": "Fists", "damage": max(1, GameState.player.get("attack", 1)),
+		"energy_cost": 0, "attack_type": "single_swing", "is_spell": false, "hotbar_index": -1,
+	}
 
 
 func _rebuild_attack_bar() -> void:
 	if attack_bar == null:
 		return
 	_clear_children(attack_bar)
-	for i in range(_attacks.size()):
-		var atk: AttackData = _attacks[i]
-		var btn             = Button.new()
-		btn.icon             = atk.icon
-		btn.text             = "%s\n(%d ⚡)" % [atk.attack_name, atk.energy_cost]
-		btn.tooltip_text     = "Damage: %d  |  Energy: %d" % [atk.damage, atk.energy_cost]
-		btn.custom_minimum_size = Vector2(80, 64)
-		btn.toggle_mode      = true
-		btn.button_pressed   = (i == _selected_attack)
-		var idx = i
-		btn.pressed.connect(func(): _select_attack(idx))
-		attack_bar.add_child(btn)
+	var atk = _get_equipped_attack()
+	var type_data = ItemRegistry.get_attack_type_data(atk.attack_type)
+
+	var lbl = Label.new()
+	var energy_txt = "  |  %d energy" % int(ceil(atk.energy_cost * type_data.get("energy_mult", 1.0))) if atk.energy_cost > 0 else ""
+	lbl.text = "Equipped: %s%s  (DMG %d%s)" % [atk.name, type_data.get("label", ""), atk.damage, energy_txt]
+	attack_bar.add_child(lbl)
 
 
-func _select_attack(idx: int) -> void:
-	_selected_attack = idx
-	for i in range(attack_bar.get_child_count()):
-		var btn = attack_bar.get_child(i) as Button
-		if btn:
-			btn.button_pressed = (i == idx)
+func _on_attack_requested(mob_id: int) -> void:
+	if _attack_in_progress:
+		return
+	_do_player_attack(mob_id)
 
 
-func _on_mob_attacked(mob_id: int, base_dmg: int) -> void:
-	if _attacks.is_empty():
+func _do_player_attack(mob_id: int) -> void:
+	var atk       = _get_equipped_attack()
+	var type_data = ItemRegistry.get_attack_type_data(atk.attack_type)
+	var p         = GameState.player
+
+	var energy_needed = int(ceil(atk.energy_cost * type_data.get("energy_mult", 1.0)))
+	if energy_needed > 0 and p.get("energy", 0) < energy_needed:
+		_log("Not enough energy!")
 		return
 
-	var atk: AttackData = _attacks[_selected_attack]
-	var p = GameState.player
-
-	var mob = GameState.monsters[mob_id]
-	mob["hp"] = max(0, mob.get("hp", 0) - (atk.damage - base_dmg))
-	GameState.monsters[mob_id] = mob
-
-	p["energy"] = max(0, p.get("energy", 0) - atk.energy_cost)
+	p["energy"] = max(0, p.get("energy", 0) - energy_needed)
 	GameState.player = p
 	refresh_stats()
+
+	var hits        = max(1, type_data.get("hits", 1))
+	var dmg_per_hit = max(1, int(round(atk.damage * type_data.get("damage_mult", 1.0) / hits)))
+
+	_attack_in_progress = true
+	for i in range(hits):
+		var mob = GameState.monsters[mob_id]
+		if mob.get("hp", 0) <= 0:
+			break
+		mob["hp"] = max(0, mob.get("hp", 0) - dmg_per_hit)
+		GameState.monsters[mob_id] = mob
+
+		_spawn_attack_effect(mob_id, type_data)
+		var card = _get_card_for_mob(mob_id)
+		if card:
+			card.refresh_from_state()
+
+		if hits > 1 and i < hits - 1:
+			await get_tree().create_timer(HIT_DELAY).timeout
+	_attack_in_progress = false
+
+	if atk.is_spell and atk.hotbar_index >= 0:
+		InventoryState.consume_hotbar_item(atk.hotbar_index)
 
 	GameState.mark_dirty()
 	SaveManager.save()
 
-	if mob["hp"] <= 0:
-		return
+	var mob = GameState.monsters[mob_id]
+	if mob.get("hp", 0) <= 0:
+		_on_mob_died(mob_id)
+	else:
+		_do_mob_turn(mob_id)
 
-	_do_mob_turn(mob_id)
+
+func _spawn_attack_effect(mob_id: int, type_data: Dictionary) -> void:
+	var scene: PackedScene = type_data.get("effect_scene", null)
+	if scene == null:
+		return
+	var card = _get_card_for_mob(mob_id)
+	if card == null:
+		return
+	var fx: Node2D = scene.instantiate()
+	fx.position = Vector2(60, 40)  # roughly centered over MobCard's sprite
+	card.add_child(fx)
 
 
 func _on_mob_died(mob_id: int) -> void:
@@ -216,11 +248,9 @@ func _on_mob_died(mob_id: int) -> void:
 
 
 func _check_all_mobs_cleared() -> void:
-	# All mobs are dead when every monster entry has hp <= 0.
 	for monster in GameState.monsters:
 		if monster.get("hp", 0) > 0:
 			return
-	# Signal the game node to spawn the exit door.
 	var game = get_tree().get_first_node_in_group("game")
 	if game and game.has_method("spawn_exit_door"):
 		game.spawn_exit_door()
@@ -240,12 +270,11 @@ func _do_mob_turn(mob_id: int) -> void:
 	if atk.is_empty():
 		return
 
-	var p       = GameState.player
-	var damage  = atk.get("damage", 1)
-	var effect  = atk.get("effect", 0)
+	var p      = GameState.player
+	var damage = atk.get("damage", 1)
+	var effect = atk.get("effect", 0)
 
 	p["hp"] = max(0, p.get("hp", 0) - damage)
-
 	var msg = "%s hits you for %d!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]
 
 	match effect:
@@ -319,7 +348,7 @@ func _clear_children(node: Node) -> void:
 		return
 	for child in node.get_children():
 		child.queue_free()
-		
+
 func _scroll_mobs(direction: int) -> void:
 	var card_count = mob_row.get_child_count()
 	_scroll_index = clampi(_scroll_index + direction, 0, max(0, card_count - 1))
@@ -333,12 +362,19 @@ func _on_inventory_slot_clicked(index: int) -> void:
 	if slot.get("frozen", false) or item_key == "":
 		return
 
-	# Handle berries — consume one from the stack, restore 3 HP.
+	var item_type = ItemRegistry.get_type(item_key)
+
+	if item_type == "weapon" or item_type == "spell":
+		InventoryState.equip_item(index)
+		var equipped = InventoryState.equipped_index == index
+		_log("%s %s." % [ItemRegistry.get_item_name(item_key), "equipped" if equipped else "unequipped"])
+		return
+
 	if item_key == "berries":
 		var p = GameState.player
 		p["hp"] = min(p.get("hp", 0) + 3, p.get("max_hp", 10))
 		GameState.player = p
-		InventoryState.consume_hotbar_item(index)   # removes 1, clears slot when count hits 0
+		InventoryState.consume_hotbar_item(index)
 		GameState.mark_dirty()
 		SaveManager.save()
 		refresh_stats()
@@ -346,18 +382,16 @@ func _on_inventory_slot_clicked(index: int) -> void:
 
 
 func _on_bag_opened() -> void:
-	# Don't stack multiple bag overlays if it's already open.
 	if is_instance_valid(_bag_ui):
 		return
 	_bag_ui = BagUIScene.instantiate()
-	# To center the ui, get the current scene and add to it
 	get_tree().current_scene.add_child(_bag_ui)
 	_bag_ui.closed.connect(_on_bag_closed)
 
 
 func _on_bag_closed() -> void:
 	_bag_ui = null
-	
+
 func _steal_random_item() -> String:
 	var candidates: Array = []
 	for i in range(InventoryState.HOTBAR_SIZE):

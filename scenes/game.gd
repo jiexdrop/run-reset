@@ -268,11 +268,8 @@ func restore_combat(combat_ui: Control) -> void:
 		var monster = GameState.monsters[mob_idx]
 		if monster.get("hp", 0) <= 0:
 			continue
-		var sword         = AttackData.new()
-		sword.attack_name = "Sword"
-		sword.damage      = GameState.player.get("attack", 1)
-		sword.energy_cost = 1
-		combat_ui.add_mob_to_combat(mob_idx, [sword])
+
+		combat_ui.add_mob_to_combat(mob_idx)
 
 
 # ── Door ──────────────────────────────────────────────────────────────────────

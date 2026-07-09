@@ -64,24 +64,25 @@ func refresh() -> void:
 	_item_key = slot_data.get("item_key", "")
 	_frozen   = slot_data.get("frozen", false)
 	var count: int = slot_data.get("count", 0)
+	var equipped: bool = (container == "hotbar" and slot_index == InventoryState.equipped_index)
 
-	# Ice overlay
 	_ice.visible = _frozen
 
-	# Item icon + stack count label
 	if _item_key != "":
 		var tex = ItemRegistry.get_icon(_item_key)
 		_icon.texture = tex
 		_icon.visible = (tex != null)
-		# Show count only when more than 1 item is stacked.
 		_label.text = str(count) if count > 1 else ""
 	else:
 		_icon.visible = false
 		_label.text   = ""
 
-	# Visual feedback for frozen
-	modulate = Color(0.7, 0.85, 1.0) if _frozen else Color.WHITE
-
+	if equipped:
+		modulate = Color(1.0, 0.85, 0.35)
+	elif _frozen:
+		modulate = Color(0.7, 0.85, 1.0)
+	else:
+		modulate = Color.WHITE
 
 # ── Mouse input / drag-drop ────────────────────────────────────────────────────
 

@@ -105,14 +105,9 @@ func _trigger_combat() -> void:
 		GameState.mark_dirty()
 		SaveManager.save()
 
-	var sword         = AttackData.new()
-	sword.attack_name = "Sword"
-	sword.damage      = GameState.player.get("attack", 1)
-	sword.energy_cost = 1
-
 	var combat_ui = get_tree().get_first_node_in_group("combat_ui")
 	if combat_ui:
-		combat_ui.add_mob_to_combat(mob_idx, [sword])
+		combat_ui.add_mob_to_combat(mob_idx)
 	else:
 		push_warning("tile: no node in group 'combat_ui' found")
 

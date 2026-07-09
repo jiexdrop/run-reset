@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://np78ciiwtoev"]
+
+[ext_resource type="Script" uid="uid://cr8dsk87qpvaq" path="res://scenes/effects/particle_burst.gd" id="1_2v1mq"]
+
+[node name="ParticleBurst" type="GPUParticles2D" unique_id=432197830]
+script = ExtResource("1_2v1mq")
