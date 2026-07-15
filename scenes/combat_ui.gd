@@ -36,6 +36,7 @@ const CARD_WIDTH = 130
 var _bag_ui: Control = null
 const ICONS_PER_ROW = 12
 
+const DEATH_VFX_DURATION = 1.5
 
 func _ready() -> void:
 	add_to_group("combat_ui")
@@ -236,6 +237,9 @@ func _on_mob_died(mob_id: int) -> void:
 	GameState.monsters[mob_id]["hp"] = 0
 	GameState.mark_dirty()
 	SaveManager.save()
+	
+	await get_tree().create_timer(DEATH_VFX_DURATION).timeout
+
 
 	_active_mob_ids.erase(mob_id)
 	_rebuild_mob_cards()
