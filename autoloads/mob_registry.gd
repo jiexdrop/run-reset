@@ -48,7 +48,7 @@ func _build_registry() -> void:
 	spider.mob_name   = "Cave Spider"
 	spider.sprite     = "spider"
 	spider.max_hp     = 3
-	spider.xp_reward  = 2
+	spider.xp_reward  = 1
 	spider.attacks    = [bite, venom] as Array[MobAttackData]
 	spider.loot_table = [
 		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },

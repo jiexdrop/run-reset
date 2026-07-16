@@ -39,8 +39,6 @@ func refresh_from_state() -> void:
 	mob_data    = GameState.monsters[mob_id]
 	_mob_attacks = mob_data.get("attacks", [])
 	_refresh()
-	if mob_data.get("hp", 0) <= 0:
-		mob_died.emit(mob_id)
 
 
 func do_mob_turn() -> Dictionary:

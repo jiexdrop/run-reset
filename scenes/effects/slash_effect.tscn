@@ -1,10 +1,15 @@
 [gd_scene format=3 uid="uid://bxjxrdfcy7wh4"]
 
 [ext_resource type="Script" uid="uid://kt1a877n6edv" path="res://scenes/effects/slash_effect.gd" id="1_slash"]
+[ext_resource type="Texture2D" uid="uid://bm5ftvb7marli" path="res://assets/attacks/sword.png" id="2_pt8fy"]
 
 [node name="SlashEffect" type="Node2D" unique_id=2140561710]
 script = ExtResource("1_slash")
 
 [node name="Polygon2D" type="Polygon2D" parent="." unique_id=560726000]
+visible = false
 color = Color(1, 1, 1, 0.9)
 polygon = PackedVector2Array(-20, 10, 0, -22, 20, -10, 4, 6)
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1517767781]
+texture = ExtResource("2_pt8fy")
