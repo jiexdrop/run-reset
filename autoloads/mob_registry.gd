@@ -34,22 +34,26 @@ func get_pool(zone: String) -> Array:
 
 func _build_registry() -> void:
 	# ── Cave Spider ────────────────────────────────────────────────────────────
-	var bite        = MobAttackData.new()
+	var bite         = MobAttackData.new()
 	bite.attack_name = "Bite"
 	bite.damage      = 1
 	bite.effect      = MobAttackData.Effect.NONE
 
-	var venom       = MobAttackData.new()
+	var venom         = MobAttackData.new()
 	venom.attack_name = "Venom"
 	venom.damage      = 1
 	venom.effect      = MobAttackData.Effect.POISON
-
-	var spider      = MobDef.new()
-	spider.mob_name  = "Cave Spider"
-	spider.sprite    = "spider"
-	spider.max_hp    = 2
-	spider.xp_reward = 2
-	spider.attacks   = [bite, venom] as Array[MobAttackData]
+ 
+	var spider        = MobDef.new()
+	spider.mob_name   = "Cave Spider"
+	spider.sprite     = "spider"
+	spider.max_hp     = 2
+	spider.xp_reward  = 2
+	spider.attacks    = [bite, venom] as Array[MobAttackData]
+	spider.loot_table = [
+		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
+	]
 	_registry["spider"] = spider
 
 	# ── Sewer Rat ──────────────────────────────────────────────────────────────
@@ -58,12 +62,16 @@ func _build_registry() -> void:
 	gnaw.damage      = 2
 	gnaw.effect      = MobAttackData.Effect.NONE
 
-	var rat         = MobDef.new()
-	rat.mob_name  = "Sewer Rat"
-	rat.sprite    = "rat"
-	rat.max_hp    = 1
-	rat.xp_reward = 1
-	rat.attacks   = [gnaw] as Array[MobAttackData]
+	var rat        = MobDef.new()
+	rat.mob_name   = "Sewer Rat"
+	rat.sprite     = "rat"
+	rat.max_hp     = 1
+	rat.xp_reward  = 1
+	rat.attacks    = [gnaw] as Array[MobAttackData]
+	rat.loot_table = [
+		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
+	]
 	_registry["rat"] = rat
 
 	# ── Glaciarch (Ribera boss) ─────────────────────────────────────────────────
@@ -77,12 +85,16 @@ func _build_registry() -> void:
 	freeze.damage      = 1
 	freeze.effect      = MobAttackData.Effect.STUN
 
-	var glaciarch    = MobDef.new()
-	glaciarch.mob_name  = "Glaciarch"
-	glaciarch.sprite    = "glaciarch"
-	glaciarch.max_hp    = 8
-	glaciarch.xp_reward = 6
-	glaciarch.attacks   = [frost_bite, freeze] as Array[MobAttackData]
+	var glaciarch        = MobDef.new()
+	glaciarch.mob_name   = "Glaciarch"
+	glaciarch.sprite     = "glaciarch"
+	glaciarch.max_hp     = 8
+	glaciarch.xp_reward  = 6
+	glaciarch.attacks    = [frost_bite, freeze] as Array[MobAttackData]
+	glaciarch.loot_table = [
+		{ "item_key": "energy_potion", "chance": 1.0, "min": 1, "max": 1 },
+		{ "item_key": "health_potion", "chance": 0.3, "min": 1, "max": 1 },
+	]
 	_registry["glaciarch"] = glaciarch
 
 	# ── Frozelin (Ribera regular) ────────────────────────────────────────────────
@@ -91,12 +103,16 @@ func _build_registry() -> void:
 	chill.damage      = 1
 	chill.effect      = MobAttackData.Effect.NONE
 
-	var frozelin     = MobDef.new()
-	frozelin.mob_name  = "Frozelin"
-	frozelin.sprite    = "frozelin"
-	frozelin.max_hp    = 2
-	frozelin.xp_reward = 2
-	frozelin.attacks   = [chill] as Array[MobAttackData]
+	var frozelin        = MobDef.new()
+	frozelin.mob_name   = "Frozelin"
+	frozelin.sprite     = "frozelin"
+	frozelin.max_hp     = 2
+	frozelin.xp_reward  = 2
+	frozelin.attacks    = [chill] as Array[MobAttackData]
+	frozelin.loot_table = [
+		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
+	]
 	_registry["frozelin"] = frozelin
 
 	# ── Gomelin (Pikoterra boss) ─────────────────────────────────────────────────
@@ -110,12 +126,16 @@ func _build_registry() -> void:
 	slam.damage      = 3
 	slam.effect      = MobAttackData.Effect.NONE
 
-	var gomelin      = MobDef.new()
-	gomelin.mob_name  = "Gomelin"
-	gomelin.sprite    = "gomelin"
-	gomelin.max_hp    = 8
-	gomelin.xp_reward = 6
-	gomelin.attacks   = [pilfer, slam] as Array[MobAttackData]
+	var gomelin        = MobDef.new()
+	gomelin.mob_name   = "Gomelin"
+	gomelin.sprite     = "gomelin"
+	gomelin.max_hp     = 8
+	gomelin.xp_reward  = 6
+	gomelin.attacks    = [pilfer, slam] as Array[MobAttackData]
+	gomelin.loot_table = [
+		{ "item_key": "health_potion", "chance": 1.0, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.3, "min": 1, "max": 1 },
+	]
 	_registry["gomelin"] = gomelin
 
 	# ── Pikonaut (Pikoterra regular) ─────────────────────────────────────────────
@@ -124,12 +144,16 @@ func _build_registry() -> void:
 	poke.damage      = 1
 	poke.effect      = MobAttackData.Effect.NONE
 
-	var pikonaut     = MobDef.new()
-	pikonaut.mob_name  = "Pikonaut"
-	pikonaut.sprite    = "pikonaut"
-	pikonaut.max_hp    = 2
-	pikonaut.xp_reward = 2
-	pikonaut.attacks   = [poke] as Array[MobAttackData]
+	var pikonaut        = MobDef.new()
+	pikonaut.mob_name   = "Pikonaut"
+	pikonaut.sprite     = "pikonaut"
+	pikonaut.max_hp     = 2
+	pikonaut.xp_reward  = 2
+	pikonaut.attacks    = [poke] as Array[MobAttackData]
+	pikonaut.loot_table = [
+		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
+	]
 	_registry["pikonaut"] = pikonaut
 
 	# ── Add more mobs here ────────────────────

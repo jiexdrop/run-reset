@@ -17,3 +17,4 @@ class_name MobDef
 @export var max_hp:     int                  = 3
 @export var xp_reward:  int                  = 1
 @export var attacks:    Array[MobAttackData] = []
+@export var loot_table: Array[Dictionary]    = []

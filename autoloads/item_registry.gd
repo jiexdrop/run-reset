@@ -38,6 +38,24 @@ var _items: Dictionary = {
 		"type": "consumable",
 	},
 
+	# ── Potions ────────────────────────────────────────────────────────────────
+	"health_potion": {
+		"name": "Health Potion",
+		"icon": preload("res://assets/items/health_potion.png"),
+		"desc": "A vial of restorative brew. Restores 6 HP.",
+		"max_stack": 8,
+		"type": "consumable",
+		"heal_amount": 6,
+	},
+	"energy_potion": {
+		"name": "Energy Potion",
+		"icon": preload("res://assets/items/energy_potion.png"),
+		"desc": "A fizzing tonic. Restores 6 energy.",
+		"max_stack": 8,
+		"type": "consumable",
+		"energy_amount": 6,
+	},
+	
 	# ── Swords ────────────────────────────────────────────────────────────────
 	"iron_sword": {
 		"name": "Iron Sword",
@@ -125,7 +143,17 @@ func get_energy_cost(item_key: String) -> int:
 	if _items.has(item_key):
 		return _items[item_key].get("energy_cost", 0)
 	return 0
+	
+func get_heal_amount(item_key: String) -> int:
+	if _items.has(item_key):
+		return _items[item_key].get("heal_amount", 0)
+	return 0
 
+func get_energy_amount(item_key: String) -> int:
+	if _items.has(item_key):
+		return _items[item_key].get("energy_amount", 0)
+	return 0
+	
 func get_attack_type(item_key: String) -> String:
 	if _items.has(item_key):
 		return _items[item_key].get("attack_type", "single_swing")

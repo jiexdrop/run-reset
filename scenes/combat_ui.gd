@@ -232,14 +232,18 @@ func _on_mob_died(mob_id: int) -> void:
 	GameState.player = p
 	refresh_stats()
 
+	var drop_msg = _roll_loot(mob_id)
+
 	_notify_tile_mob_dead(mob_id)
 
 	GameState.monsters[mob_id]["hp"] = 0
 	GameState.mark_dirty()
 	SaveManager.save()
-	
-	await get_tree().create_timer(DEATH_VFX_DURATION).timeout
 
+	if drop_msg != "":
+		_log(drop_msg)
+
+	await get_tree().create_timer(DEATH_VFX_DURATION).timeout
 
 	_active_mob_ids.erase(mob_id)
 	_rebuild_mob_cards()
@@ -384,6 +388,27 @@ func _on_inventory_slot_clicked(index: int) -> void:
 		refresh_stats()
 		_log("You eat berries and restore 3 HP.")
 
+	if item_key == "health_potion":
+		var p = GameState.player
+		p["hp"] = min(p.get("hp", 0) + ItemRegistry.get_heal_amount(item_key), p.get("max_hp", 10))
+		GameState.player = p
+		InventoryState.consume_hotbar_item(index)
+		GameState.mark_dirty()
+		SaveManager.save()
+		refresh_stats()
+		_log("You drink a Health Potion and restore %d HP." % ItemRegistry.get_heal_amount(item_key))
+		return
+
+	if item_key == "energy_potion":
+		var p = GameState.player
+		p["energy"] = min(p.get("energy", 0) + ItemRegistry.get_energy_amount(item_key), p.get("max_energy", 10))
+		GameState.player = p
+		InventoryState.consume_hotbar_item(index)
+		GameState.mark_dirty()
+		SaveManager.save()
+		refresh_stats()
+		_log("You drink an Energy Potion and restore %d energy." % ItemRegistry.get_energy_amount(item_key))
+		return
 
 func _on_bag_opened() -> void:
 	if is_instance_valid(_bag_ui):
@@ -408,3 +433,19 @@ func _steal_random_item() -> String:
 	var item_key = InventoryState.hotbar[idx]["item_key"]
 	InventoryState.consume_hotbar_item(idx)
 	return item_key
+	
+func _roll_loot(mob_id: int) -> String:
+	var loot_table: Array = GameState.monsters[mob_id].get("loot_table", [])
+	if loot_table.is_empty():
+		return ""
+
+	var drops: Array = []
+	for entry in loot_table:
+		if randf() < entry.get("chance", 0.0):
+			var amount = randi_range(entry.get("min", 1), entry.get("max", 1))
+			InventoryState.add_item(entry.get("item_key", ""), amount)
+			drops.append("%s x%d" % [ItemRegistry.get_item_name(entry.get("item_key", "")), amount])
+
+	if drops.is_empty():
+		return ""
+	return "%s dropped: %s" % [GameState.monsters[mob_id].get("name", "Mob"), ", ".join(drops)]
