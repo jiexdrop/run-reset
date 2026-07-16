@@ -47,12 +47,13 @@ func _build_registry() -> void:
 	var spider        = MobDef.new()
 	spider.mob_name   = "Cave Spider"
 	spider.sprite     = "spider"
-	spider.max_hp     = 2
+	spider.max_hp     = 3
 	spider.xp_reward  = 2
 	spider.attacks    = [bite, venom] as Array[MobAttackData]
 	spider.loot_table = [
 		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
+		{ "item_key": "stone_sword", "chance": 0.12, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["spider"] = spider
 
@@ -65,7 +66,7 @@ func _build_registry() -> void:
 	var rat        = MobDef.new()
 	rat.mob_name   = "Sewer Rat"
 	rat.sprite     = "rat"
-	rat.max_hp     = 1
+	rat.max_hp     = 2
 	rat.xp_reward  = 1
 	rat.attacks    = [gnaw] as Array[MobAttackData]
 	rat.loot_table = [
@@ -106,7 +107,7 @@ func _build_registry() -> void:
 	var frozelin        = MobDef.new()
 	frozelin.mob_name   = "Frozelin"
 	frozelin.sprite     = "frozelin"
-	frozelin.max_hp     = 2
+	frozelin.max_hp     = 3
 	frozelin.xp_reward  = 2
 	frozelin.attacks    = [chill] as Array[MobAttackData]
 	frozelin.loot_table = [
@@ -147,7 +148,7 @@ func _build_registry() -> void:
 	var pikonaut        = MobDef.new()
 	pikonaut.mob_name   = "Pikonaut"
 	pikonaut.sprite     = "pikonaut"
-	pikonaut.max_hp     = 2
+	pikonaut.max_hp     = 3
 	pikonaut.xp_reward  = 2
 	pikonaut.attacks    = [poke] as Array[MobAttackData]
 	pikonaut.loot_table = [

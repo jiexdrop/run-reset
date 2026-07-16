@@ -226,8 +226,8 @@ func _on_mob_died(mob_id: int) -> void:
 	if p["xp"] >= p.get("xp_to_next", 10):
 		p["xp"]    -= p["xp_to_next"]
 		p["level"]  = p.get("level", 1) + 1
-		p["max_hp"] = p.get("max_hp", 10) + 1
-		p["hp"]     = p["max_hp"]
+		#p["max_hp"] = p.get("max_hp", 10) # + 1
+		#p["hp"]     = p["max_hp"]
 		_log("Level up! Now level %d" % p["level"])
 	GameState.player = p
 	refresh_stats()

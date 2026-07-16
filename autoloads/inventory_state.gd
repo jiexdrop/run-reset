@@ -3,7 +3,7 @@ extends Node
 const HOTBAR_SIZE = 8
 const BAG_SIZE    = 24
 
-const DEBUG_GIVE_WEAPONS := true
+const DEBUG_GIVE_WEAPONS := false
 const DEBUG_WEAPON_KEYS: Array[String] = ["iron_sword", "steel_sword", "stone_sword"]
 const DEBUG_SPELL_KEYS:  Array[String] = ["spell_ice", "spell_fire"]
 const DEBUG_SPELL_COUNT := 8
