@@ -13,6 +13,14 @@ const HIT_DELAY = 0.15   # pause between hits of a multi-hit attack
 const MobCardScene = preload("res://scenes/mob_card.tscn")
 const BagUIScene   = preload("res://scenes/bag_ui.tscn")
 
+const MOB_ATTACK_EFFECTS: Dictionary = {
+	"Explode": preload("res://scenes/effects/explosion_effect.tscn"),
+}
+
+const SELF_DESTRUCT_ATTACKS: Dictionary = {
+	"Explode": true,
+}
+
 @onready var level_label:    Label           = $MarginContainer/VBox/StatsSection/LevelLabel
 @onready var hearts_grid:    GridContainer   = $MarginContainer/VBox/StatsSection/HeartsGrid
 @onready var energy_grid:    GridContainer   = $MarginContainer/VBox/StatsSection/EnergyGrid
@@ -226,13 +234,12 @@ func _on_mob_died(mob_id: int) -> void:
 	if p["xp"] >= p.get("xp_to_next", 10):
 		p["xp"]    -= p["xp_to_next"]
 		p["level"]  = p.get("level", 1) + 1
-		#p["max_hp"] = p.get("max_hp", 10) # + 1
-		#p["hp"]     = p["max_hp"]
 		_log("Level up! Now level %d" % p["level"])
 	GameState.player = p
 	refresh_stats()
 
-	var drop_msg = _roll_loot(mob_id)
+	var explode_msg = _apply_death_explosion(mob_id)
+	var drop_msg     = _roll_loot(mob_id)
 
 	_notify_tile_mob_dead(mob_id)
 
@@ -240,8 +247,11 @@ func _on_mob_died(mob_id: int) -> void:
 	GameState.mark_dirty()
 	SaveManager.save()
 
-	if drop_msg != "":
-		_log(drop_msg)
+	var final_msgs: Array = []
+	if explode_msg != "": final_msgs.append(explode_msg)
+	if drop_msg    != "": final_msgs.append(drop_msg)
+	if not final_msgs.is_empty():
+		_log(" ".join(final_msgs))
 
 	await get_tree().create_timer(DEATH_VFX_DURATION).timeout
 
@@ -253,7 +263,6 @@ func _on_mob_died(mob_id: int) -> void:
 		_check_all_mobs_cleared()
 	else:
 		_log("")
-
 
 func _check_all_mobs_cleared() -> void:
 	for monster in GameState.monsters:
@@ -277,6 +286,8 @@ func _do_mob_turn(mob_id: int) -> void:
 	var atk: Dictionary = card.do_mob_turn()
 	if atk.is_empty():
 		return
+
+	_spawn_mob_attack_effect(mob_id, atk.get("attack_name", ""))
 
 	var p      = GameState.player
 	var damage = atk.get("damage", 1)
@@ -449,3 +460,34 @@ func _roll_loot(mob_id: int) -> String:
 	if drops.is_empty():
 		return ""
 	return "%s dropped: %s" % [GameState.monsters[mob_id].get("name", "Mob"), ", ".join(drops)]
+	
+	
+func _spawn_mob_attack_effect(mob_id: int, attack_name: String) -> void:
+	var scene: PackedScene = MOB_ATTACK_EFFECTS.get(attack_name, null)
+	if scene == null:
+		return
+	var card = _get_card_for_mob(mob_id)
+	if card == null:
+		return
+	var fx: Node2D = scene.instantiate()
+	fx.position = Vector2(60, 40)  # roughly centered over MobCard's sprite
+	card.add_child(fx)
+
+## If the dying mob has a self-destruct attack (e.g. Kaze Shroom's Explode),
+## apply its damage to the player and play its effect, even though the mob
+## never got to take its normal turn.
+func _apply_death_explosion(mob_id: int) -> String:
+	var attacks: Array = GameState.monsters[mob_id].get("attacks", [])
+	for atk in attacks:
+		var atk_name: String = atk.get("attack_name", "")
+		if SELF_DESTRUCT_ATTACKS.get(atk_name, false):
+			_spawn_mob_attack_effect(mob_id, atk_name)
+			var damage: int = atk.get("damage", 0)
+			var p = GameState.player
+			p["hp"] = max(0, p.get("hp", 0) - damage)
+			GameState.player = p
+			refresh_stats()
+			if p["hp"] <= 0:
+				_on_player_died()
+			return "%s explodes for %d damage!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]
+	return ""

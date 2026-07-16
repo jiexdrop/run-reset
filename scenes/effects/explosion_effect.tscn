@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://bl2ow8qdvxvav"]
+
+[ext_resource type="Script" uid="uid://dtqs2h3nxp7ba" path="res://scenes/effects/explosion_effect.gd" id="1_expl"]
+[ext_resource type="Texture2D" uid="uid://cjudwocylhkx5" path="res://assets/attacks/explosion.png" id="2_expl"]
+
+[node name="ExplosionEffect" type="Node2D" unique_id=778550016]
+script = ExtResource("1_expl")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=34080189]
+scale = Vector2(0.8, 0.8)
+texture = ExtResource("2_expl")
