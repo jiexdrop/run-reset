@@ -255,6 +255,9 @@ func _on_mob_died(mob_id: int) -> void:
 
 	await get_tree().create_timer(DEATH_VFX_DURATION).timeout
 
+	if not is_inside_tree():
+		return   # scene changed / node freed while we were waiting
+
 	_active_mob_ids.erase(mob_id)
 	_rebuild_mob_cards()
 
@@ -268,6 +271,8 @@ func _check_all_mobs_cleared() -> void:
 	for monster in GameState.monsters:
 		if monster.get("hp", 0) > 0:
 			return
+	if not is_inside_tree():
+		return
 	var game = get_tree().get_first_node_in_group("game")
 	if game and game.has_method("spawn_exit_door"):
 		game.spawn_exit_door()
