@@ -77,5 +77,14 @@ func _build_registry() -> void:
 		],
 		"mob_pool": ["pikonaut"],
 		"boss": "gomelin",
+		"bg_color": Color(0.922, 0.719, 0.578, 1.0),
+	}
+	
+	_registry["evergreen"] = {
+		"tiles": [
+			preload("res://assets/tiles/evergreen/tile_0.png"),
+		],
+		"mob_pool": ["kaze_shroom"],
+		"boss": "sapguard",
 		"bg_color": Color(0.72, 0.80, 0.55, 1.0),
 	}

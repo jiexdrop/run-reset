@@ -122,17 +122,12 @@ func _build_registry() -> void:
 	pilfer.damage      = 2
 	pilfer.effect      = MobAttackData.Effect.STEAL
 
-	var slam         = MobAttackData.new()
-	slam.attack_name = "Slam"
-	slam.damage      = 3
-	slam.effect      = MobAttackData.Effect.NONE
-
 	var gomelin        = MobDef.new()
 	gomelin.mob_name   = "Gomelin"
 	gomelin.sprite     = "gomelin"
 	gomelin.max_hp     = 8
 	gomelin.xp_reward  = 6
-	gomelin.attacks    = [pilfer, slam] as Array[MobAttackData]
+	gomelin.attacks    = [pilfer] as Array[MobAttackData]
 	gomelin.loot_table = [
 		{ "item_key": "health_potion", "chance": 1.0, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.3, "min": 1, "max": 1 },
@@ -156,5 +151,42 @@ func _build_registry() -> void:
 		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["pikonaut"] = pikonaut
+	
+
+	# ── Kaze Shroom ─────────────────────────────────────────────
+	var explode         = MobAttackData.new()
+	explode.attack_name    = "Explode"
+	explode.damage         = 3
+	explode.effect         = MobAttackData.Effect.NONE
+
+	var kaze_shroom        = MobDef.new()
+	kaze_shroom.mob_name   = "Kaze Shroom"
+	kaze_shroom.sprite     = "kaze_shroom"
+	kaze_shroom.max_hp     = 3
+	kaze_shroom.xp_reward  = 2
+	kaze_shroom.attacks    = [explode] as Array[MobAttackData]
+	kaze_shroom.loot_table = [
+		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
+	] as Array[Dictionary]
+	_registry["kaze_shroom"] = kaze_shroom
+
+	# ── Sapguard ─────────────────────────────────────────────
+	var sip         = MobAttackData.new()
+	sip.attack_name    = "Sip"
+	sip.damage         = 2
+	sip.effect         = MobAttackData.Effect.NONE
+
+	var sapguard        = MobDef.new()
+	sapguard.mob_name   = "Sapguard"
+	sapguard.sprite     = "sapguard"
+	sapguard.max_hp     = 8
+	sapguard.xp_reward  = 2
+	sapguard.attacks    = [sip] as Array[MobAttackData]
+	sapguard.loot_table = [
+		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
+	] as Array[Dictionary]
+	_registry["sapguard"] = sapguard
 
 	# ── Add more mobs here ────────────────────

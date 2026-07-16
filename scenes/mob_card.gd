@@ -7,10 +7,12 @@ signal mob_died(mob_id: int)
 const MOB_SPRITES: Dictionary = {
 	"spider": preload("res://assets/mobs/spider.png"),
 	"rat": preload("res://assets/mobs/rat.png"),
-	"glaciarch": preload("res://assets/mobs/ribera/glaciarch.png"),
-	"frozelin":  preload("res://assets/mobs/ribera/frozelin.png"),
-	"gomelin":   preload("res://assets/mobs/pikoterra/gomelin.png"),
-	"pikonaut":  preload("res://assets/mobs/pikoterra/pikonaut.png"),
+	"glaciarch":    preload("res://assets/mobs/ribera/glaciarch.png"),
+	"frozelin":     preload("res://assets/mobs/ribera/frozelin.png"),
+	"gomelin":      preload("res://assets/mobs/pikoterra/gomelin.png"),
+	"pikonaut":     preload("res://assets/mobs/pikoterra/pikonaut.png"),
+	"kaze_shroom":  preload("res://assets/mobs/evergreen/kaze_shroom.png"),
+	"sapguard":     preload("res://assets/mobs/evergreen/sapguard.png"),
 }
 
 const HP_FULL      = preload("res://assets/ui/heart_full.png")
