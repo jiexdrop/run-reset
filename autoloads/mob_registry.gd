@@ -53,7 +53,7 @@ func _build_registry() -> void:
 	spider.loot_table = [
 		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
-	]
+	] as Array[Dictionary]
 	_registry["spider"] = spider
 
 	# ── Sewer Rat ──────────────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ func _build_registry() -> void:
 	rat.loot_table = [
 		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
-	]
+	] as Array[Dictionary]
 	_registry["rat"] = rat
 
 	# ── Glaciarch (Ribera boss) ─────────────────────────────────────────────────
@@ -94,7 +94,7 @@ func _build_registry() -> void:
 	glaciarch.loot_table = [
 		{ "item_key": "energy_potion", "chance": 1.0, "min": 1, "max": 1 },
 		{ "item_key": "health_potion", "chance": 0.3, "min": 1, "max": 1 },
-	]
+	] as Array[Dictionary]
 	_registry["glaciarch"] = glaciarch
 
 	# ── Frozelin (Ribera regular) ────────────────────────────────────────────────
@@ -112,7 +112,7 @@ func _build_registry() -> void:
 	frozelin.loot_table = [
 		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
-	]
+	] as Array[Dictionary]
 	_registry["frozelin"] = frozelin
 
 	# ── Gomelin (Pikoterra boss) ─────────────────────────────────────────────────
@@ -135,7 +135,7 @@ func _build_registry() -> void:
 	gomelin.loot_table = [
 		{ "item_key": "health_potion", "chance": 1.0, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.3, "min": 1, "max": 1 },
-	]
+	] as Array[Dictionary]
 	_registry["gomelin"] = gomelin
 
 	# ── Pikonaut (Pikoterra regular) ─────────────────────────────────────────────
@@ -153,7 +153,7 @@ func _build_registry() -> void:
 	pikonaut.loot_table = [
 		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
-	]
+	] as Array[Dictionary]
 	_registry["pikonaut"] = pikonaut
 
 	# ── Add more mobs here ────────────────────
