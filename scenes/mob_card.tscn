@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://cjlf27sole3mx"]
+[gd_scene format=3 uid="uid://bja61m6w0764o"]
 
 [ext_resource type="Script" uid="uid://dwm6q314wbcbl" path="res://scenes/mob_card.gd" id="1_mobcard"]
 
@@ -19,9 +19,10 @@ layout_mode = 2
 text = "Mob"
 horizontal_alignment = 1
 
-[node name="HPContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=100000005]
+[node name="HPBar" type="ProgressBar" parent="VBoxContainer" unique_id=100000005]
+custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
-alignment = 1
+show_percentage = false
 
 [node name="AttackButton" type="Button" parent="VBoxContainer" unique_id=100000006]
 layout_mode = 2

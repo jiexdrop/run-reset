@@ -162,7 +162,7 @@ func _build_registry() -> void:
 	var kaze_shroom        = MobDef.new()
 	kaze_shroom.mob_name   = "Kaze Shroom"
 	kaze_shroom.sprite     = "kaze_shroom"
-	kaze_shroom.max_hp     = 3
+	kaze_shroom.max_hp     = 1
 	kaze_shroom.xp_reward  = 2
 	kaze_shroom.attacks    = [explode] as Array[MobAttackData]
 	kaze_shroom.loot_table = [

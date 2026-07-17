@@ -37,7 +37,7 @@
      inkscape:window-x="-8"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer2"
+     inkscape:current-layer="layer3"
      showgrid="false"
      inkscape:lockguides="false"><inkscape:grid
        id="grid28"
@@ -2318,7 +2318,10 @@
        y="402.54492" /><g
        id="g86"
        inkscape:label="explosion"
-       transform="translate(-13.98528,-46.568538)"><circle
+       transform="translate(-13.98528,-46.568538)"
+       inkscape:export-filename="attacks\explosion.png"
+       inkscape:export-xdpi="73.948349"
+       inkscape:export-ydpi="73.948349"><circle
          style="fill:#f9c22b;stroke:#f79617;stroke-width:0.710203;stroke-linecap:round;stroke-linejoin:round;paint-order:stroke fill markers"
          id="path86-1"
          cx="232.75099"

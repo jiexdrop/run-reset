@@ -15,9 +15,8 @@ const MOB_SPRITES: Dictionary = {
 	"sapguard":     preload("res://assets/mobs/evergreen/sapguard.png"),
 }
 
-const HP_FULL      = preload("res://assets/ui/heart_full.png")
-const HP_EMPTY     = preload("res://assets/ui/heart_empty.png")
-const HP_ICON_SIZE = Vector2(16, 16)
+const HP_BAR_FILL_COLOR: Color = Color(0.75, 0.2, 0.2)
+const HP_BAR_BG_COLOR:   Color = Color(0.2, 0.2, 0.2)
 
 var mob_id:   int        = -1
 var mob_data: Dictionary = {}
@@ -25,7 +24,7 @@ var _mob_attacks: Array = []
 
 @onready var mob_sprite:    TextureRect   = $VBoxContainer/MobSprite
 @onready var name_label:    Label         = $VBoxContainer/NameLabel
-@onready var hp_container:  HBoxContainer = $VBoxContainer/HPContainer
+@onready var hp_bar:        ProgressBar   = $VBoxContainer/HPBar
 @onready var attack_button: Button        = $VBoxContainer/AttackButton
 
 
@@ -33,6 +32,7 @@ func setup(id: int, data: Dictionary) -> void:
 	mob_id      = id
 	mob_data    = data
 	_mob_attacks = data.get("attacks", [])
+	_style_hp_bar()
 	_refresh()
 	attack_button.pressed.connect(_on_attack_pressed)
 
@@ -56,19 +56,23 @@ func _refresh() -> void:
 		mob_sprite.texture = MOB_SPRITES[sprite_key]
 	var hp     = mob_data.get("hp",     1)
 	var max_hp = mob_data.get("max_hp", hp)
-	_build_hearts(hp, max_hp)
+	_update_hp_bar(hp, max_hp)
 	attack_button.disabled = (hp <= 0)
 
 
-func _build_hearts(hp: int, max_hp: int) -> void:
-	for child in hp_container.get_children():
-		child.queue_free()
-	for i in range(max_hp):
-		var icon = TextureRect.new()
-		icon.texture         = HP_FULL if i < hp else HP_EMPTY
-		icon.custom_minimum_size = HP_ICON_SIZE
-		icon.stretch_mode    = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		hp_container.add_child(icon)
+func _style_hp_bar() -> void:
+	var fill_style := StyleBoxFlat.new()
+	fill_style.bg_color = HP_BAR_FILL_COLOR
+	hp_bar.add_theme_stylebox_override("fill", fill_style)
+
+	var bg_style := StyleBoxFlat.new()
+	bg_style.bg_color = HP_BAR_BG_COLOR
+	hp_bar.add_theme_stylebox_override("background", bg_style)
+
+
+func _update_hp_bar(hp: int, max_hp: int) -> void:
+	hp_bar.max_value = max(1, max_hp)
+	hp_bar.value     = clampi(hp, 0, max_hp)
 
 
 func _on_attack_pressed() -> void:
