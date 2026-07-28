@@ -20,7 +20,7 @@ const ATTACK_TYPES: Dictionary = {
 		"effect_scene": preload("res://scenes/effects/slash_effect.tscn"),
 	},
 	"heavy_swing_basic": {
-		"hits": 1, "damage_mult": 1.0, "energy_mult": 3.0, "label": " (Heavy)",
+		"hits": 1, "damage_mult": 1.0, "energy_mult": 1.0, "label": " (Heavy)",
 		"effect_scene": preload("res://scenes/effects/slash_effect.tscn"),
 	},
 	"fire_spell": {
@@ -87,6 +87,7 @@ var _items: Dictionary = {
 		"type": "weapon",
 		"damage": 2,
 		"attack_type": "heavy_swing_basic",
+		"energy_cost": 1, 
 	},
 
 	# ── Spells ────────────────────────────────────────────────────────────────
