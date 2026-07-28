@@ -19,6 +19,10 @@ const ATTACK_TYPES: Dictionary = {
 		"hits": 1, "damage_mult": 1.8, "energy_mult": 2.0, "label": " (Heavy)",
 		"effect_scene": preload("res://scenes/effects/slash_effect.tscn"),
 	},
+	"heavy_swing_basic": {
+		"hits": 1, "damage_mult": 1.0, "energy_mult": 3.0, "label": " (Heavy)",
+		"effect_scene": preload("res://scenes/effects/slash_effect.tscn"),
+	},
 	"fire_spell": {
 		"hits": 1, "damage_mult": 1.0, "energy_mult": 1.0, "label": "",
 		"effect_scene": preload("res://scenes/effects/fire_effect.tscn"),
@@ -81,8 +85,8 @@ var _items: Dictionary = {
 		"desc": "A crude, heavy blade chipped from stone.",
 		"max_stack": 1,
 		"type": "weapon",
-		"damage": 3,
-		"attack_type": "heavy_swing",
+		"damage": 2,
+		"attack_type": "heavy_swing_basic",
 	},
 
 	# ── Spells ────────────────────────────────────────────────────────────────

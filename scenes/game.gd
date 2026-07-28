@@ -8,7 +8,7 @@ const BUSH = preload("res://scenes/bush.tscn")
 const TILE_SIZE = 70
 const NUM_ROOMS = 12
 const MOB_SPAWN_CHANCE  = 0.6
-const BUSH_SPAWN_CHANCE = 0.10
+const BUSH_SPAWN_CHANCE = 1.0
 const ZONE_CYCLE_LENGTH = 3
 
 const CAMERA_PADDING  = 1.5
