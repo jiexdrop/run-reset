@@ -51,9 +51,9 @@ func _build_registry() -> void:
 	spider.xp_reward  = 1
 	spider.attacks    = [bite, venom] as Array[MobAttackData]
 	spider.loot_table = [
-		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
-		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
-		{ "item_key": "stone_sword", "chance": 0.12, "min": 1, "max": 1 },
+		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
+		{ "item_key": "stone_sword", "chance": 0.22, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["spider"] = spider
 
@@ -70,8 +70,8 @@ func _build_registry() -> void:
 	rat.xp_reward  = 1
 	rat.attacks    = [gnaw] as Array[MobAttackData]
 	rat.loot_table = [
-		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
-		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
+		{ "item_key": "health_potion", "chance": 0.22, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.22, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["rat"] = rat
 
@@ -111,8 +111,8 @@ func _build_registry() -> void:
 	frozelin.xp_reward  = 2
 	frozelin.attacks    = [chill] as Array[MobAttackData]
 	frozelin.loot_table = [
-		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
-		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
+		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["frozelin"] = frozelin
 
@@ -147,8 +147,8 @@ func _build_registry() -> void:
 	pikonaut.xp_reward  = 2
 	pikonaut.attacks    = [poke] as Array[MobAttackData]
 	pikonaut.loot_table = [
-		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
-		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
+		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["pikonaut"] = pikonaut
 	
