@@ -113,6 +113,7 @@ func _build_registry() -> void:
 	frozelin.loot_table = [
 		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
+		{ "item_key": "spell_ice", "chance": 0.32, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["frozelin"] = frozelin
 
@@ -149,6 +150,7 @@ func _build_registry() -> void:
 	pikonaut.loot_table = [
 		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
+		{ "item_key": "spell_fire", "chance": 0.32, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["pikonaut"] = pikonaut
 	
@@ -166,8 +168,8 @@ func _build_registry() -> void:
 	kaze_shroom.xp_reward  = 2
 	kaze_shroom.attacks    = [explode] as Array[MobAttackData]
 	kaze_shroom.loot_table = [
-		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
-		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
+		{ "item_key": "health_potion", "chance": 0.42, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["kaze_shroom"] = kaze_shroom
 
