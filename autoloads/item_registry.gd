@@ -86,8 +86,7 @@ var _items: Dictionary = {
 		"max_stack": 1,
 		"type": "weapon",
 		"damage": 2,
-		"attack_type": "heavy_swing_basic",
-		"energy_cost": 1, 
+		"attack_type": "heavy_swing_basic", 
 	},
 
 	# ── Spells ────────────────────────────────────────────────────────────────

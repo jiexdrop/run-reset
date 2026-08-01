@@ -27,8 +27,6 @@ const SELF_DESTRUCT_ATTACKS: Dictionary = {
 @onready var exp_row:        HBoxContainer   = $MarginContainer/VBox/StatsSection/ExpRow
 @onready var mob_scroll:     ScrollContainer = $MarginContainer/VBox/CombatSection/MobCarousel/MobScroll
 @onready var mob_row:        HBoxContainer   = $MarginContainer/VBox/CombatSection/MobCarousel/MobScroll/MobRow
-@onready var prev_button:    Button          = $MarginContainer/VBox/CombatSection/MobCarousel/PrevButton
-@onready var next_button:    Button          = $MarginContainer/VBox/CombatSection/MobCarousel/NextButton
 @onready var attack_bar:     HFlowContainer  = $MarginContainer/VBox/AttackBar
 @onready var combat_section: Control         = $MarginContainer/VBox/CombatSection
 @onready var log_label:      Label           = $MarginContainer/VBox/LogLabel
@@ -55,8 +53,6 @@ func _ready() -> void:
 	add_to_group("combat_ui")
 	refresh_stats()
 	combat_section.visible = false
-	prev_button.pressed.connect(_scroll_mobs.bind(-1))
-	next_button.pressed.connect(_scroll_mobs.bind(1))
 	if inv_ui:
 		inv_ui.slot_clicked.connect(_on_inventory_slot_clicked)
 		inv_ui.bag_opened.connect(_on_bag_opened)
@@ -391,8 +387,6 @@ func _scroll_mobs(direction: int) -> void:
 	var card_count = mob_row.get_child_count()
 	_scroll_index = clampi(_scroll_index + direction, 0, max(0, card_count - 1))
 	mob_scroll.scroll_horizontal = _scroll_index * CARD_WIDTH
-	prev_button.disabled = (_scroll_index == 0)
-	next_button.disabled = (_scroll_index >= card_count - 1)
 
 func _on_inventory_slot_clicked(index: int) -> void:
 	var slot = InventoryState.hotbar[index]

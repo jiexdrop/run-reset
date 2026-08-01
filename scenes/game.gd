@@ -395,7 +395,7 @@ func _build_door_node(world_pos: Vector2) -> Node2D:
 func _on_door_clicked(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			_enter_next_level()
+			call_deferred("_enter_next_level")
 
 
 func _enter_next_level() -> void:
