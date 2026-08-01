@@ -543,10 +543,10 @@ func _run_mob_turn_sequence() -> void:
 func _play_attack_lunge(card: Control) -> void:
 	if card == null or not is_instance_valid(card):
 		return
-	var start_x = card.position.x
+	var start_y = card.position.y
 	var tween = create_tween()
-	tween.tween_property(card, "position:y", start_x - LUNGE_OUT_DIST, 0.12)\
+	tween.tween_property(card, "position:y", start_y - LUNGE_OUT_DIST, 0.12)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(card, "position:y", start_x, 0.18)\
+	tween.tween_property(card, "position:y", start_y, 0.18)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	await tween.finished
