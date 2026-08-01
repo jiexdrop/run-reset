@@ -49,6 +49,7 @@ const MOVE_TURN_DELAY = 0.35   # pause between each mob's turn in a move-trigger
 const LUNGE_OUT_DIST  = 18.0
 
 var _mob_turns_running: bool = false
+var _skip_next_turn: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group("combat_ui")
@@ -82,12 +83,14 @@ func add_mob_to_combat(mob_idx: int) -> void:
 	else:
 		_active_mob_ids.append(mob_idx)
 		_log("A new enemy joins the fight!")
+	_skip_next_turn[mob_idx] = true
 	_rebuild_mob_cards()
 
 
 func end_combat() -> void:
 	combat_section.visible = false
 	_active_mob_ids = []
+	_skip_next_turn.clear()
 	_clear_children(mob_row)
 	_log("")
 
@@ -266,6 +269,7 @@ func _on_mob_died(mob_id: int) -> void:
 		return   # scene changed / node freed while we were waiting
 
 	_active_mob_ids.erase(mob_id)
+	_skip_next_turn.erase(mob_id)
 	_rebuild_mob_cards()
 
 	if _active_mob_ids.is_empty():
@@ -525,6 +529,10 @@ func _run_mob_turn_sequence() -> void:
 		if GameState.monsters[mob_id].get("hp", 0) <= 0:
 			continue
 
+		if _skip_next_turn.get(mob_id, false):
+			_skip_next_turn.erase(mob_id)   # sat out its first opportunity — now fair game
+			continue
+
 		await _do_mob_turn(mob_id)
 
 		if not is_inside_tree():
@@ -536,7 +544,6 @@ func _run_mob_turn_sequence() -> void:
 
 		await get_tree().create_timer(MOVE_TURN_DELAY).timeout
 	_mob_turns_running = false
-
 
 ## Quick back-and-forth "lunge" on the mob's card to sell an attack —
 ## moves toward the player, then springs back to its original spot.
