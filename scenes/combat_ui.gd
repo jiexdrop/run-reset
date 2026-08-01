@@ -45,6 +45,10 @@ var _bag_ui: Control = null
 const ICONS_PER_ROW = 12
 
 const DEATH_VFX_DURATION = 1.5
+const MOVE_TURN_DELAY = 0.35   # pause between each mob's turn in a move-triggered sequence
+const LUNGE_OUT_DIST  = 18.0
+
+var _mob_turns_running: bool = false
 
 func _ready() -> void:
 	add_to_group("combat_ui")
@@ -295,6 +299,10 @@ func _do_mob_turn(mob_id: int) -> void:
 	if atk.is_empty():
 		return
 
+	await _play_attack_lunge(card)
+	if not is_inside_tree():
+		return
+
 	_spawn_mob_attack_effect(mob_id, atk.get("attack_name", ""))
 
 	var p      = GameState.player
@@ -324,7 +332,6 @@ func _do_mob_turn(mob_id: int) -> void:
 
 	if p["hp"] <= 0:
 		_on_player_died()
-
 
 func _on_player_died() -> void:
 	_log("You died! Resetting...")
@@ -499,3 +506,47 @@ func _apply_death_explosion(mob_id: int) -> String:
 				_on_player_died()
 			return "%s explodes for %d damage!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]
 	return ""
+	
+func on_player_moved() -> void:
+	if _mob_turns_running or _attack_in_progress:
+		return
+	if not combat_section.visible or _active_mob_ids.is_empty():
+		return
+	_run_mob_turn_sequence()
+
+
+func _run_mob_turn_sequence() -> void:
+	_mob_turns_running = true
+	for mob_id in _active_mob_ids.duplicate():
+		if not _active_mob_ids.has(mob_id):
+			continue
+		if mob_id >= GameState.monsters.size():
+			continue
+		if GameState.monsters[mob_id].get("hp", 0) <= 0:
+			continue
+
+		await _do_mob_turn(mob_id)
+
+		if not is_inside_tree():
+			_mob_turns_running = false
+			return
+		if GameState.player.get("hp", 0) <= 0:
+			_mob_turns_running = false
+			return
+
+		await get_tree().create_timer(MOVE_TURN_DELAY).timeout
+	_mob_turns_running = false
+
+
+## Quick back-and-forth "lunge" on the mob's card to sell an attack —
+## moves toward the player, then springs back to its original spot.
+func _play_attack_lunge(card: Control) -> void:
+	if card == null or not is_instance_valid(card):
+		return
+	var start_x = card.position.x
+	var tween = create_tween()
+	tween.tween_property(card, "position:y", start_x - LUNGE_OUT_DIST, 0.12)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(card, "position:y", start_x, 0.18)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	await tween.finished

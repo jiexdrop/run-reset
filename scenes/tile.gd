@@ -27,6 +27,12 @@ func reveal() -> void:
 	if _mob_key != "" and not _mob_dead:
 		_trigger_combat()
 
+	# Moving/discovering a tile gives every currently active enemy a chance
+	# to attack, in sequence — not just the mob on the tile you revealed.
+	var combat_ui = get_tree().get_first_node_in_group("combat_ui")
+	if combat_ui and combat_ui.has_method("on_player_moved"):
+		combat_ui.on_player_moved()
+
 func _refresh_mob_indicator() -> void:
 	print("_refresh_mob_indicator")
 	if is_instance_valid(_mob_indicator):
