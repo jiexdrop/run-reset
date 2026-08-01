@@ -1,5 +1,10 @@
-class_name MobCard
-extends PanelContainer
+class_name MobView
+extends VBoxContainer
+
+## MobView — displays one mob at native sprite size with a fixed-size
+## health bar above it. Clicking the sprite attacks the mob directly
+## (no separate attack button). Bottom-alignment within the mob row is
+## achieved via size_flags_vertical = SIZE_SHRINK_END (set below).
 
 signal attack_requested(mob_id: int)
 signal mob_died(mob_id: int)
@@ -15,30 +20,42 @@ const MOB_SPRITES: Dictionary = {
 	"sapguard":     preload("res://assets/mobs/evergreen/sapguard.png"),
 }
 
+const HEALTH_BAR_SIZE: Vector2 = Vector2(56, 8)
 const HP_BAR_FILL_COLOR: Color = Color(0.75, 0.2, 0.2)
 const HP_BAR_BG_COLOR:   Color = Color(0.2, 0.2, 0.2)
+const DEAD_MODULATE: Color = Color(0.4, 0.4, 0.4, 0.7)
 
 var mob_id:   int        = -1
 var mob_data: Dictionary = {}
 var _mob_attacks: Array = []
 
-@onready var mob_sprite:    TextureRect   = $VBoxContainer/MobSprite
-@onready var name_label:    Label         = $VBoxContainer/NameLabel
-@onready var hp_bar:        ProgressBar   = $VBoxContainer/HPBar
-@onready var attack_button: Button        = $VBoxContainer/AttackButton
+@onready var name_label: Label       = $NameLabel
+@onready var hp_bar:      ProgressBar = $HPBar
+@onready var sprite:      TextureRect = $Sprite
+
+
+func _ready() -> void:
+	# Bottom-align this mob within MobRow regardless of its own height.
+	size_flags_vertical = Control.SIZE_SHRINK_END
+
+	hp_bar.custom_minimum_size   = HEALTH_BAR_SIZE
+	hp_bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	hp_bar.show_percentage       = false
+	_style_hp_bar()
+
+	sprite.mouse_filter = Control.MOUSE_FILTER_STOP
+	sprite.gui_input.connect(_on_sprite_gui_input)
 
 
 func setup(id: int, data: Dictionary) -> void:
-	mob_id      = id
-	mob_data    = data
+	mob_id       = id
+	mob_data     = data
 	_mob_attacks = data.get("attacks", [])
-	_style_hp_bar()
 	_refresh()
-	attack_button.pressed.connect(_on_attack_pressed)
 
 
 func refresh_from_state() -> void:
-	mob_data    = GameState.monsters[mob_id]
+	mob_data     = GameState.monsters[mob_id]
 	_mob_attacks = mob_data.get("attacks", [])
 	_refresh()
 
@@ -51,13 +68,19 @@ func do_mob_turn() -> Dictionary:
 
 func _refresh() -> void:
 	name_label.text = mob_data.get("name", "???")
+
 	var sprite_key = mob_data.get("sprite", "")
-	if MOB_SPRITES.has(sprite_key):
-		mob_sprite.texture = MOB_SPRITES[sprite_key]
+	var tex: Texture2D = MOB_SPRITES.get(sprite_key, null)
+	sprite.texture = tex
+	if tex:
+		sprite.custom_minimum_size = tex.get_size()
+
 	var hp     = mob_data.get("hp",     1)
 	var max_hp = mob_data.get("max_hp", hp)
-	_update_hp_bar(hp, max_hp)
-	attack_button.disabled = (hp <= 0)
+	hp_bar.max_value = max(1, max_hp)
+	hp_bar.value     = clampi(hp, 0, max_hp)
+
+	sprite.modulate = DEAD_MODULATE if hp <= 0 else Color.WHITE
 
 
 func _style_hp_bar() -> void:
@@ -70,10 +93,7 @@ func _style_hp_bar() -> void:
 	hp_bar.add_theme_stylebox_override("background", bg_style)
 
 
-func _update_hp_bar(hp: int, max_hp: int) -> void:
-	hp_bar.max_value = max(1, max_hp)
-	hp_bar.value     = clampi(hp, 0, max_hp)
-
-
-func _on_attack_pressed() -> void:
-	attack_requested.emit(mob_id)
+func _on_sprite_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if mob_data.get("hp", 0) > 0:
+			attack_requested.emit(mob_id)

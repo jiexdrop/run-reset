@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://d1dpc737586na"]
+
+[ext_resource type="Script" uid="uid://g3qdr8fumjp6" path="res://scenes/mob_view.gd" id="1_ck5q1"]
+
+[node name="MobView" type="VBoxContainer" unique_id=100000001]
+alignment = 1
+script = ExtResource("1_ck5q1")
+
+[node name="NameLabel" type="Label" parent="." unique_id=840887571]
+layout_mode = 2
+text = "Mob"
+horizontal_alignment = 1
+
+[node name="HPBar" type="ProgressBar" parent="." unique_id=516037640]
+layout_mode = 2
+
+[node name="Sprite" type="TextureRect" parent="." unique_id=512652130]
+layout_mode = 2
+stretch_mode = 4

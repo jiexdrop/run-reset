@@ -82,13 +82,13 @@ custom_minimum_size = Vector2(24, 0)
 layout_mode = 2
 text = "‹"
 
-[node name="MobScroll" type="ScrollContainer" parent="MarginContainer/VBox/CombatSection/MobCarousel" unique_id=200000022]
+[node name="MobScroll" type="ScrollContainer" parent="MarginContainer/VBox/CombatSection/MobCarousel"]
 custom_minimum_size = Vector2(0, 160)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 0
 horizontal_scroll_mode = 2
-vertical_scroll_mode = 0
+vertical_scroll_mode = 1
 
 [node name="MobRow" type="HBoxContainer" parent="MarginContainer/VBox/CombatSection/MobCarousel/MobScroll" unique_id=200000011]
 layout_mode = 2

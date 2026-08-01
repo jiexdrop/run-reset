@@ -45,7 +45,7 @@ func _refresh_mob_indicator() -> void:
 	indicator.position = Vector2.ZERO
 
 	var sprite : Sprite2D = Sprite2D.new()
-	sprite.texture = MobCard.MOB_SPRITES.get(def.sprite)
+	sprite.texture = MobView.MOB_SPRITES.get(def.sprite)
 	sprite.centered = true
 
 	var icon_size := 50.0

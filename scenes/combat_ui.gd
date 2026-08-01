@@ -10,7 +10,7 @@ const EXP_EMPTY    = preload("res://assets/ui/exp_empty.png")
 const ICON_SIZE = Vector2(20, 20)
 const HIT_DELAY = 0.15   # pause between hits of a multi-hit attack
 
-const MobCardScene = preload("res://scenes/mob_card.tscn")
+const MobViewScene = preload("res://scenes/mob_view.tscn")
 const BagUIScene   = preload("res://scenes/bag_ui.tscn")
 
 const MOB_ATTACK_EFFECTS: Dictionary = {
@@ -118,11 +118,11 @@ func _rebuild_mob_cards() -> void:
 	for mob_id in _active_mob_ids:
 		if mob_id >= GameState.monsters.size():
 			continue
-		var card = MobCardScene.instantiate()
-		mob_row.add_child(card)
-		card.setup(mob_id, GameState.monsters[mob_id])
-		card.attack_requested.connect(_on_attack_requested)
-		card.mob_died.connect(_on_mob_died)
+		var mob_view = MobViewScene.instantiate()
+		mob_row.add_child(mob_view)
+		mob_view.setup(mob_id, GameState.monsters[mob_id])
+		mob_view.attack_requested.connect(_on_attack_requested)
+		mob_view.mob_died.connect(_on_mob_died)
 
 
 ## Reads the currently equipped hotbar item and returns a normalized attack
