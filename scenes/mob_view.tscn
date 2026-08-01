@@ -16,4 +16,6 @@ layout_mode = 2
 
 [node name="Sprite" type="TextureRect" parent="." unique_id=512652130]
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
 stretch_mode = 4
