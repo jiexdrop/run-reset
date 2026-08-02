@@ -61,6 +61,15 @@ func _build_registry() -> void:
 		"bg_color": Color(0.796, 0.781, 0.718, 1.0),
 	}
 
+	_registry["desert"] = {
+		"tiles": [
+			preload("res://assets/tiles/desert/tile_0.png"),
+		],
+		"mob_pool": ["cactus", "sandipper"],
+		"boss": "",
+		"bg_color": Color(0.93, 0.80, 0.55, 1.0),
+	}
+
 	_registry["ribera"] = {
 		"tiles": [
 			preload("res://assets/tiles/ribera/tile_0.png"),

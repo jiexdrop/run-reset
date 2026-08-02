@@ -10,14 +10,18 @@ signal attack_requested(mob_id: int)
 signal mob_died(mob_id: int)
 
 const MOB_SPRITES: Dictionary = {
-	"spider": preload("res://assets/mobs/spider.png"),
-	"rat": preload("res://assets/mobs/rat.png"),
-	"glaciarch":    preload("res://assets/mobs/ribera/glaciarch.png"),
-	"frozelin":     preload("res://assets/mobs/ribera/frozelin.png"),
-	"gomelin":      preload("res://assets/mobs/pikoterra/gomelin.png"),
-	"pikonaut":     preload("res://assets/mobs/pikoterra/pikonaut.png"),
-	"kaze_shroom":  preload("res://assets/mobs/evergreen/kaze_shroom.png"),
-	"sapguard":     preload("res://assets/mobs/evergreen/sapguard.png"),
+	"spider":          preload("res://assets/mobs/spider.png"),
+	"rat":             preload("res://assets/mobs/rat.png"),
+	"cactus":          preload("res://assets/mobs/desert/cactus.png"),
+	"sandipper":       preload("res://assets/mobs/desert/sandipper.png"),
+	"sandipper_block": preload("res://assets/mobs/desert/sandipper_block.png"),
+	"glaciarch":       preload("res://assets/mobs/ribera/glaciarch.png"),
+	"frozelin":        preload("res://assets/mobs/ribera/frozelin.png"),
+	"gomelin":         preload("res://assets/mobs/pikoterra/gomelin.png"),
+	"pikonaut":        preload("res://assets/mobs/pikoterra/pikonaut.png"),
+	"kaze_shroom":     preload("res://assets/mobs/evergreen/kaze_shroom.png"),
+	"sapguard":        preload("res://assets/mobs/evergreen/sapguard.png"),
+	"sapguard_block":  preload("res://assets/mobs/evergreen/sapguard_block.png"),
 }
 
 const HEALTH_BAR_SIZE: Vector2 = Vector2(56, 8)

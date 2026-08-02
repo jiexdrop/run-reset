@@ -74,6 +74,42 @@ func _build_registry() -> void:
 		{ "item_key": "energy_potion", "chance": 0.22, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["rat"] = rat
+	
+	# ── Cactus ─────────────────────────────────────────────────────────────────
+	var thorn         = MobAttackData.new()
+	thorn.attack_name = "Thorn Jab"
+	thorn.damage      = 2
+	thorn.effect      = MobAttackData.Effect.NONE
+
+	var cactus        = MobDef.new()
+	cactus.mob_name   = "Cactus"
+	cactus.sprite     = "cactus"
+	cactus.max_hp     = 4
+	cactus.xp_reward  = 2
+	cactus.attacks    = [thorn] as Array[MobAttackData]
+	cactus.loot_table = [
+		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
+	] as Array[Dictionary]
+	_registry["cactus"] = cactus
+
+	# ── Sandipper ─────────────────────────────────────────────────────────────
+	var peck         = MobAttackData.new()
+	peck.attack_name = "Peck"
+	peck.damage      = 1
+	peck.effect      = MobAttackData.Effect.NONE
+
+	var sandipper        = MobDef.new()
+	sandipper.mob_name   = "Sandipper"
+	sandipper.sprite     = "sandipper"
+	sandipper.max_hp     = 2
+	sandipper.xp_reward  = 2
+	sandipper.attacks    = [peck] as Array[MobAttackData]
+	sandipper.loot_table = [
+		{ "item_key": "health_potion", "chance": 0.22, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.22, "min": 1, "max": 1 },
+	] as Array[Dictionary]
+	_registry["sandipper"] = sandipper
 
 	# ── Glaciarch (Ribera boss) ─────────────────────────────────────────────────
 	var frost_bite   = MobAttackData.new()
