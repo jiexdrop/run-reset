@@ -124,13 +124,14 @@ func _build_registry() -> void:
 	pilfer.damage      = 2
 	pilfer.effect      = MobAttackData.Effect.STEAL
 
-	var gomelin        = MobDef.new()
-	gomelin.mob_name   = "Gomelin"
-	gomelin.sprite     = "gomelin"
-	gomelin.max_hp     = 8
-	gomelin.xp_reward  = 6
-	gomelin.attacks    = [pilfer] as Array[MobAttackData]
-	gomelin.loot_table = [
+	var gomelin         = MobDef.new()
+	gomelin.mob_name    = "Gomelin"
+	gomelin.sprite      = "gomelin"
+	gomelin.max_hp      = 8
+	gomelin.xp_reward   = 6
+	gomelin.attacks     = [pilfer] as Array[MobAttackData]
+	gomelin.resistances = {"physical": 0.5, "ice": 2.0, "fire": 0.1}
+	gomelin.loot_table  = [
 		{ "item_key": "health_potion", "chance": 1.0, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.3, "min": 1, "max": 1 },
 	] as Array[Dictionary]
@@ -142,13 +143,14 @@ func _build_registry() -> void:
 	poke.damage      = 1
 	poke.effect      = MobAttackData.Effect.NONE
 
-	var pikonaut        = MobDef.new()
-	pikonaut.mob_name   = "Pikonaut"
-	pikonaut.sprite     = "pikonaut"
-	pikonaut.max_hp     = 3
-	pikonaut.xp_reward  = 2
-	pikonaut.attacks    = [poke] as Array[MobAttackData]
-	pikonaut.loot_table = [
+	var pikonaut         = MobDef.new()
+	pikonaut.mob_name    = "Pikonaut"
+	pikonaut.sprite      = "pikonaut"
+	pikonaut.max_hp      = 3
+	pikonaut.xp_reward   = 2
+	pikonaut.attacks     = [poke] as Array[MobAttackData]
+	pikonaut.resistances = {"physical": 0.5, "ice": 2.0, "fire": 0.1}
+	pikonaut.loot_table  = [
 		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "spell_fire", "chance": 0.32, "min": 1, "max": 1 },
