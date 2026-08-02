@@ -90,9 +90,10 @@ func refresh() -> void:
 func _gui_input(event: InputEvent) -> void:
 	if not event is InputEventMouseButton:
 		return
+	if _drag_enabled:
+		return   # bag is open — clicks are for dragging only, not equip/consume
 	if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		emit_signal("slot_clicked", container, slot_index)
-
 
 ## Called by the drag-drop manager when a drag starts on this slot.
 func begin_drag() -> void:
