@@ -37,6 +37,7 @@ func _build_slots() -> void:
 		var slot: ItemSlot = ItemSlotScene.instantiate()
 		_grid.add_child(slot)
 		slot.setup("bag", i, true)
+		slot.set_drag_enabled(true)   # ← added
 		slot.slot_clicked.connect(_on_slot_clicked)
 		slot.drag_started.connect(_on_slot_drag)
 		slot.drop_received.connect(_on_slot_drop)

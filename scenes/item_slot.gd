@@ -34,6 +34,7 @@ var is_bag_slot: bool = false      # controls which base texture to use
 # ── Internal state ─────────────────────────────────────────────────────────────
 var _item_key: String = ""
 var _frozen:   bool   = false
+var _drag_enabled: bool = false
 
 @onready var _bg:      TextureRect = $BgRect
 @onready var _ice:     TextureRect = $IceOverlay
@@ -116,3 +117,31 @@ func _style_label() -> void:
 	_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
 	_label.add_theme_constant_override("shadow_offset_x", 1)
 	_label.add_theme_constant_override("shadow_offset_y", 1)
+	
+## Called by InventoryUI / BagUI to turn dragging on/off for this slot.
+func set_drag_enabled(enabled: bool) -> void:
+	_drag_enabled = enabled
+
+
+func _get_drag_data(_at_position: Vector2) -> Variant:
+	if not _drag_enabled or _frozen or _item_key == "":
+		return null
+
+	# Simple floating preview of the icon being dragged.
+	var preview := TextureRect.new()
+	preview.texture      = ItemRegistry.get_icon(_item_key)
+	preview.custom_minimum_size = ICON_SIZE
+	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	set_drag_preview(preview)
+
+	return {"container": container, "index": slot_index}
+
+
+func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
+	if not _drag_enabled or _frozen:
+		return false
+	return typeof(data) == TYPE_DICTIONARY and data.has("container") and data.has("index")
+
+
+func _drop_data(_at_position: Vector2, data: Variant) -> void:
+	InventoryState.swap_slots(data["container"], data["index"], container, slot_index)

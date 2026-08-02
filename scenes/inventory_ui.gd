@@ -126,3 +126,8 @@ func _on_slot_clicked(container: String, index: int) -> void:
 
 func _on_bag_pressed() -> void:
 	bag_opened.emit()
+	
+## Enables/disables drag-and-drop on all hotbar slots (only while the bag is open).
+func set_drag_enabled(enabled: bool) -> void:
+	for slot in _slots:
+		slot.set_drag_enabled(enabled)

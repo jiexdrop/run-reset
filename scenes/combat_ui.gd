@@ -446,10 +446,12 @@ func _on_bag_opened() -> void:
 	_bag_ui = BagUIScene.instantiate()
 	get_tree().current_scene.add_child(_bag_ui)
 	_bag_ui.closed.connect(_on_bag_closed)
+	inv_ui.set_drag_enabled(true)
 
 
 func _on_bag_closed() -> void:
 	_bag_ui = null
+	inv_ui.set_drag_enabled(false)
 
 func _steal_random_item() -> String:
 	var candidates: Array = []
