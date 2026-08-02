@@ -18,3 +18,4 @@ class_name MobDef
 @export var xp_reward:  int                  = 1
 @export var attacks:    Array[MobAttackData] = []
 @export var loot_table: Array[Dictionary]    = []
+@export var resistances: Dictionary          = {} 

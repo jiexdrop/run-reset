@@ -99,6 +99,7 @@ var _items: Dictionary = {
 		"damage": 2,
 		"energy_cost": 2,
 		"attack_type": "ice_spell",
+		"element": "ice",
 	},
 	"spell_fire": {
 		"name": "Fire Spell",
@@ -109,6 +110,7 @@ var _items: Dictionary = {
 		"damage": 3,
 		"energy_cost": 3,
 		"attack_type": "fire_spell",
+		"element": "fire",
 	},
 }
 
@@ -162,6 +164,11 @@ func get_attack_type(item_key: String) -> String:
 	if _items.has(item_key):
 		return _items[item_key].get("attack_type", "single_swing")
 	return "single_swing"
+
+func get_element(item_key: String) -> String:
+	if _items.has(item_key):
+		return _items[item_key].get("element", "physical")
+	return "physical"
 
 func get_attack_type_data(attack_type: String) -> Dictionary:
 	return ATTACK_TYPES.get(attack_type, ATTACK_TYPES["single_swing"])

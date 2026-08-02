@@ -191,6 +191,12 @@ func _do_player_attack(mob_id: int) -> void:
 	var hits        = max(1, type_data.get("hits", 1))
 	var dmg_per_hit = max(1, int(round(atk.damage * type_data.get("damage_mult", 1.0) / hits)))
 
+	var target_mob    = GameState.monsters[mob_id]
+	var resistances    = target_mob.get("resistances", {})
+	var atk_element     = ItemRegistry.get_element(atk.item_key) if atk.item_key != "" else "physical"
+	var resist_mult     = resistances.get(atk_element, 1.0)
+	dmg_per_hit = max(1, int(round(dmg_per_hit * resist_mult)))
+	
 	_attack_in_progress = true
 	for i in range(hits):
 		var mob = GameState.monsters[mob_id]

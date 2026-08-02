@@ -29,10 +29,14 @@ var mob_id:   int        = -1
 var mob_data: Dictionary = {}
 var _mob_attacks: Array = []
 
-@onready var name_label: Label       = $NameLabel
-@onready var hp_bar:      ProgressBar = $HPBar
-@onready var sprite:      TextureRect = $Sprite
+@onready var name_label:   Label       = $NameLabel
+@onready var resist_label: Label       = $ResistLabel
+@onready var hp_bar:       ProgressBar = $HPBar
+@onready var sprite:       TextureRect = $Sprite
 
+const ELEMENT_DISPLAY: Dictionary = {
+	"physical": "Physical", "fire": "Fire", "ice": "Ice",
+}
 
 func _ready() -> void:
 	# Bottom-align this mob within MobRow regardless of its own height.
@@ -68,6 +72,7 @@ func do_mob_turn() -> Dictionary:
 
 func _refresh() -> void:
 	name_label.text = mob_data.get("name", "???")
+	_refresh_resist_label()
 
 	var sprite_key = mob_data.get("sprite", "")
 	var tex: Texture2D = MOB_SPRITES.get(sprite_key, null)
@@ -97,3 +102,17 @@ func _on_sprite_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if mob_data.get("hp", 0) > 0:
 			attack_requested.emit(mob_id)
+
+func _refresh_resist_label() -> void:
+	var resistances: Dictionary = mob_data.get("resistances", {})
+	var parts: Array = []
+	for element in resistances:
+		var mult: float = resistances[element]
+		var label = ELEMENT_DISPLAY.get(element, element.capitalize())
+		if mult < 1.0:
+			parts.append("Resists %s" % label)
+		elif mult > 1.0:
+			parts.append("Weak to %s" % label)
+	resist_label.text = ", ".join(parts)
+	resist_label.visible = not parts.is_empty()
+	resist_label.add_theme_font_size_override("font_size", 10)

@@ -86,14 +86,15 @@ func _trigger_combat() -> void:
 	else:
 		# Build a fresh runtime mob entry.
 		var mob_entry = {
-			"name":       def.mob_name,
-			"sprite":     def.sprite,
-			"hp":         def.max_hp,
-			"max_hp":     def.max_hp,
-			"xp_reward":  def.xp_reward,
-			"attacks":    [],
-			"loot_table": def.loot_table,
-			"tile_key":   tile_key_str,
+			"name":        def.mob_name,
+			"sprite":      def.sprite,
+			"hp":          def.max_hp,
+			"max_hp":      def.max_hp,
+			"xp_reward":   def.xp_reward,
+			"attacks":     [],
+			"loot_table":  def.loot_table,
+			"resistances": def.resistances,
+			"tile_key":    tile_key_str,
 		}
 		for atk in def.attacks:
 			mob_entry["attacks"].append({

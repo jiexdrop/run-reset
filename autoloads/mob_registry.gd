@@ -92,6 +92,7 @@ func _build_registry() -> void:
 	glaciarch.max_hp     = 8
 	glaciarch.xp_reward  = 6
 	glaciarch.attacks    = [frost_bite, freeze] as Array[MobAttackData]
+	glaciarch.resistances = {"physical": 0.5, "ice": 0.1, "fire": 2.0}
 	glaciarch.loot_table = [
 		{ "item_key": "energy_potion", "chance": 1.0, "min": 1, "max": 1 },
 		{ "item_key": "health_potion", "chance": 0.3, "min": 1, "max": 1 },
