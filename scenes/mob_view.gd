@@ -38,15 +38,16 @@ const ELEMENT_DISPLAY: Dictionary = {
 	"physical": "Physical", "fire": "Fire", "ice": "Ice",
 }
 
-const RESIST_ICON_SIZE: Vector2 = Vector2(1, 1)
+const RESIST_ICON_SIZE: Vector2 = Vector2(20, 20)
 const RESIST_ICONS: Dictionary = {
 	"fire":     preload("res://assets/resistance/fire.png"),
 	"ice":      preload("res://assets/resistance/ice.png"),
 	"physical": preload("res://assets/resistance/physical.png"),
 }
-const RESIST_COLOR: Color = Color(0.55, 0.85, 0.4)   # resists → "+"
-const WEAK_COLOR:   Color = Color(0.9, 0.35, 0.35)   # weak → "-"
-
+const RESIST_BADGE_COLOR: Color = Color(0.25, 0.35, 0.25)   # resists — dark green-gray
+const WEAK_BADGE_COLOR:   Color = Color(0.45, 0.22, 0.22)   # weak    — dark red-gray
+const RESIST_SIGN := "▲"   # resist: takes less damage
+const WEAK_SIGN   := "▼"   # weak:   takes more damage
 
 func _ready() -> void:
 	# Bottom-align this mob within MobRow regardless of its own height.
@@ -126,18 +127,35 @@ func _refresh_resist_label() -> void:
 			continue
 		has_any = true
 
+		var badge := PanelContainer.new()
+		var style := StyleBoxFlat.new()
+		style.bg_color = RESIST_BADGE_COLOR if mult < 1.0 else WEAK_BADGE_COLOR
+		style.set_corner_radius_all(3)
+		style.content_margin_left   = 2
+		style.content_margin_right  = 2
+		style.content_margin_top    = 0
+		style.content_margin_bottom = 0
+		badge.add_theme_stylebox_override("panel", style)
+
+		var hbox := HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 1)
+		badge.add_child(hbox)
+
 		var icon_tex: Texture2D = RESIST_ICONS.get(element, null)
 		if icon_tex:
 			var icon := TextureRect.new()
 			icon.texture             = icon_tex
+			icon.expand_mode         = TextureRect.EXPAND_IGNORE_SIZE
 			icon.custom_minimum_size = RESIST_ICON_SIZE
 			icon.stretch_mode        = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			resist_row.add_child(icon)
+			hbox.add_child(icon)
 
 		var sign_lbl := Label.new()
-		sign_lbl.text = "+" if mult < 1.0 else "-"
-		sign_lbl.add_theme_font_size_override("font_size", 18)
-		sign_lbl.add_theme_color_override("font_color", RESIST_COLOR if mult < 1.0 else WEAK_COLOR)
-		resist_row.add_child(sign_lbl)
+		sign_lbl.text = RESIST_SIGN if mult < 1.0 else WEAK_SIGN
+		sign_lbl.add_theme_font_size_override("font_size", 10)
+		sign_lbl.add_theme_color_override("font_color", Color.GREEN if mult < 1.0 else Color.RED)
+		hbox.add_child(sign_lbl)
+
+		resist_row.add_child(badge)
 
 	resist_row.visible = has_any
