@@ -29,14 +29,24 @@ var mob_id:   int        = -1
 var mob_data: Dictionary = {}
 var _mob_attacks: Array = []
 
-@onready var name_label:   Label       = $NameLabel
-@onready var resist_label: Label       = $ResistLabel
-@onready var hp_bar:       ProgressBar = $HPBar
-@onready var sprite:       TextureRect = $Sprite
+@onready var name_label:   Label         = $NameLabel
+@onready var resist_row:   HBoxContainer = $ResistRow
+@onready var hp_bar:       ProgressBar   = $HPBar
+@onready var sprite:       TextureRect   = $Sprite
 
 const ELEMENT_DISPLAY: Dictionary = {
 	"physical": "Physical", "fire": "Fire", "ice": "Ice",
 }
+
+const RESIST_ICON_SIZE: Vector2 = Vector2(1, 1)
+const RESIST_ICONS: Dictionary = {
+	"fire":     preload("res://assets/resistance/fire.png"),
+	"ice":      preload("res://assets/resistance/ice.png"),
+	"physical": preload("res://assets/resistance/physical.png"),
+}
+const RESIST_COLOR: Color = Color(0.55, 0.85, 0.4)   # resists → "+"
+const WEAK_COLOR:   Color = Color(0.9, 0.35, 0.35)   # weak → "-"
+
 
 func _ready() -> void:
 	# Bottom-align this mob within MobRow regardless of its own height.
@@ -104,15 +114,30 @@ func _on_sprite_gui_input(event: InputEvent) -> void:
 			attack_requested.emit(mob_id)
 
 func _refresh_resist_label() -> void:
+	for child in resist_row.get_children():
+		child.queue_free()
+
 	var resistances: Dictionary = mob_data.get("resistances", {})
-	var parts: Array = []
+	var has_any := false
+
 	for element in resistances:
 		var mult: float = resistances[element]
-		var label = ELEMENT_DISPLAY.get(element, element.capitalize())
-		if mult < 1.0:
-			parts.append("Resists %s" % label)
-		elif mult > 1.0:
-			parts.append("Weak to %s" % label)
-	resist_label.text = ", ".join(parts)
-	resist_label.visible = not parts.is_empty()
-	resist_label.add_theme_font_size_override("font_size", 10)
+		if mult == 1.0:
+			continue
+		has_any = true
+
+		var icon_tex: Texture2D = RESIST_ICONS.get(element, null)
+		if icon_tex:
+			var icon := TextureRect.new()
+			icon.texture             = icon_tex
+			icon.custom_minimum_size = RESIST_ICON_SIZE
+			icon.stretch_mode        = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			resist_row.add_child(icon)
+
+		var sign_lbl := Label.new()
+		sign_lbl.text = "+" if mult < 1.0 else "-"
+		sign_lbl.add_theme_font_size_override("font_size", 18)
+		sign_lbl.add_theme_color_override("font_color", RESIST_COLOR if mult < 1.0 else WEAK_COLOR)
+		resist_row.add_child(sign_lbl)
+
+	resist_row.visible = has_any
