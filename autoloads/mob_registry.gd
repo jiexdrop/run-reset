@@ -218,13 +218,14 @@ func _build_registry() -> void:
 	sip.damage         = 2
 	sip.effect         = MobAttackData.Effect.NONE
 
-	var sapguard        = MobDef.new()
-	sapguard.mob_name   = "Sapguard"
-	sapguard.sprite     = "sapguard"
-	sapguard.max_hp     = 8
-	sapguard.xp_reward  = 2
-	sapguard.attacks    = [sip] as Array[MobAttackData]
-	sapguard.loot_table = [
+	var sapguard         = MobDef.new()
+	sapguard.mob_name    = "Sapguard"
+	sapguard.sprite      = "sapguard"
+	sapguard.max_hp      = 8
+	sapguard.xp_reward   = 2
+	sapguard.attacks     = [sip] as Array[MobAttackData]
+	sapguard.resistances = {"physical": 0.1, "ice": 2.0, "fire": 2.0}
+	sapguard.loot_table  = [
 		{ "item_key": "health_potion", "chance": 0.12, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.12, "min": 1, "max": 1 },
 	] as Array[Dictionary]
