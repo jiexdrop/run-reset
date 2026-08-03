@@ -103,11 +103,11 @@ func _build_registry() -> void:
 	sandipper.mob_name   = "Sandipper"
 	sandipper.sprite     = "sandipper"
 	sandipper.max_hp     = 2
-	sandipper.xp_reward  = 2
+	sandipper.xp_reward  = 1
 	sandipper.attacks    = [peck] as Array[MobAttackData]
+	sandipper.burrows    = true
 	sandipper.loot_table = [
 		{ "item_key": "health_potion", "chance": 0.22, "min": 1, "max": 1 },
-		{ "item_key": "energy_potion", "chance": 0.22, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["sandipper"] = sandipper
 

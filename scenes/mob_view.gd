@@ -89,7 +89,8 @@ func _refresh() -> void:
 	name_label.text = mob_data.get("name", "???")
 	_refresh_resist_label()
 
-	var sprite_key = mob_data.get("sprite", "")
+	var is_burrowed = mob_data.get("burrowed", false)
+	var sprite_key = "sapguard_block" if is_burrowed else mob_data.get("sprite", "")
 	var tex: Texture2D = MOB_SPRITES.get(sprite_key, null)
 	sprite.texture = tex
 	if tex:
@@ -115,7 +116,7 @@ func _style_hp_bar() -> void:
 
 func _on_sprite_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if mob_data.get("hp", 0) > 0:
+		if mob_data.get("hp", 0) > 0 and not mob_data.get("burrowed", false):
 			attack_requested.emit(mob_id)
 
 func _refresh_resist_label() -> void:

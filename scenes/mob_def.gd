@@ -19,3 +19,4 @@ class_name MobDef
 @export var attacks:    Array[MobAttackData] = []
 @export var loot_table: Array[Dictionary]    = []
 @export var resistances: Dictionary          = {} 
+@export var burrows:    bool                 = false

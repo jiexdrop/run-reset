@@ -214,15 +214,36 @@ func _do_player_attack(mob_id: int) -> void:
 			await get_tree().create_timer(HIT_DELAY).timeout
 	_attack_in_progress = false
 
+	# Burrow check — if the mob just hit can burrow, send it underground and
+	# make it skip its next turn opportunity.
+	var mob = GameState.monsters[mob_id]
+	if mob.get("hp", 0) > 0:
+		var def = MobRegistry.get_def(mob.get("mob_key", ""))
+		if def and def.burrows:
+			mob["burrowed"] = true
+			_skip_next_turn[mob_id] = true
+			GameState.monsters[mob_id] = mob
+			var burrow_card = _get_card_for_mob(mob_id)
+			if burrow_card:
+				burrow_card.refresh_from_state()
+
 	if atk.is_spell and atk.hotbar_index >= 0:
 		InventoryState.consume_hotbar_item(atk.hotbar_index)
 
 	GameState.mark_dirty()
 	SaveManager.save()
 
-	var mob = GameState.monsters[mob_id]
+	mob = GameState.monsters[mob_id]
 	if mob.get("hp", 0) <= 0:
 		_on_mob_died(mob_id)
+	elif _skip_next_turn.get(mob_id, false):
+		_skip_next_turn.erase(mob_id)
+		if mob.get("burrowed", false):
+			mob["burrowed"] = false
+			GameState.monsters[mob_id] = mob
+			var settle_card = _get_card_for_mob(mob_id)
+			if settle_card:
+				settle_card.refresh_from_state()
 	else:
 		_do_mob_turn(mob_id)
 
@@ -533,8 +554,13 @@ func _run_mob_turn_sequence() -> void:
 
 		if _skip_next_turn.get(mob_id, false):
 			_skip_next_turn.erase(mob_id)   # sat out its first opportunity — now fair game
+			if GameState.monsters[mob_id].get("burrowed", false):
+				GameState.monsters[mob_id]["burrowed"] = false
+				var seq_card = _get_card_for_mob(mob_id)
+				if seq_card:
+					seq_card.refresh_from_state()
 			continue
-
+			
 		await _do_mob_turn(mob_id)
 
 		if not is_inside_tree():

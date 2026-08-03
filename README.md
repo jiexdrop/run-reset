@@ -7,3 +7,4 @@ Roguelite dungeon exploration
 - add a shop owner npc
 - add gomelin ring drop
 - add a way to delete items
+- add rocks that block the path forward

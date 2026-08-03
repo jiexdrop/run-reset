@@ -88,6 +88,7 @@ func _trigger_combat() -> void:
 		var mob_entry = {
 			"name":        def.mob_name,
 			"sprite":      def.sprite,
+			"mob_key":     _mob_key,
 			"hp":          def.max_hp,
 			"max_hp":      def.max_hp,
 			"xp_reward":   def.xp_reward,
