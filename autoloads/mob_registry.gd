@@ -102,7 +102,7 @@ func _build_registry() -> void:
 	var sandipper        = MobDef.new()
 	sandipper.mob_name   = "Sandipper"
 	sandipper.sprite     = "sandipper"
-	sandipper.max_hp     = 2
+	sandipper.max_hp     = 3
 	sandipper.xp_reward  = 1
 	sandipper.attacks    = [peck] as Array[MobAttackData]
 	sandipper.burrows    = true
