@@ -583,3 +583,8 @@ func _play_attack_lunge(card: Control) -> void:
 	tween.tween_property(card, "position:y", start_y, 0.18)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	await tween.finished
+
+func _on_pass_turn_pressed() -> void:
+	if not combat_section.visible or _active_mob_ids.is_empty():
+		return
+	on_player_moved()

@@ -88,6 +88,11 @@ horizontal_scroll_mode = 2
 layout_mode = 2
 alignment = 1
 
+[node name="PassTurnButton" type="Button" parent="MarginContainer/VBox/CombatSection" unique_id=200000016]
+layout_mode = 2
+size_flags_vertical = 0
+text = "Pass Turn"
+
 [node name="Separator2" type="HSeparator" parent="MarginContainer/VBox" unique_id=200000012]
 layout_mode = 2
 size_flags_vertical = 0
@@ -108,3 +113,5 @@ size_flags_vertical = 0
 [node name="InventoryUI" parent="MarginContainer/VBox" unique_id=1195445285 instance=ExtResource("2_invui")]
 layout_mode = 2
 size_flags_vertical = 0
+
+[connection signal="pressed" from="MarginContainer/VBox/CombatSection/PassTurnButton" to="." method="_on_pass_turn_pressed"]
