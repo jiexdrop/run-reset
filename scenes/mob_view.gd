@@ -90,7 +90,9 @@ func _refresh() -> void:
 	_refresh_resist_label()
 
 	var is_burrowed = mob_data.get("burrowed", false)
-	var sprite_key = "sapguard_block" if is_burrowed else mob_data.get("sprite", "")
+	var base_sprite = mob_data.get("sprite", "")
+	var block_key   = base_sprite + "_block"
+	var sprite_key  = block_key if (is_burrowed and MOB_SPRITES.has(block_key)) else base_sprite
 	var tex: Texture2D = MOB_SPRITES.get(sprite_key, null)
 	sprite.texture = tex
 	if tex:
