@@ -236,14 +236,12 @@ func _do_player_attack(mob_id: int) -> void:
 	mob = GameState.monsters[mob_id]
 	if mob.get("hp", 0) <= 0:
 		_on_mob_died(mob_id)
+	elif mob.get("burrowed", false):
+		pass   # underground — sits out this attack; _run_mob_turn_sequence
+			   # (triggered by the player's next move) will consume _skip_next_turn
+			   # and resurface it there, exactly once
 	elif _skip_next_turn.get(mob_id, false):
 		_skip_next_turn.erase(mob_id)
-		if mob.get("burrowed", false):
-			mob["burrowed"] = false
-			GameState.monsters[mob_id] = mob
-			var settle_card = _get_card_for_mob(mob_id)
-			if settle_card:
-				settle_card.refresh_from_state()
 	else:
 		_do_mob_turn(mob_id)
 
