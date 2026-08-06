@@ -23,6 +23,7 @@ signal drop_received(container: String, index: int)
 const TEX_SLOT     = preload("res://assets/ui/slot.png")
 const TEX_SLOT_ICE = preload("res://assets/ui/slot_ice.png")
 const TEX_SLOT_BAG = preload("res://assets/ui/slot.png")
+const TEX_SLOT_TRASH = preload("res://assets/ui/slot_trash.png")
 
 const ICON_SIZE    = Vector2(48, 48)
 
@@ -53,7 +54,7 @@ func setup(p_container: String, p_index: int, p_is_bag: bool = false) -> void:
 	container   = p_container
 	slot_index  = p_index
 	is_bag_slot = p_is_bag
-	_bg.texture = TEX_SLOT_BAG if p_is_bag else TEX_SLOT
+	_bg.texture = TEX_SLOT_TRASH if container == "trash" else TEX_SLOT_BAG if p_is_bag else TEX_SLOT
 	_style_label()
 	refresh()
 
@@ -63,9 +64,11 @@ func refresh() -> void:
 	if container == "hotbar":
 		if slot_index < InventoryState.hotbar.size():
 			slot_data = InventoryState.hotbar[slot_index]
-	else:
+	elif container == "bag":
 		if slot_index < InventoryState.bag.size():
 			slot_data = InventoryState.bag[slot_index]
+	elif container == "trash":
+		slot_data = InventoryState.trash
 
 	_item_key = slot_data.get("item_key", "")
 	_frozen   = slot_data.get("frozen", false)
@@ -174,7 +177,10 @@ static func _cleanup_drag() -> void:
 func receive_drop() -> void:
 	if _drag_source.is_empty():
 		return
-	InventoryState.swap_slots(_drag_source["container"], _drag_source["index"], container, slot_index)
+	if container == "trash" and _drag_source["container"] != "trash":
+		InventoryState.move_to_trash(_drag_source["container"], _drag_source["index"])
+	else:
+		InventoryState.swap_slots(_drag_source["container"], _drag_source["index"], container, slot_index)
 
 
 # ── Private ────────────────────────────────────────────────────────────────────

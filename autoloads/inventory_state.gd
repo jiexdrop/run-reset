@@ -12,6 +12,10 @@ signal inventory_changed
 
 var hotbar: Array = []
 var bag:    Array = []
+# The trash holds the most recently discarded item.  It is deliberately a
+# normal slot so the player can drag the item back out before discarding
+# something else.
+var trash: Dictionary = {}
 var equipped_index: int = -1   ## hotbar index of the equipped weapon/spell, -1 = none (Fists)
 
 
@@ -26,6 +30,7 @@ func _init_slots() -> void:
 	bag.clear()
 	for i in range(BAG_SIZE):
 		bag.append(_empty_slot())
+	trash = _empty_slot()
 	equipped_index = -1
 
 
@@ -109,19 +114,17 @@ func set_bag_frozen(slot_idx: int, frozen: bool) -> void:
 
 func swap_slots(container_a: String, idx_a: int,
 				container_b: String, idx_b: int) -> void:
-	var arr_a = hotbar if container_a == "hotbar" else bag
-	var arr_b = hotbar if container_b == "hotbar" else bag
-
-	if idx_a < 0 or idx_a >= arr_a.size(): return
-	if idx_b < 0 or idx_b >= arr_b.size(): return
-	if arr_a[idx_a]["frozen"] or arr_b[idx_b]["frozen"]:
+	var slot_a := _get_slot(container_a, idx_a)
+	var slot_b := _get_slot(container_b, idx_b)
+	if slot_a.is_empty() or slot_b.is_empty():
+		return
+	if slot_a.get("frozen", false) or slot_b.get("frozen", false):
 		return
 
-	var tmp         = arr_a[idx_a].duplicate()
-	arr_a[idx_a]    = arr_b[idx_b].duplicate()
-	arr_b[idx_b]    = tmp
-	arr_a[idx_a]["frozen"] = false
-	arr_b[idx_b]["frozen"] = false
+	_set_slot(container_a, idx_a, slot_b.duplicate())
+	_set_slot(container_b, idx_b, slot_a.duplicate())
+	_get_slot(container_a, idx_a)["frozen"] = false
+	_get_slot(container_b, idx_b)["frozen"] = false
 
 	# Equipped weapon follows its item if it was moved between hotbar slots;
 	# if it left the hotbar entirely, unequip.
@@ -136,6 +139,41 @@ func swap_slots(container_a: String, idx_a: int,
 			equipped_index = idx_a
 
 	emit_signal("inventory_changed")
+
+
+## Moves an item into the temporary trash slot.  The current trash contents
+## are overwritten (and therefore deleted) only when another item is dropped
+## on it.
+func move_to_trash(source_container: String, source_index: int) -> void:
+	if source_container == "trash":
+		return
+	var source := _get_slot(source_container, source_index)
+	if source.is_empty() or source.get("item_key", "") == "" or source.get("frozen", false):
+		return
+
+	trash = source.duplicate()
+	trash["frozen"] = false
+	_set_slot(source_container, source_index, _empty_slot())
+	if source_container == "hotbar":
+		_unequip_if_empty(source_index)
+	emit_signal("inventory_changed")
+
+
+func _get_slot(container: String, index: int) -> Dictionary:
+	if container == "trash":
+		return trash if index == 0 else {}
+	var slots := hotbar if container == "hotbar" else bag if container == "bag" else []
+	return slots[index] if index >= 0 and index < slots.size() else {}
+
+
+func _set_slot(container: String, index: int, value: Dictionary) -> void:
+	if container == "trash":
+		if index == 0:
+			trash = value
+		return
+	var slots := hotbar if container == "hotbar" else bag if container == "bag" else []
+	if index >= 0 and index < slots.size():
+		slots[index] = value
 
 
 ## Equip/unequip a weapon or spell living in a hotbar slot. Toggling the
@@ -169,6 +207,7 @@ func to_dict() -> Dictionary:
 	return {
 		"hotbar":         hotbar.duplicate(true),
 		"bag":            bag.duplicate(true),
+		"trash":          trash.duplicate(true),
 		"equipped_index": equipped_index,
 	}
 
@@ -181,5 +220,8 @@ func from_dict(data: Dictionary) -> void:
 	var saved_bag = data.get("bag", [])
 	for i in range(min(saved_bag.size(), BAG_SIZE)):
 		bag[i] = saved_bag[i]
+	var saved_trash = data.get("trash", {})
+	if saved_trash is Dictionary:
+		trash = saved_trash.duplicate(true)
 	equipped_index = data.get("equipped_index", -1)
 	emit_signal("inventory_changed")

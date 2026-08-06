@@ -19,6 +19,7 @@ const SLOT_SEPARATION := 4      # must match the scene's h_separation / v_separa
 # ── State ─────────────────────────────────────────────────────────────────────
 var _slots: Array = []
 var _bag_button: TextureButton = null
+var _trash_slot: ItemSlot = null
 var _columns_dirty: bool = false   # debounce flag
 
 
@@ -58,6 +59,7 @@ func _build_slots() -> void:
 		_slots.append(slot)
 
 	_build_bag_button()
+	_build_trash_slot()
 
 	slot_grid.columns = SLOT_MIN_COLS
 
@@ -77,9 +79,20 @@ func _build_bag_button() -> void:
 	slot_grid.add_child(_bag_button)
 
 
+func _build_trash_slot() -> void:
+	_trash_slot = ItemSlotScene.instantiate()
+	slot_grid.add_child(_trash_slot)
+	_trash_slot.setup("trash", 0, false)
+	# Match the hotbar: this becomes draggable only while the bag is open.
+	_trash_slot.set_drag_enabled(false)
+	_trash_slot.tooltip_text = "Trash: drop an item here. The previous trash item is deleted."
+
+
 func _on_inventory_changed() -> void:
 	for slot in _slots:
 		slot.refresh()
+	if is_instance_valid(_trash_slot):
+		_trash_slot.refresh()
 
 
 ## Queue a column update — deferred so many resize events in one frame
@@ -131,3 +144,5 @@ func _on_bag_pressed() -> void:
 func set_drag_enabled(enabled: bool) -> void:
 	for slot in _slots:
 		slot.set_drag_enabled(enabled)
+	if is_instance_valid(_trash_slot):
+		_trash_slot.set_drag_enabled(enabled)

@@ -19,6 +19,7 @@ const COLUMNS       = 6
 @onready var _close_btn: Button        = $Panel/VBox/TitleBar/CloseButton
 
 var _slots: Array = []
+var _trash_slot: ItemSlot = null
 
 
 func _ready() -> void:
@@ -43,10 +44,18 @@ func _build_slots() -> void:
 		slot.drop_received.connect(_on_slot_drop)
 		_slots.append(slot)
 
+	_trash_slot = ItemSlotScene.instantiate()
+	_grid.add_child(_trash_slot)
+	_trash_slot.setup("trash", 0, false)
+	_trash_slot.set_drag_enabled(true)
+	_trash_slot.tooltip_text = "Trash: drop an item here. The previous trash item is deleted."
+
 
 func _on_inventory_changed() -> void:
 	for slot in _slots:
 		slot.refresh()
+	if is_instance_valid(_trash_slot):
+		_trash_slot.refresh()
 
 
 func _on_slot_clicked(container: String, index: int) -> void:
