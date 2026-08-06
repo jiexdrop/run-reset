@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bhwyuf84ejc14"]
 
 [ext_resource type="Script" uid="uid://dguq0wgu7kyfu" path="res://scenes/combat_ui.gd" id="1_combatui"]
+[ext_resource type="Texture2D" uid="uid://7gfohimiyr26" path="res://assets/ui/poison.png" id="2_34x8n"]
 [ext_resource type="PackedScene" uid="uid://bpu8ms8fk3kf1" path="res://scenes/inventory_ui.tscn" id="2_invui"]
 
 [node name="CombatUi" type="Control" unique_id=1815585971]
@@ -49,6 +50,21 @@ text = "Level 1"
 [node name="HeartsGrid" type="GridContainer" parent="MarginContainer/VBox/StatsSection" unique_id=1283081124]
 layout_mode = 2
 columns = 12
+
+[node name="PoisonBadge" type="HBoxContainer" parent="MarginContainer/VBox/StatsSection" unique_id=200000030]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Icon" type="TextureRect" parent="MarginContainer/VBox/StatsSection/PoisonBadge" unique_id=200000031]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+texture = ExtResource("2_34x8n")
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="MarginContainer/VBox/StatsSection/PoisonBadge" unique_id=200000032]
+layout_mode = 2
+text = "PSN"
 
 [node name="EnergyGrid" type="GridContainer" parent="MarginContainer/VBox/StatsSection" unique_id=1040683733]
 layout_mode = 2

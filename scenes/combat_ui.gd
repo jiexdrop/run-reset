@@ -6,6 +6,9 @@ const ENERGY_FULL  = preload("res://assets/ui/energy_full.png")
 const ENERGY_EMPTY = preload("res://assets/ui/energy_empty.png")
 const EXP_FULL     = preload("res://assets/ui/exp_full.png")
 const EXP_EMPTY    = preload("res://assets/ui/exp_empty.png")
+const POISON_ICON        = preload("res://assets/ui/poison.png")
+const HEART_FULL_POISON  = preload("res://assets/ui/heart_full_poison.png")
+const HEART_EMPTY_POISON = preload("res://assets/ui/heart_empty_poison.png")
 
 const ICON_SIZE = Vector2(20, 20)
 const HIT_DELAY = 0.15   # pause between hits of a multi-hit attack
@@ -31,6 +34,9 @@ const SELF_DESTRUCT_ATTACKS: Dictionary = {
 @onready var combat_section: Control         = $MarginContainer/VBox/CombatSection
 @onready var log_label:      Label           = $MarginContainer/VBox/LogLabel
 @onready var inv_ui:         Control         = $MarginContainer/VBox/InventoryUI
+@onready var poison_badge:   Control         = $MarginContainer/VBox/StatsSection/PoisonBadge
+@onready var poison_icon:    TextureRect     = $MarginContainer/VBox/StatsSection/PoisonBadge/Icon
+@onready var poison_label:   Label           = $MarginContainer/VBox/StatsSection/PoisonBadge/Label
 
 var _active_mob_ids: Array = []
 var _player_stunned: bool  = false
@@ -62,11 +68,25 @@ func _ready() -> void:
 
 func refresh_stats() -> void:
 	var p = GameState.player
+	var poisoned = p.get("poison_turns", 0) > 0
+
 	level_label.text = "Level  %d" % p.get("level", 1)
-	_build_icon_grid(hearts_grid, p.get("hp", 0),      p.get("max_hp", 10),     HEART_FULL,  HEART_EMPTY)
+
+	var heart_full  = HEART_FULL_POISON  if poisoned else HEART_FULL
+	var heart_empty = HEART_EMPTY_POISON if poisoned else HEART_EMPTY
+	_build_icon_grid(hearts_grid, p.get("hp", 0),      p.get("max_hp", 10),     heart_full,  heart_empty)
 	_build_icon_grid(energy_grid, p.get("energy", 10),  p.get("max_energy", 10), ENERGY_FULL, ENERGY_EMPTY)
 	_build_icon_row(exp_row,    p.get("xp", 0),       p.get("xp_to_next", 10), EXP_FULL,    EXP_EMPTY)
 
+	_update_poison_badge(p)
+
+
+func _update_poison_badge(p: Dictionary) -> void:
+	var turns = p.get("poison_turns", 0)
+	poison_badge.visible = turns > 0
+	if turns > 0:
+		poison_label.text = "PSN x%d" % turns
+		
 
 func add_mob_to_combat(mob_idx: int) -> void:
 	if _active_mob_ids.has(mob_idx):
@@ -339,8 +359,7 @@ func _do_mob_turn(mob_id: int) -> void:
 
 	match effect:
 		1:
-			p["hp"] = max(0, p["hp"] - 1)
-			msg += " Poisoned! (-1 extra)"
+			msg += _apply_poison_status(p)
 		2:
 			_player_stunned = true
 			msg += " You are stunned!"
@@ -348,6 +367,13 @@ func _do_mob_turn(mob_id: int) -> void:
 			var stolen = _steal_random_item()
 			if stolen != "":
 				msg += " Gomelin steals your %s!" % ItemRegistry.get_item_name(stolen)
+
+	# Poison ticks down once per mob turn — but not on the turn it was just
+	# applied/refreshed, so a fresh poison always lasts its full 3-5 turns.
+	if effect != 1 and p.get("poison_turns", 0) > 0:
+		p["poison_turns"] = max(0, p["poison_turns"] - 1)
+		if p["poison_turns"] == 0:
+			msg += " Poison wears off."
 
 	GameState.player = p
 	GameState.mark_dirty()
@@ -357,6 +383,17 @@ func _do_mob_turn(mob_id: int) -> void:
 
 	if p["hp"] <= 0:
 		_on_player_died()
+		
+## Applies the poison status. First application just starts the timer with
+## no damage. Getting poisoned again while already poisoned costs a heart
+## and refreshes the duration — an incentive to clear it or avoid repeat hits.
+func _apply_poison_status(p: Dictionary) -> String:
+	var already_poisoned = p.get("poison_turns", 0) > 0
+	p["poison_turns"] = randi_range(3, 5)
+	if already_poisoned:
+		p["hp"] = max(0, p.get("hp", 0) - 1)
+		return " Poison flares up! (-1 heart)"
+	return " You are poisoned!"
 
 func _on_player_died() -> void:
 	_log("You died! Resetting...")

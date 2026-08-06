@@ -45,6 +45,7 @@ func reset() -> void:
 		"xp_to_next": 10,
 		"energy":     10,
 		"max_energy": 10,
+		"poison_turns": 0,
 	}
 	GameState.zone       = "default"
 	GameState.zone_stage = 1
