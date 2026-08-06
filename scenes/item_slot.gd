@@ -123,23 +123,33 @@ func _style_label() -> void:
 func set_drag_enabled(enabled: bool) -> void:
 	_drag_enabled = enabled
 
-
 func _get_drag_data(_at_position: Vector2) -> Variant:
 	if not _drag_enabled or _frozen or _item_key == "":
 		return null
 
-	# Simple floating preview of the icon being dragged, centered on the cursor.
 	var preview := TextureRect.new()
-	preview.texture       = ItemRegistry.get_icon(_item_key)
+	preview.texture = ItemRegistry.get_icon(_item_key)
 	preview.custom_minimum_size = ICON_SIZE
-	preview.size          = ICON_SIZE                       # force actual rect size now
-	preview.expand_mode   = TextureRect.EXPAND_IGNORE_SIZE   # make it honor that size
-	preview.stretch_mode  = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	preview.position      = -ICON_SIZE / 2.0                 # center on cursor
-	set_drag_preview(preview)
+	preview.size = ICON_SIZE
+	preview.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	return {"container": container, "index": slot_index}
+	var root := Control.new()
+	root.custom_minimum_size = ICON_SIZE
+	root.size = ICON_SIZE
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(preview)
 
+	preview.position = Vector2.ZERO
+
+	set_drag_preview(root)
+	root.position = -ICON_SIZE * 0.5
+
+	return {
+		"container": container,
+		"index": slot_index
+	}
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	if not _drag_enabled or _frozen:
