@@ -128,11 +128,14 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 	if not _drag_enabled or _frozen or _item_key == "":
 		return null
 
-	# Simple floating preview of the icon being dragged.
+	# Simple floating preview of the icon being dragged, centered on the cursor.
 	var preview := TextureRect.new()
-	preview.texture      = ItemRegistry.get_icon(_item_key)
+	preview.texture       = ItemRegistry.get_icon(_item_key)
 	preview.custom_minimum_size = ICON_SIZE
-	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	preview.size          = ICON_SIZE                       # force actual rect size now
+	preview.expand_mode   = TextureRect.EXPAND_IGNORE_SIZE   # make it honor that size
+	preview.stretch_mode  = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	preview.position      = -ICON_SIZE / 2.0                 # center on cursor
 	set_drag_preview(preview)
 
 	return {"container": container, "index": slot_index}
