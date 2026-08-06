@@ -51,18 +51,18 @@ text = "Level 1"
 layout_mode = 2
 columns = 12
 
-[node name="PoisonBadge" type="HBoxContainer" parent="MarginContainer/VBox/StatsSection" unique_id=200000030]
+[node name="EffectBadge" type="HBoxContainer" parent="MarginContainer/VBox/StatsSection" unique_id=200000030]
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="Icon" type="TextureRect" parent="MarginContainer/VBox/StatsSection/PoisonBadge" unique_id=200000031]
+[node name="Icon" type="TextureRect" parent="MarginContainer/VBox/StatsSection/EffectBadge" unique_id=200000031]
 custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
 texture = ExtResource("2_34x8n")
 stretch_mode = 5
 
-[node name="Label" type="Label" parent="MarginContainer/VBox/StatsSection/PoisonBadge" unique_id=200000032]
+[node name="Label" type="Label" parent="MarginContainer/VBox/StatsSection/EffectBadge" unique_id=200000032]
 layout_mode = 2
 text = "PSN"
 

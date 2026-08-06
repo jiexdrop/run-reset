@@ -17,6 +17,7 @@ enum Effect {
 	STUN,       # skip player next turn
 	BLEED,
 	STEAL,
+	FREEZE,     # lock inventory slots for a limited time
 }
 
 @export var attack_name: String        = "Attack"

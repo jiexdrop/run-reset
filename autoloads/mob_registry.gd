@@ -120,7 +120,7 @@ func _build_registry() -> void:
 	var freeze       = MobAttackData.new()
 	freeze.attack_name = "Freeze"
 	freeze.damage      = 1
-	freeze.effect      = MobAttackData.Effect.STUN
+	freeze.effect      = MobAttackData.Effect.FREEZE
 
 	var glaciarch        = MobDef.new()
 	glaciarch.mob_name   = "Glaciarch"

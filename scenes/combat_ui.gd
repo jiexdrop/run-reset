@@ -7,6 +7,7 @@ const ENERGY_EMPTY = preload("res://assets/ui/energy_empty.png")
 const EXP_FULL     = preload("res://assets/ui/exp_full.png")
 const EXP_EMPTY    = preload("res://assets/ui/exp_empty.png")
 const POISON_ICON        = preload("res://assets/ui/poison.png")
+const FROZEN_ICON        = preload("res://assets/ui/frozen.png")
 const HEART_FULL_POISON  = preload("res://assets/ui/heart_full_poison.png")
 const HEART_EMPTY_POISON = preload("res://assets/ui/heart_empty_poison.png")
 
@@ -34,9 +35,9 @@ const SELF_DESTRUCT_ATTACKS: Dictionary = {
 @onready var combat_section: Control         = $MarginContainer/VBox/CombatSection
 @onready var log_label:      Label           = $MarginContainer/VBox/LogLabel
 @onready var inv_ui:         Control         = $MarginContainer/VBox/InventoryUI
-@onready var poison_badge:   Control         = $MarginContainer/VBox/StatsSection/PoisonBadge
-@onready var poison_icon:    TextureRect     = $MarginContainer/VBox/StatsSection/PoisonBadge/Icon
-@onready var poison_label:   Label           = $MarginContainer/VBox/StatsSection/PoisonBadge/Label
+@onready var effect_badge:   Control         = $MarginContainer/VBox/StatsSection/EffectBadge
+@onready var effect_icon:    TextureRect     = $MarginContainer/VBox/StatsSection/EffectBadge/Icon
+@onready var effect_label:   Label           = $MarginContainer/VBox/StatsSection/EffectBadge/Label
 
 var _active_mob_ids: Array = []
 var _player_stunned: bool  = false
@@ -78,14 +79,19 @@ func refresh_stats() -> void:
 	_build_icon_grid(energy_grid, p.get("energy", 10),  p.get("max_energy", 10), ENERGY_FULL, ENERGY_EMPTY)
 	_build_icon_row(exp_row,    p.get("xp", 0),       p.get("xp_to_next", 10), EXP_FULL,    EXP_EMPTY)
 
-	_update_poison_badge(p)
+	_update_effect_badge(p)
 
 
-func _update_poison_badge(p: Dictionary) -> void:
-	var turns = p.get("poison_turns", 0)
-	poison_badge.visible = turns > 0
-	if turns > 0:
-		poison_label.text = "PSN x%d" % turns
+func _update_effect_badge(p: Dictionary) -> void:
+	var frozen_turns = p.get("frozen_turns", 0)
+	var poison_turns = p.get("poison_turns", 0)
+	effect_badge.visible = frozen_turns > 0 or poison_turns > 0
+	if frozen_turns > 0:
+		effect_icon.texture = FROZEN_ICON
+		effect_label.text = "FRZ x%d" % frozen_turns
+	elif poison_turns > 0:
+		effect_icon.texture = POISON_ICON
+		effect_label.text = "PSN x%d" % poison_turns
 		
 
 func add_mob_to_combat(mob_idx: int) -> void:
@@ -358,22 +364,29 @@ func _do_mob_turn(mob_id: int) -> void:
 	var msg = "%s hits you for %d!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]
 
 	match effect:
-		1:
+		MobAttackData.Effect.POISON:
 			msg += _apply_poison_status(p)
-		2:
+		MobAttackData.Effect.STUN:
 			_player_stunned = true
 			msg += " You are stunned!"
-		4:
+		MobAttackData.Effect.STEAL:
 			var stolen = _steal_random_item()
 			if stolen != "":
 				msg += " Gomelin steals your %s!" % ItemRegistry.get_item_name(stolen)
+		MobAttackData.Effect.FREEZE:
+			msg += _apply_freeze_status(p)
 
 	# Poison ticks down once per mob turn — but not on the turn it was just
 	# applied/refreshed, so a fresh poison always lasts its full 3-5 turns.
-	if effect != 1 and p.get("poison_turns", 0) > 0:
+	if effect != MobAttackData.Effect.POISON and p.get("poison_turns", 0) > 0:
 		p["poison_turns"] = max(0, p["poison_turns"] - 1)
 		if p["poison_turns"] == 0:
 			msg += " Poison wears off."
+	if effect != MobAttackData.Effect.FREEZE and p.get("frozen_turns", 0) > 0:
+		p["frozen_turns"] = max(0, p["frozen_turns"] - 1)
+		if p["frozen_turns"] == 0:
+			InventoryState.thaw_all_slots()
+			msg += " Your inventory thaws."
 
 	GameState.player = p
 	GameState.mark_dirty()
@@ -394,6 +407,17 @@ func _apply_poison_status(p: Dictionary) -> String:
 		p["hp"] = max(0, p.get("hp", 0) - 1)
 		return " Poison flares up! (-1 heart)"
 	return " You are poisoned!"
+
+
+## Freeze lasts exactly five subsequent mob turns. Repeated applications
+## refresh the duration and lock one more inventory slot, up to three slots.
+func _apply_freeze_status(p: Dictionary) -> String:
+	var already_frozen = p.get("frozen_turns", 0) > 0
+	p["frozen_turns"] = 5
+	var froze_slot = InventoryState.freeze_random_slot(3)
+	if froze_slot:
+		return " Your inventory freezes!" if not already_frozen else " Another inventory slot freezes!"
+	return " You are frozen!"
 
 func _on_player_died() -> void:
 	_log("You died! Resetting...")

@@ -15,3 +15,4 @@ Roguelite dungeon exploration
 - first poison: just green effect
 - second poison: lose 1 heart
 - third poison: lose 1 heart 
+- make combat more dynamic (shields, frozen player)

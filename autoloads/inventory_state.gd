@@ -112,6 +112,41 @@ func set_bag_frozen(slot_idx: int, frozen: bool) -> void:
 	emit_signal("inventory_changed")
 
 
+## Freezes one new random slot across the hotbar and bag. Returns false once
+## the requested limit has been reached or every slot is already frozen.
+func freeze_random_slot(max_frozen_slots: int = 3) -> bool:
+	var frozen_count := 0
+	var candidates: Array[Dictionary] = []
+	for container in ["hotbar", "bag"]:
+		var slots: Array = hotbar if container == "hotbar" else bag
+		for index in range(slots.size()):
+			if slots[index].get("frozen", false):
+				frozen_count += 1
+			else:
+				candidates.append({"container": container, "index": index})
+
+	if frozen_count >= max_frozen_slots or candidates.is_empty():
+		return false
+
+	var choice: Dictionary = candidates.pick_random()
+	_get_slot(choice["container"], choice["index"])["frozen"] = true
+	emit_signal("inventory_changed")
+	return true
+
+
+## Frozen slots are a temporary combat status, so they are all released
+## together once Freeze wears off.
+func thaw_all_slots() -> void:
+	var changed := false
+	for slots in [hotbar, bag]:
+		for slot in slots:
+			if slot.get("frozen", false):
+				slot["frozen"] = false
+				changed = true
+	if changed:
+		emit_signal("inventory_changed")
+
+
 func swap_slots(container_a: String, idx_a: int,
 				container_b: String, idx_b: int) -> void:
 	var slot_a := _get_slot(container_a, idx_a)
