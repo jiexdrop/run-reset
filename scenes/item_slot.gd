@@ -41,6 +41,11 @@ var _drag_enabled: bool = false
 @onready var _icon:    TextureRect = $IconRect
 @onready var _label:   Label       = $Label
 
+# Shared across all ItemSlot instances — only one drag can be active at a time.
+static var _drag_icon:   TextureRect = null
+static var _drag_source: Dictionary = {}   # {"container": String, "index": int}
+static var _dragging:    bool = false
+
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 
@@ -85,26 +90,91 @@ func refresh() -> void:
 	else:
 		modulate = Color.WHITE
 
-# ── Mouse input / drag-drop ────────────────────────────────────────────────────
+
+# ── Mouse input / drag-drop (floating icon) ───────────────────────────────────
 
 func _gui_input(event: InputEvent) -> void:
 	if not event is InputEventMouseButton:
 		return
-	if _drag_enabled:
-		return   # bag is open — clicks are for dragging only, not equip/consume
-	if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		emit_signal("slot_clicked", container, slot_index)
-
-## Called by the drag-drop manager when a drag starts on this slot.
-func begin_drag() -> void:
-	if _frozen or _item_key == "":
+	if event.button_index != MOUSE_BUTTON_LEFT:
 		return
+
+	if not _drag_enabled:
+		if event.pressed:
+			emit_signal("slot_clicked", container, slot_index)
+		return
+
+	# Bag is open — clicks drive the manual drag instead of equip/consume.
+	if event.pressed:
+		_try_begin_drag()
+	else:
+		_try_end_drag()
+
+
+func _process(_delta: float) -> void:
+	if _dragging and is_instance_valid(_drag_icon):
+		_drag_icon.global_position = get_global_mouse_position() - ICON_SIZE / 2.0
+
+
+func _try_begin_drag() -> void:
+	if _dragging or _frozen or _item_key == "":
+		return
+
+	_dragging    = true
+	_drag_source = {"container": container, "index": slot_index}
+
+	_drag_icon = TextureRect.new()
+	_drag_icon.texture       = ItemRegistry.get_icon(_item_key)
+	_drag_icon.custom_minimum_size = ICON_SIZE
+	_drag_icon.size          = ICON_SIZE
+	_drag_icon.expand_mode   = TextureRect.EXPAND_IGNORE_SIZE
+	_drag_icon.stretch_mode  = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_drag_icon.mouse_filter  = Control.MOUSE_FILTER_IGNORE
+	_drag_icon.modulate.a    = 0.85
+	_drag_icon.z_index       = 4096
+
+	get_tree().root.add_child(_drag_icon)
+	_drag_icon.global_position = get_global_mouse_position() - ICON_SIZE / 2.0
+
 	emit_signal("drag_started", container, slot_index)
 
 
-## Called by the drag-drop manager when something is dropped here.
+func _try_end_drag() -> void:
+	if not _dragging:
+		return
+
+	# NOTE: mouse-button capture means this release event is always routed
+	# back to the slot where the drag *started*, not the slot currently under
+	# the cursor — so we can't just check self's rect here. Ask the viewport
+	# for the control actually being hovered instead.
+	var hovered: Control = get_viewport().gui_get_hovered_control()
+	if hovered is ItemSlot:
+		hovered.receive_drop()
+
+	_cleanup_drag()
+
+
+## Called externally (e.g. BagUI on close, or a global cancel) to abort a
+## drag without completing a drop.
+static func cancel_drag() -> void:
+	if _dragging:
+		_cleanup_drag()
+
+
+static func _cleanup_drag() -> void:
+	if is_instance_valid(_drag_icon):
+		_drag_icon.queue_free()
+	_drag_icon   = null
+	_dragging    = false
+	_drag_source = {}
+
+
+## Called when a drop resolves on this slot; uses the shared static
+## _drag_source instead of Godot's built-in drag payload.
 func receive_drop() -> void:
-	emit_signal("drop_received", container, slot_index)
+	if _drag_source.is_empty():
+		return
+	InventoryState.swap_slots(_drag_source["container"], _drag_source["index"], container, slot_index)
 
 
 # ── Private ────────────────────────────────────────────────────────────────────
@@ -118,44 +188,8 @@ func _style_label() -> void:
 	_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
 	_label.add_theme_constant_override("shadow_offset_x", 1)
 	_label.add_theme_constant_override("shadow_offset_y", 1)
-	
+
+
 ## Called by InventoryUI / BagUI to turn dragging on/off for this slot.
 func set_drag_enabled(enabled: bool) -> void:
 	_drag_enabled = enabled
-
-func _get_drag_data(_at_position: Vector2) -> Variant:
-	if not _drag_enabled or _frozen or _item_key == "":
-		return null
-
-	var preview := TextureRect.new()
-	preview.texture = ItemRegistry.get_icon(_item_key)
-	preview.custom_minimum_size = ICON_SIZE
-	preview.size = ICON_SIZE
-	preview.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	var root := Control.new()
-	root.custom_minimum_size = ICON_SIZE
-	root.size = ICON_SIZE
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(preview)
-
-	preview.position = Vector2.ZERO
-
-	set_drag_preview(root)
-	root.position = -ICON_SIZE * 0.5
-
-	return {
-		"container": container,
-		"index": slot_index
-	}
-
-func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
-	if not _drag_enabled or _frozen:
-		return false
-	return typeof(data) == TYPE_DICTIONARY and data.has("container") and data.has("index")
-
-
-func _drop_data(_at_position: Vector2, data: Variant) -> void:
-	InventoryState.swap_slots(data["container"], data["index"], container, slot_index)
