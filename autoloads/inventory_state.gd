@@ -114,7 +114,7 @@ func set_bag_frozen(slot_idx: int, frozen: bool) -> void:
 
 ## Freezes one new random slot across the hotbar and bag. Returns false once
 ## the requested limit has been reached or every slot is already frozen.
-func freeze_random_slot(max_frozen_slots: int = 3) -> bool:
+func freeze_random_slot(max_frozen_slots: int = 8) -> bool:
 	var frozen_count := 0
 	var candidates: Array[Dictionary] = []
 	for container in ["hotbar", "bag"]:
@@ -122,7 +122,7 @@ func freeze_random_slot(max_frozen_slots: int = 3) -> bool:
 		for index in range(slots.size()):
 			if slots[index].get("frozen", false):
 				frozen_count += 1
-			else:
+			elif slots[index].get("item_key", "") != "":
 				candidates.append({"container": container, "index": index})
 
 	if frozen_count >= max_frozen_slots or candidates.is_empty():

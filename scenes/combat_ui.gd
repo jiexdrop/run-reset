@@ -364,6 +364,7 @@ func _do_mob_turn(mob_id: int) -> void:
 	var p      = GameState.player
 	var damage = atk.get("damage", 1)
 	var effect = atk.get("effect", 0)
+	#print("DEBUG atk=", atk, " effect=", effect, " typeof=", typeof(effect))
 
 	p["hp"] = max(0, p.get("hp", 0) - damage)
 	var msg = "%s hits you for %d!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]

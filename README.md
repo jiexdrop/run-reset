@@ -17,3 +17,4 @@ Roguelite dungeon exploration
 - third poison: lose 1 heart 
 - make combat more dynamic (shields, frozen player
 - uncomment zone registry
+- should only freeze items
