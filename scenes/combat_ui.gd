@@ -337,6 +337,7 @@ func _check_all_mobs_cleared() -> void:
 
 
 func _do_mob_turn(mob_id: int) -> void:
+	print(">>> _do_mob_turn START, mob_id=", mob_id)
 	if _player_stunned:
 		_player_stunned = false
 		_log("You were stunned — mob skips!")
@@ -350,8 +351,12 @@ func _do_mob_turn(mob_id: int) -> void:
 	if atk.is_empty():
 		return
 
+	print("Mob turn picked: ", atk.get("attack_name", "?")) 
+
 	await _play_attack_lunge(card)
+	print(">>> resumed after lunge, mob_id=", mob_id)
 	if not is_inside_tree():
+		print("_do_mob_turn bailed: not inside tree")
 		return
 
 	_spawn_mob_attack_effect(mob_id, atk.get("attack_name", ""))
@@ -359,11 +364,13 @@ func _do_mob_turn(mob_id: int) -> void:
 	var p      = GameState.player
 	var damage = atk.get("damage", 1)
 	var effect = atk.get("effect", 0)
+	print("DEBUG atk=", atk, " effect=", effect, " typeof=", typeof(effect))
 
 	p["hp"] = max(0, p.get("hp", 0) - damage)
 	var msg = "%s hits you for %d!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]
 
-	match effect:
+	print("ABOUT TO MATCH, effect=", effect)
+	match int(effect):
 		MobAttackData.Effect.POISON:
 			msg += _apply_poison_status(p)
 		MobAttackData.Effect.STUN:
@@ -374,7 +381,10 @@ func _do_mob_turn(mob_id: int) -> void:
 			if stolen != "":
 				msg += " Gomelin steals your %s!" % ItemRegistry.get_item_name(stolen)
 		MobAttackData.Effect.FREEZE:
+			print("FREEZE ARM HIT")
 			msg += _apply_freeze_status(p)
+		_:
+			print("NO MATCH ARM HIT, effect was: ", effect)
 
 	# Poison ticks down once per mob turn — but not on the turn it was just
 	# applied/refreshed, so a fresh poison always lasts its full 3-5 turns.
@@ -412,13 +422,23 @@ func _apply_poison_status(p: Dictionary) -> String:
 ## Freeze lasts exactly five subsequent mob turns. Repeated applications
 ## refresh the duration and lock one more inventory slot, up to three slots.
 func _apply_freeze_status(p: Dictionary) -> String:
+	print("_apply_freeze_status called, frozen_turns before: ", p.get("frozen_turns", 0))
 	var already_frozen = p.get("frozen_turns", 0) > 0
 	p["frozen_turns"] = 5
 	var froze_slot = InventoryState.freeze_random_slot(3)
-	if froze_slot:
-		return " Your inventory freezes!" if not already_frozen else " Another inventory slot freezes!"
-	return " You are frozen!"
 
+	var msg := ""
+	if froze_slot:
+		msg = " Your inventory freezes!" if not already_frozen else " Another inventory slot freezes!"
+	else:
+		msg = " You are frozen!"
+
+	if already_frozen:
+		p["hp"] = max(0, p.get("hp", 0) - 1)
+		msg += " (-1 heart)"
+
+	return msg
+	
 func _on_player_died() -> void:
 	_log("You died! Resetting...")
 	await get_tree().create_timer(1.5).timeout
@@ -644,6 +664,8 @@ func _play_attack_lunge(card: Control) -> void:
 	tween.tween_property(card, "position:y", start_y, 0.18)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	await tween.finished
+	if not is_instance_valid(card):
+		return
 
 func _on_pass_turn_pressed() -> void:
 	if not combat_section.visible or _active_mob_ids.is_empty():
