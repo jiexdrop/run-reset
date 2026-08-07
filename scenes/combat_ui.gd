@@ -364,12 +364,10 @@ func _do_mob_turn(mob_id: int) -> void:
 	var p      = GameState.player
 	var damage = atk.get("damage", 1)
 	var effect = atk.get("effect", 0)
-	print("DEBUG atk=", atk, " effect=", effect, " typeof=", typeof(effect))
 
 	p["hp"] = max(0, p.get("hp", 0) - damage)
 	var msg = "%s hits you for %d!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]
 
-	print("ABOUT TO MATCH, effect=", effect)
 	match int(effect):
 		MobAttackData.Effect.POISON:
 			msg += _apply_poison_status(p)
@@ -381,10 +379,7 @@ func _do_mob_turn(mob_id: int) -> void:
 			if stolen != "":
 				msg += " Gomelin steals your %s!" % ItemRegistry.get_item_name(stolen)
 		MobAttackData.Effect.FREEZE:
-			print("FREEZE ARM HIT")
 			msg += _apply_freeze_status(p)
-		_:
-			print("NO MATCH ARM HIT, effect was: ", effect)
 
 	# Poison ticks down once per mob turn — but not on the turn it was just
 	# applied/refreshed, so a fresh poison always lasts its full 3-5 turns.
