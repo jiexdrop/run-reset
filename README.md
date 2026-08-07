@@ -18,3 +18,5 @@ Roguelite dungeon exploration
 - make combat more dynamic (shields, frozen player
 - uncomment zone registry
 - should only freeze items
+- make the player visible
+- make area of effect fire spells/ice spells
