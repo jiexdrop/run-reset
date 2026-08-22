@@ -25,20 +25,20 @@ const SELF_DESTRUCT_ATTACKS: Dictionary = {
 	"Explode": true,
 }
 
-@onready var level_label:      Label           = $MarginContainer/VBox/StatsSection/LevelLabel
-@onready var hearts_grid:      GridContainer   = $MarginContainer/VBox/StatsSection/HeartsGrid
-@onready var energy_grid:      GridContainer   = $MarginContainer/VBox/StatsSection/EnergyGrid
-@onready var exp_row:          HBoxContainer   = $MarginContainer/VBox/StatsSection/ExpRow
-@onready var mob_scroll:       ScrollContainer = $MarginContainer/VBox/CombatSection/MobCarousel/MobScroll
-@onready var mob_row:          HBoxContainer   = $MarginContainer/VBox/CombatSection/MobCarousel/MobScroll/MobRow
-@onready var attack_bar:       HFlowContainer  = $MarginContainer/VBox/AttackBar
-@onready var combat_section:   Control         = $MarginContainer/VBox/CombatSection
-@onready var log_label:        Label           = $MarginContainer/VBox/LogLabel
-@onready var inv_ui:           Control         = $MarginContainer/VBox/InventoryUI
-@onready var effect_badge:     Control         = $MarginContainer/VBox/StatsSection/EffectBadge
-@onready var effect_icon:      TextureRect     = $MarginContainer/VBox/StatsSection/EffectBadge/Icon
-@onready var effect_label:     Label           = $MarginContainer/VBox/StatsSection/EffectBadge/Label
-@onready var pass_turn_button: Button          = $MarginContainer/VBox/CombatSection/PassTurnButton
+@onready var level_label:      Label           = $MarginContainer/ContentArea/VBox/StatsSection/LevelLabel
+@onready var hearts_grid:      GridContainer   = $MarginContainer/ContentArea/VBox/StatsSection/HeartsGrid
+@onready var energy_grid:      GridContainer   = $MarginContainer/ContentArea/VBox/StatsSection/EnergyGrid
+@onready var exp_row:          HBoxContainer   = $MarginContainer/ContentArea/VBox/StatsSection/ExpRow
+@onready var mob_scroll:       ScrollContainer = $MarginContainer/ContentArea/VBox/CombatSection/MobCarousel/MobScroll
+@onready var mob_row:          HBoxContainer   = $MarginContainer/ContentArea/VBox/CombatSection/MobCarousel/MobScroll/MobRow
+@onready var attack_bar:       HFlowContainer  = $MarginContainer/ContentArea/VBox/AttackBar
+@onready var combat_section:   Control         = $MarginContainer/ContentArea/VBox/CombatSection
+@onready var log_label:        Label           = $MarginContainer/ContentArea/VBox/LogLabel
+@onready var inv_ui:           Control         = $MarginContainer/ContentArea/InventoryUI
+@onready var effect_badge:     Control         = $MarginContainer/ContentArea/VBox/StatsSection/EffectBadge
+@onready var effect_icon:      TextureRect     = $MarginContainer/ContentArea/VBox/StatsSection/EffectBadge/Icon
+@onready var effect_label:     Label           = $MarginContainer/ContentArea/VBox/StatsSection/EffectBadge/Label
+@onready var pass_turn_button: Button          = $MarginContainer/ContentArea/VBox/CombatSection/PassTurnButton
 
 var _active_mob_ids: Array = []
 var _player_stunned: bool  = false
