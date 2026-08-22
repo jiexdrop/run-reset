@@ -56,6 +56,7 @@ const LUNGE_OUT_DIST  = 18.0
 var _mob_turns_running: bool = false
 var _skip_next_turn: Dictionary = {}
 var _pending_bombs: Dictionary = {}   # mob_id -> pending damage
+var _exploded: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group("combat_ui")
@@ -115,6 +116,7 @@ func end_combat() -> void:
 	_active_mob_ids = []
 	_skip_next_turn.clear()
 	_pending_bombs.clear()
+	_exploded.clear()
 	_clear_children(mob_row)
 	_log("")
 
@@ -394,6 +396,9 @@ func _do_mob_turn(mob_id: int) -> void:
 	p["hp"] = max(0, p.get("hp", 0) - damage)
 	var msg = "%s hits you for %d!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]
 
+	var atk_name: String = atk.get("attack_name", "")
+	var is_self_destruct: bool = SELF_DESTRUCT_ATTACKS.get(atk_name, false)
+
 	match int(effect):
 		MobAttackData.Effect.POISON:
 			msg += _apply_poison_status(p)
@@ -427,6 +432,13 @@ func _do_mob_turn(mob_id: int) -> void:
 
 	if p["hp"] <= 0:
 		_on_player_died()
+		return
+
+	if is_self_destruct:
+		_exploded[mob_id] = true
+		GameState.monsters[mob_id]["hp"] = 0
+		GameState.mark_dirty()
+		_on_mob_died(mob_id)
 		
 ## Applies the poison status. First application just starts the timer with
 ## no damage. Getting poisoned again while already poisoned costs a heart
@@ -619,10 +631,13 @@ func _spawn_mob_attack_effect(mob_id: int, attack_name: String) -> void:
 ## apply its damage to the player and play its effect, even though the mob
 ## never got to take its normal turn.
 func _apply_death_explosion(mob_id: int) -> String:
+	if _exploded.get(mob_id, false):
+		return ""
 	var attacks: Array = GameState.monsters[mob_id].get("attacks", [])
 	for atk in attacks:
 		var atk_name: String = atk.get("attack_name", "")
 		if SELF_DESTRUCT_ATTACKS.get(atk_name, false):
+			_exploded[mob_id] = true
 			_spawn_mob_attack_effect(mob_id, atk_name)
 			var damage: int = atk.get("damage", 0)
 			var p = GameState.player
@@ -633,7 +648,7 @@ func _apply_death_explosion(mob_id: int) -> String:
 				_on_player_died()
 			return "%s explodes for %d damage!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]
 	return ""
-	
+
 func on_player_moved() -> void:
 	if _mob_turns_running or _attack_in_progress:
 		return
