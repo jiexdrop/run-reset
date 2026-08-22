@@ -31,6 +31,10 @@ const ATTACK_TYPES: Dictionary = {
 		"hits": 1, "damage_mult": 0.5, "energy_mult": 1.0, "label": "",
 		"effect_scene": preload("res://scenes/effects/ice_effect.tscn"),
 	},
+	"bomb_throw": {
+		"hits": 1, "damage_mult": 1.0, "energy_mult": 1.0, "label": " (Fused)",
+		"effect_scene": preload("res://scenes/effects/explosion_effect.tscn"),
+	},
 }
 
 var _items: Dictionary = {
@@ -111,6 +115,18 @@ var _items: Dictionary = {
 		"energy_cost": 3,
 		"attack_type": "fire_spell",
 		"element": "fire",
+	},
+	
+	"bomb": {
+		"name": "Bomb",
+		"icon": preload("res://assets/items/bomb.png"),
+		"desc": "Lob it and step back — the fuse takes one enemy turn to burn down before it goes off.",
+		"max_stack": 4,
+		"type": "spell",
+		"damage": 5,
+		"energy_cost": 0,
+		"attack_type": "bomb_throw",
+		"element": "physical",
 	},
 }
 

@@ -209,6 +209,7 @@ func _build_registry() -> void:
 	kaze_shroom.loot_table = [
 		{ "item_key": "health_potion", "chance": 0.42, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
+		{ "item_key": "bomb", "chance": 0.22, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["kaze_shroom"] = kaze_shroom
 
@@ -229,6 +230,7 @@ func _build_registry() -> void:
 		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "iron_sword", "chance": 0.52, "min": 1, "max": 1 },
+		{ "item_key": "bomb", "chance": 0.25, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["sapguard"] = sapguard
 

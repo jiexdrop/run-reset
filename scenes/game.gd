@@ -2,6 +2,10 @@ extends Node2D
 
 const TILE = preload("uid://ceosbosrytods")
 const BUSH = preload("res://scenes/bush.tscn")
+const GROUND_ITEM = preload("res://scenes/ground_item.tscn")
+const GROUND_ITEM_ZONE = "evergreen"
+const GROUND_ITEM_KEY = "bomb"
+const GROUND_ITEM_SPAWN_CHANCE = 0.18
 
 @onready var camera_2d: Camera2D = $Camera2D
 
@@ -226,8 +230,10 @@ func generate_tiles() -> void:
 				mob_key = pool[randi() % pool.size()]
 
 		var has_bush: bool = false
-		if tile_type == "room" and key != "0,0" and mob_key == "":
-			has_bush = randf() < BUSH_SPAWN_CHANCE
+		var has_ground_item: bool = false
+		if tile_type == "room" and key != "0,0" and mob_key == "" and not has_bush \
+				and GameState.zone == GROUND_ITEM_ZONE:
+			has_ground_item = randf() < GROUND_ITEM_SPAWN_CHANCE
 
 		GameState.tiles[key] = {
 			"visible":        key == "0,0",
@@ -236,6 +242,9 @@ func generate_tiles() -> void:
 			"mob_dead":       false,
 			"has_bush":       has_bush,
 			"bush_harvested": false,
+			"has_ground_item":   has_ground_item,
+			"item_key":          GROUND_ITEM_KEY if has_ground_item else "",
+			"item_collected":    false,
 		}
 
 	_spawn_tiles()
@@ -453,6 +462,12 @@ func _spawn_tiles() -> void:
 			_spawn_bush(key, gx, gy,
 				GameState.tiles[key].get("visible", false),
 				GameState.tiles[key].get("bush_harvested", false))
+				
+		if GameState.tiles[key].get("has_ground_item", false):
+			_spawn_ground_item(key, gx, gy,
+				GameState.tiles[key].get("visible", false),
+				GameState.tiles[key].get("item_key", ""),
+				GameState.tiles[key].get("item_collected", false))
 
 	update_edge_dots()
 
@@ -476,6 +491,29 @@ func _spawn_bush(tile_key: String, gx: int, gy: int, tile_visible: bool, harvest
 		bush.visible = tile_node.visible
 	)
 
+
+func _spawn_ground_item(tile_key: String, gx: int, gy: int, tile_visible: bool,
+						 item_key: String, collected: bool) -> void:
+	if collected or item_key == "":
+		return
+	var tile_node: Node2D = null
+	for t in _spawned_tiles:
+		if t.grid_x == gx and t.grid_y == gy:
+			tile_node = t
+			break
+	if tile_node == null:
+		return
+
+	var item: GroundItem = GROUND_ITEM.instantiate()
+	item.z_index  = 5
+	item.position = Vector2(0, 0)
+	item.visible  = tile_visible
+	tile_node.add_child(item)
+	item.setup(tile_key, item_key)
+
+	tile_node.visibility_changed.connect(func():
+		item.visible = tile_node.visible
+	)
 
 # ── Camera ────────────────────────────────────────────────────────────────────
 

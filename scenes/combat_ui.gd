@@ -55,6 +55,7 @@ const LUNGE_OUT_DIST  = 18.0
 
 var _mob_turns_running: bool = false
 var _skip_next_turn: Dictionary = {}
+var _pending_bombs: Dictionary = {}   # mob_id -> pending damage
 
 func _ready() -> void:
 	add_to_group("combat_ui")
@@ -113,6 +114,7 @@ func end_combat() -> void:
 	combat_section.visible = false
 	_active_mob_ids = []
 	_skip_next_turn.clear()
+	_pending_bombs.clear()
 	_clear_children(mob_row)
 	_log("")
 
@@ -213,6 +215,10 @@ func _do_player_attack(mob_id: int) -> void:
 	p["energy"] = max(0, p.get("energy", 0) - energy_needed)
 	GameState.player = p
 	refresh_stats()
+	
+	if atk.attack_type == "bomb_throw":
+		_throw_bomb(mob_id, atk)
+		return
 
 	var hits        = max(1, type_data.get("hits", 1))
 	var dmg_per_hit = max(1, int(round(atk.damage * type_data.get("damage_mult", 1.0) / hits)))
@@ -270,7 +276,26 @@ func _do_player_attack(mob_id: int) -> void:
 		_skip_next_turn.erase(mob_id)
 	else:
 		_do_mob_turn(mob_id)
+		_resolve_pending_bomb(mob_id)
 
+func _throw_bomb(mob_id: int, atk: Dictionary) -> void:
+	var target_mob = GameState.monsters[mob_id]
+	var resistances = target_mob.get("resistances", {})
+	var atk_element = ItemRegistry.get_element(atk.item_key)
+	var resist_mult  = resistances.get(atk_element, 1.0)
+	var dmg = max(1, int(round(atk.damage * resist_mult)))
+
+	_pending_bombs[mob_id] = _pending_bombs.get(mob_id, 0) + dmg
+
+	if atk.hotbar_index >= 0:
+		InventoryState.consume_hotbar_item(atk.hotbar_index)
+
+	_log("You lob a bomb and step back — fuse burning...")
+	GameState.mark_dirty()
+	SaveManager.save()
+	# Deliberately no _do_mob_turn call here — that's the whole point of the
+	# quirk: the mob gets its next turn opportunity for free, then the bomb
+	# goes off once that turn resolves (see _resolve_pending_bomb).
 
 func _spawn_attack_effect(mob_id: int, type_data: Dictionary) -> void:
 	var scene: PackedScene = type_data.get("effect_scene", null)
@@ -628,15 +653,18 @@ func _run_mob_turn_sequence() -> void:
 			continue
 
 		if _skip_next_turn.get(mob_id, false):
-			_skip_next_turn.erase(mob_id)   # sat out its first opportunity — now fair game
+			_skip_next_turn.erase(mob_id)
 			if GameState.monsters[mob_id].get("burrowed", false):
 				GameState.monsters[mob_id]["burrowed"] = false
 				var seq_card = _get_card_for_mob(mob_id)
 				if seq_card:
 					seq_card.refresh_from_state()
+			_resolve_pending_bomb(mob_id)
 			continue
 			
 		await _do_mob_turn(mob_id)
+		
+		_resolve_pending_bomb(mob_id)
 
 		if not is_inside_tree():
 			_mob_turns_running = false
@@ -667,3 +695,30 @@ func _on_pass_turn_pressed() -> void:
 	if not combat_section.visible or _active_mob_ids.is_empty():
 		return
 	on_player_moved()
+
+func _resolve_pending_bomb(mob_id: int) -> void:
+	if not _pending_bombs.has(mob_id):
+		return
+	var dmg = _pending_bombs[mob_id]
+	_pending_bombs.erase(mob_id)
+
+	if mob_id >= GameState.monsters.size():
+		return
+	var mob = GameState.monsters[mob_id]
+	if mob.get("hp", 0) <= 0:
+		return
+
+	mob["hp"] = max(0, mob.get("hp", 0) - dmg)
+	GameState.monsters[mob_id] = mob
+
+	_spawn_attack_effect(mob_id, ItemRegistry.get_attack_type_data("bomb_throw"))
+	var card = _get_card_for_mob(mob_id)
+	if card:
+		card.refresh_from_state()
+
+	_log("The bomb goes off — %s takes %d damage!" % [mob.get("name", "Mob"), dmg])
+	GameState.mark_dirty()
+	SaveManager.save()
+
+	if mob["hp"] <= 0:
+		_on_mob_died(mob_id)
