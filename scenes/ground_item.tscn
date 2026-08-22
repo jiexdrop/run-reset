@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://diorqmjfrje02"]
+
+[ext_resource type="Script" uid="uid://y27mpasbqso" path="res://scenes/ground_item.gd" id="1_gitem"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_gitem"]
+size = Vector2(40, 40)
+
+[node name="GroundItem" type="Area2D" unique_id=865482548]
+script = ExtResource("1_gitem")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=603003562]
+scale = Vector2(0.6, 0.6)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1045561731]
+shape = SubResource("RectangleShape2D_gitem")
