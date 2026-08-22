@@ -25,19 +25,20 @@ const SELF_DESTRUCT_ATTACKS: Dictionary = {
 	"Explode": true,
 }
 
-@onready var level_label:    Label           = $MarginContainer/VBox/StatsSection/LevelLabel
-@onready var hearts_grid:    GridContainer   = $MarginContainer/VBox/StatsSection/HeartsGrid
-@onready var energy_grid:    GridContainer   = $MarginContainer/VBox/StatsSection/EnergyGrid
-@onready var exp_row:        HBoxContainer   = $MarginContainer/VBox/StatsSection/ExpRow
-@onready var mob_scroll:     ScrollContainer = $MarginContainer/VBox/CombatSection/MobCarousel/MobScroll
-@onready var mob_row:        HBoxContainer   = $MarginContainer/VBox/CombatSection/MobCarousel/MobScroll/MobRow
-@onready var attack_bar:     HFlowContainer  = $MarginContainer/VBox/AttackBar
-@onready var combat_section: Control         = $MarginContainer/VBox/CombatSection
-@onready var log_label:      Label           = $MarginContainer/VBox/LogLabel
-@onready var inv_ui:         Control         = $MarginContainer/VBox/InventoryUI
-@onready var effect_badge:   Control         = $MarginContainer/VBox/StatsSection/EffectBadge
-@onready var effect_icon:    TextureRect     = $MarginContainer/VBox/StatsSection/EffectBadge/Icon
-@onready var effect_label:   Label           = $MarginContainer/VBox/StatsSection/EffectBadge/Label
+@onready var level_label:      Label           = $MarginContainer/VBox/StatsSection/LevelLabel
+@onready var hearts_grid:      GridContainer   = $MarginContainer/VBox/StatsSection/HeartsGrid
+@onready var energy_grid:      GridContainer   = $MarginContainer/VBox/StatsSection/EnergyGrid
+@onready var exp_row:          HBoxContainer   = $MarginContainer/VBox/StatsSection/ExpRow
+@onready var mob_scroll:       ScrollContainer = $MarginContainer/VBox/CombatSection/MobCarousel/MobScroll
+@onready var mob_row:          HBoxContainer   = $MarginContainer/VBox/CombatSection/MobCarousel/MobScroll/MobRow
+@onready var attack_bar:       HFlowContainer  = $MarginContainer/VBox/AttackBar
+@onready var combat_section:   Control         = $MarginContainer/VBox/CombatSection
+@onready var log_label:        Label           = $MarginContainer/VBox/LogLabel
+@onready var inv_ui:           Control         = $MarginContainer/VBox/InventoryUI
+@onready var effect_badge:     Control         = $MarginContainer/VBox/StatsSection/EffectBadge
+@onready var effect_icon:      TextureRect     = $MarginContainer/VBox/StatsSection/EffectBadge/Icon
+@onready var effect_label:     Label           = $MarginContainer/VBox/StatsSection/EffectBadge/Label
+@onready var pass_turn_button: Button          = $MarginContainer/VBox/CombatSection/PassTurnButton
 
 var _active_mob_ids: Array = []
 var _player_stunned: bool  = false
@@ -61,7 +62,7 @@ var _exploded: Dictionary = {}
 func _ready() -> void:
 	add_to_group("combat_ui")
 	refresh_stats()
-	combat_section.visible = false
+	pass_turn_button.disabled = true
 	if inv_ui:
 		inv_ui.slot_clicked.connect(_on_inventory_slot_clicked)
 		inv_ui.bag_opened.connect(_on_bag_opened)
@@ -99,24 +100,23 @@ func _update_effect_badge(p: Dictionary) -> void:
 func add_mob_to_combat(mob_idx: int) -> void:
 	if _active_mob_ids.has(mob_idx):
 		return
-	if not combat_section.visible:
+	if _active_mob_ids.is_empty():
 		_active_mob_ids  = [mob_idx]
 		_player_stunned  = false
-		combat_section.visible = true
 		_log("")
 	else:
 		_active_mob_ids.append(mob_idx)
 		_log("A new enemy joins the fight!")
 	_skip_next_turn[mob_idx] = true
+	pass_turn_button.disabled = false
 	_rebuild_mob_cards()
 
 
 func end_combat() -> void:
-	combat_section.visible = false
+	pass_turn_button.disabled = true
 	_active_mob_ids = []
 	_skip_next_turn.clear()
 	_pending_bombs.clear()
-	_exploded.clear()
 	_clear_children(mob_row)
 	_log("")
 
@@ -652,7 +652,7 @@ func _apply_death_explosion(mob_id: int) -> String:
 func on_player_moved() -> void:
 	if _mob_turns_running or _attack_in_progress:
 		return
-	if not combat_section.visible or _active_mob_ids.is_empty():
+	if _active_mob_ids.is_empty():
 		return
 	_run_mob_turn_sequence()
 
@@ -707,7 +707,7 @@ func _play_attack_lunge(card: Control) -> void:
 		return
 
 func _on_pass_turn_pressed() -> void:
-	if not combat_section.visible or _active_mob_ids.is_empty():
+	if _active_mob_ids.is_empty():
 		return
 	on_player_moved()
 
