@@ -311,7 +311,7 @@ func _spawn_attack_effect(mob_id: int, type_data: Dictionary) -> void:
 	card.add_child(fx)
 
 
-func _on_mob_died(mob_id: int) -> void:
+func _on_mob_died(mob_id: int, explosion_msg: String = "") -> void:
 	var xp_gain = GameState.monsters[mob_id].get("xp_reward", 1)
 	var p       = GameState.player
 	p["xp"]     = p.get("xp", 0) + xp_gain
@@ -322,7 +322,10 @@ func _on_mob_died(mob_id: int) -> void:
 	GameState.player = p
 	refresh_stats()
 
-	var explode_msg = _apply_death_explosion(mob_id)
+	# If the mob just self-destructed on its own turn, the explosion damage
+	# was already applied there — reuse that message instead of applying
+	# the damage a second time via _apply_death_explosion.
+	var explode_msg = explosion_msg if explosion_msg != "" else _apply_death_explosion(mob_id)
 	var drop_msg     = _roll_loot(mob_id)
 
 	_notify_tile_mob_dead(mob_id)
@@ -434,12 +437,39 @@ func _do_mob_turn(mob_id: int) -> void:
 		_on_player_died()
 		return
 
+	# Self-destruct attacks (e.g. Kaze Shroom's Explode) kill the mob itself
+	# when used on its own turn, mirroring the death-explosion that already
+	# happens when the mob is killed by the player/a bomb.
+	if SELF_DESTRUCT_ATTACKS.get(atk.get("attack_name", ""), false):
+		await _self_destruct_mob(mob_id, atk.get("attack_name", ""), damage)
+
 	if is_self_destruct:
 		_exploded[mob_id] = true
 		GameState.monsters[mob_id]["hp"] = 0
 		GameState.mark_dirty()
 		_on_mob_died(mob_id)
-		
+
+## Kills a mob that self-destructed as part of its own turn (e.g. Kaze
+## Shroom's Explode) and routes it through the normal death flow — grey
+## fade, XP, loot, tile update — without re-applying the explosion damage,
+## which was already dealt above in _do_mob_turn.
+func _self_destruct_mob(mob_id: int, attack_name: String, damage: int) -> void:
+	if mob_id >= GameState.monsters.size():
+		return
+	var mob = GameState.monsters[mob_id]
+	if mob.get("hp", 0) <= 0:
+		return   # already dead — avoid double death handling
+
+	mob["hp"] = 0
+	GameState.monsters[mob_id] = mob
+
+	var card = _get_card_for_mob(mob_id)
+	if card:
+		card.refresh_from_state()   # grey fade fires immediately, same as other mobs
+
+	var explode_msg = "%s explodes for %d damage!" % [mob.get("name", "Mob"), damage]
+	await _on_mob_died(mob_id, explode_msg)
+
 ## Applies the poison status. First application just starts the timer with
 ## no damage. Getting poisoned again while already poisoned costs a heart
 ## and refreshes the duration — an incentive to clear it or avoid repeat hits.
