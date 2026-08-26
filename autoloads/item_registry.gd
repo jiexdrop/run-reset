@@ -71,7 +71,7 @@ var _items: Dictionary = {
 		"desc": "A sturdy iron blade.",
 		"max_stack": 1,
 		"type": "weapon",
-		"damage": 2,
+		"damage": 3,
 		"attack_type": "single_swing",
 	},
 	"steel_sword": {
