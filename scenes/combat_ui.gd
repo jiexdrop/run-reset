@@ -56,6 +56,8 @@ const LUNGE_OUT_DIST  = 18.0
 
 var _mob_turns_running: bool = false
 var _skip_next_turn: Dictionary = {}
+var _telegraphed: Dictionary = {}  # mob_id -> attack selected for its next turn
+var _shielded_this_turn: bool = false
 var _pending_bombs: Dictionary = {}   # mob_id -> pending damage
 var _exploded: Dictionary = {}
 
@@ -116,6 +118,8 @@ func end_combat() -> void:
 	pass_turn_button.disabled = true
 	_active_mob_ids = []
 	_skip_next_turn.clear()
+	_telegraphed.clear()
+	_shielded_this_turn = false
 	_pending_bombs.clear()
 	_clear_children(mob_row)
 	_log("")
@@ -154,6 +158,7 @@ func _rebuild_mob_cards() -> void:
 		var mob_view = MobViewScene.instantiate()
 		mob_row.add_child(mob_view)
 		mob_view.setup(mob_id, GameState.monsters[mob_id])
+		mob_view.set_telegraphed(_telegraphed.has(mob_id))
 		mob_view.attack_requested.connect(_on_attack_requested)
 		mob_view.mob_died.connect(_on_mob_died)
 
@@ -196,6 +201,17 @@ func _rebuild_attack_bar() -> void:
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lbl.custom_minimum_size.x = 0
 	attack_bar.add_child(lbl)
+
+	var shield_idx := InventoryState.equipped_shield_index
+	if shield_idx >= 0 and shield_idx < InventoryState.hotbar.size():
+		var shield_key: String = InventoryState.hotbar[shield_idx].get("item_key", "")
+		if ItemRegistry.get_type(shield_key) == "shield":
+			var shield_button := Button.new()
+			shield_button.text = "Shield"
+			shield_button.icon = ItemRegistry.get_icon(shield_key)
+			shield_button.tooltip_text = "Block the next telegraphed attack this turn."
+			shield_button.pressed.connect(_on_shield_pressed)
+			attack_bar.add_child(shield_button)
 
 
 func _on_attack_requested(mob_id: int) -> void:
@@ -347,6 +363,7 @@ func _on_mob_died(mob_id: int, explosion_msg: String = "") -> void:
 
 	_active_mob_ids.erase(mob_id)
 	_skip_next_turn.erase(mob_id)
+	_telegraphed.erase(mob_id)
 	_rebuild_mob_cards()
 
 	if _active_mob_ids.is_empty():
@@ -377,8 +394,21 @@ func _do_mob_turn(mob_id: int) -> void:
 	if card == null:
 		return
 
-	var atk: Dictionary = card.do_mob_turn()
-	if atk.is_empty():
+	if not _telegraphed.has(mob_id):
+		var selected_atk: Dictionary = card.do_mob_turn()
+		if selected_atk.is_empty():
+			return
+		_telegraphed[mob_id] = selected_atk
+		card.set_telegraphed(true)
+		_log("%s is telegraphing an attack!" % GameState.monsters[mob_id].get("name", "Mob"))
+		return
+
+	var atk: Dictionary = _telegraphed[mob_id]
+	_telegraphed.erase(mob_id)
+	card.set_telegraphed(false)
+	if _shielded_this_turn:
+		_shielded_this_turn = false  # v1: blocks only the first resolving mob
+		_log("Blocked!")
 		return
 
 	print("Mob turn picked: ", atk.get("attack_name", "?")) 
@@ -571,6 +601,12 @@ func _on_inventory_slot_clicked(index: int) -> void:
 		_log("%s %s." % [ItemRegistry.get_item_name(item_key), "equipped" if equipped else "unequipped"])
 		return
 
+	if item_type == "shield":
+		InventoryState.equip_shield(index)
+		var equipped_shield = InventoryState.equipped_shield_index == index
+		_log("Shield %s." % ["equipped" if equipped_shield else "unequipped"])
+		return
+
 	if item_key == "berries":
 		var p = GameState.player
 		p["hp"] = min(p.get("hp", 0) + 3, p.get("max_hp", 10))
@@ -681,15 +717,16 @@ func _apply_death_explosion(mob_id: int) -> String:
 			return "%s explodes for %d damage!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]
 	return ""
 
-func on_player_moved() -> void:
+func on_player_moved(shielded: bool = false) -> void:
 	if _mob_turns_running or _attack_in_progress:
 		return
 	if _active_mob_ids.is_empty():
 		return
-	_run_mob_turn_sequence()
+	_run_mob_turn_sequence(shielded)
 
 
-func _run_mob_turn_sequence() -> void:
+func _run_mob_turn_sequence(shielded: bool = false) -> void:
+	_shielded_this_turn = shielded
 	_mob_turns_running = true
 	for mob_id in _active_mob_ids.duplicate():
 		if not _active_mob_ids.has(mob_id):
@@ -722,6 +759,7 @@ func _run_mob_turn_sequence() -> void:
 
 		await get_tree().create_timer(MOVE_TURN_DELAY).timeout
 	_mob_turns_running = false
+	_shielded_this_turn = false
 
 ## Quick back-and-forth "lunge" on the mob's card to sell an attack —
 ## moves toward the player, then springs back to its original spot.
@@ -738,10 +776,17 @@ func _play_attack_lunge(card: Control) -> void:
 	if not is_instance_valid(card):
 		return
 
-func _on_pass_turn_pressed() -> void:
+func _on_pass_turn_pressed(shielded: bool = false) -> void:
 	if _active_mob_ids.is_empty():
 		return
-	on_player_moved()
+	on_player_moved(shielded)
+
+
+func _on_shield_pressed() -> void:
+	if _active_mob_ids.is_empty() or _mob_turns_running:
+		return
+	_shielded_this_turn = true
+	_on_pass_turn_pressed(true)
 
 func _resolve_pending_bomb(mob_id: int) -> void:
 	if not _pending_bombs.has(mob_id):

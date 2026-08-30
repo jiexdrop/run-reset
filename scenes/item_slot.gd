@@ -73,7 +73,7 @@ func refresh() -> void:
 	_item_key = slot_data.get("item_key", "")
 	_frozen   = slot_data.get("frozen", false)
 	var count: int = slot_data.get("count", 0)
-	var equipped: bool = (container == "hotbar" and slot_index == InventoryState.equipped_index)
+	var equipped: bool = container == "hotbar" and (slot_index == InventoryState.equipped_index or slot_index == InventoryState.equipped_shield_index)
 
 	_ice.visible = _frozen
 

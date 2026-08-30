@@ -128,6 +128,16 @@ var _items: Dictionary = {
 		"attack_type": "bomb_throw",
 		"element": "physical",
 	},
+
+	# ── Shields ───────────────────────────────────────────────────────────────
+	"wood_shield": {
+		"name": "Wood Shield",
+		"icon": preload("res://assets/items/shield.png"),
+		"desc": "A simple wooden shield.",
+		"max_stack": 1,
+		"type": "shield",
+		"block_amount": 999,
+	},
 }
 
 
@@ -159,6 +169,11 @@ func get_type(item_key: String) -> String:
 func get_damage(item_key: String) -> int:
 	if _items.has(item_key):
 		return _items[item_key].get("damage", 0)
+	return 0
+
+func get_block_amount(item_key: String) -> int:
+	if _items.has(item_key):
+		return _items[item_key].get("block_amount", 0)
 	return 0
 
 func get_energy_cost(item_key: String) -> int:

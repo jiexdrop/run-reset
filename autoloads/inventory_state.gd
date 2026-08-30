@@ -17,6 +17,7 @@ var bag:    Array = []
 # something else.
 var trash: Dictionary = {}
 var equipped_index: int = -1   ## hotbar index of the equipped weapon/spell, -1 = none (Fists)
+var equipped_shield_index: int = -1  ## hotbar index of the equipped shield, -1 = none
 
 
 func _ready() -> void:
@@ -32,6 +33,7 @@ func _init_slots() -> void:
 		bag.append(_empty_slot())
 	trash = _empty_slot()
 	equipped_index = -1
+	equipped_shield_index = -1
 
 
 func _empty_slot() -> Dictionary:
@@ -161,17 +163,19 @@ func swap_slots(container_a: String, idx_a: int,
 	_get_slot(container_a, idx_a)["frozen"] = false
 	_get_slot(container_b, idx_b)["frozen"] = false
 
-	# Equipped weapon follows its item if it was moved between hotbar slots;
-	# if it left the hotbar entirely, unequip.
-	if container_a == "hotbar" and idx_a == equipped_index and container_b != "hotbar":
-		equipped_index = -1
-	elif container_b == "hotbar" and idx_b == equipped_index and container_a != "hotbar":
-		equipped_index = -1
-	elif container_a == "hotbar" and container_b == "hotbar":
-		if equipped_index == idx_a:
-			equipped_index = idx_b
-		elif equipped_index == idx_b:
-			equipped_index = idx_a
+	# Equipped gear follows its item between hotbar slots; leaving the hotbar
+	# unequips it. Weapons/spells and shields use independent equip slots.
+	for equipped_property in ["equipped_index", "equipped_shield_index"]:
+		var equipped_slot: int = get(equipped_property)
+		if container_a == "hotbar" and idx_a == equipped_slot and container_b != "hotbar":
+			set(equipped_property, -1)
+		elif container_b == "hotbar" and idx_b == equipped_slot and container_a != "hotbar":
+			set(equipped_property, -1)
+		elif container_a == "hotbar" and container_b == "hotbar":
+			if equipped_slot == idx_a:
+				set(equipped_property, idx_b)
+			elif equipped_slot == idx_b:
+				set(equipped_property, idx_a)
 
 	emit_signal("inventory_changed")
 
@@ -226,9 +230,25 @@ func equip_item(slot_idx: int) -> void:
 	emit_signal("inventory_changed")
 
 
+## Equip/unequip a shield living in a hotbar slot. Shields have their own
+## equipment slot so a weapon/spell can remain equipped at the same time.
+func equip_shield(slot_idx: int) -> void:
+	if slot_idx < 0 or slot_idx >= HOTBAR_SIZE:
+		return
+	var slot = hotbar[slot_idx]
+	if slot.get("item_key", "") == "" or slot.get("frozen", false):
+		return
+	if ItemRegistry.get_type(slot["item_key"]) != "shield":
+		return
+	equipped_shield_index = -1 if equipped_shield_index == slot_idx else slot_idx
+	emit_signal("inventory_changed")
+
+
 func _unequip_if_empty(slot_idx: int) -> void:
 	if equipped_index == slot_idx:
 		equipped_index = -1
+	if equipped_shield_index == slot_idx:
+		equipped_shield_index = -1
 
 
 func debug_grant_weapons_and_spells() -> void:
@@ -244,6 +264,7 @@ func to_dict() -> Dictionary:
 		"bag":            bag.duplicate(true),
 		"trash":          trash.duplicate(true),
 		"equipped_index": equipped_index,
+		"equipped_shield_index": equipped_shield_index,
 	}
 
 
@@ -259,4 +280,5 @@ func from_dict(data: Dictionary) -> void:
 	if saved_trash is Dictionary:
 		trash = saved_trash.duplicate(true)
 	equipped_index = data.get("equipped_index", -1)
+	equipped_shield_index = data.get("equipped_shield_index", -1)
 	emit_signal("inventory_changed")

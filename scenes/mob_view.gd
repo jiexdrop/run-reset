@@ -37,6 +37,7 @@ var _mob_attacks: Array = []
 @onready var resist_row:   HBoxContainer = $ResistRow
 @onready var hp_bar:       ProgressBar   = $HPBar
 @onready var sprite:       TextureRect   = $Sprite
+@onready var telegraph_icon: TextureRect = $Sprite/TelegraphIcon
 
 const ELEMENT_DISPLAY: Dictionary = {
 	"physical": "Physical", "fire": "Fire", "ice": "Ice",
@@ -83,6 +84,10 @@ func do_mob_turn() -> Dictionary:
 	if _mob_attacks.is_empty():
 		return {}
 	return _mob_attacks[randi() % _mob_attacks.size()]
+
+
+func set_telegraphed(active: bool) -> void:
+	telegraph_icon.visible = active
 
 
 func _refresh() -> void:
