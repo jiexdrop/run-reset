@@ -186,6 +186,19 @@ func get_element(item_key: String) -> String:
 		return _items[item_key].get("element", "physical")
 	return "physical"
 
+
+## Returns every item known to the game for developer-facing tools.
+## Sorting by display name keeps the debug item browser predictable even as
+## additional items are registered later.
+func get_item_keys() -> Array[String]:
+	var keys: Array[String] = []
+	for item_key in _items:
+		keys.append(item_key)
+	keys.sort_custom(func(a: String, b: String) -> bool:
+		return get_item_name(a).naturalnocasecmp_to(get_item_name(b)) < 0
+	)
+	return keys
+
 func get_attack_type_data(attack_type: String) -> Dictionary:
 	return ATTACK_TYPES.get(attack_type, ATTACK_TYPES["single_swing"])
 
