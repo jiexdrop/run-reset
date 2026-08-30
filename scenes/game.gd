@@ -3,9 +3,9 @@ extends Node2D
 const TILE = preload("uid://ceosbosrytods")
 const BUSH = preload("res://scenes/bush.tscn")
 const GROUND_ITEM = preload("res://scenes/ground_item.tscn")
-const GROUND_ITEM_ZONE = "evergreen"
-const GROUND_ITEM_KEY = "bomb"
+const GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield"]
 const GROUND_ITEM_SPAWN_CHANCE = 0.18
+const MAX_GROUND_ITEMS_PER_FLOOR = 2
 
 @onready var camera_2d: Camera2D = $Camera2D
 
@@ -220,6 +220,9 @@ func generate_tiles() -> void:
 	if place_boss and not boss_candidates.is_empty():
 		boss_room_key = boss_candidates[rng.randi_range(0, boss_candidates.size() - 1)]
 
+	# Ground items can appear in every zone, but remain uncommon and are capped
+	# so a floor never becomes cluttered with pickups.
+	var ground_items_placed := 0
 	for key in _gen_floor:
 		var tile_type = _gen_floor[key]
 		var mob_key: String = ""
@@ -233,8 +236,10 @@ func generate_tiles() -> void:
 		var has_bush: bool = false
 		var has_ground_item: bool = false
 		if tile_type == "room" and key != "0,0" and mob_key == "" and not has_bush \
-				and GameState.zone == GROUND_ITEM_ZONE:
-			has_ground_item = randf() < GROUND_ITEM_SPAWN_CHANCE
+				and ground_items_placed < MAX_GROUND_ITEMS_PER_FLOOR:
+			has_ground_item = rng.randf() < GROUND_ITEM_SPAWN_CHANCE
+			if has_ground_item:
+				ground_items_placed += 1
 
 		GameState.tiles[key] = {
 			"visible":        key == "0,0",
@@ -244,7 +249,7 @@ func generate_tiles() -> void:
 			"has_bush":       has_bush,
 			"bush_harvested": false,
 			"has_ground_item":   has_ground_item,
-			"item_key":          GROUND_ITEM_KEY if has_ground_item else "",
+			"item_key":          GROUND_ITEM_KEYS[rng.randi_range(0, GROUND_ITEM_KEYS.size() - 1)] if has_ground_item else "",
 			"item_collected":    false,
 		}
 
