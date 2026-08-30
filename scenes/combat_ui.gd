@@ -408,7 +408,23 @@ func _do_mob_turn(mob_id: int) -> void:
 	card.set_telegraphed(false)
 	if _shielded_this_turn:
 		_shielded_this_turn = false  # v1: blocks only the first resolving mob
-		_log("Blocked!")
+		await _play_attack_lunge(card)
+		if not is_inside_tree():
+			return
+		_spawn_mob_attack_effect(mob_id, atk.get("attack_name", ""))
+		_show_block_feedback(mob_id, atk.get("attack_name", ""), card)
+
+		var blocked_name: String = GameState.monsters[mob_id].get("name", "Mob")
+		var blocked_attack: String = atk.get("attack_name", "attack")
+		if SELF_DESTRUCT_ATTACKS.get(blocked_attack, false):
+			# A self-destruct still consumes the monster.  The shield prevents
+			# damage, but it must not cancel the explosion or leave the mob alive.
+			await _self_destruct_mob(
+				mob_id,
+				"%s explodes harmlessly against your shield!" % blocked_name
+			)
+		else:
+			_log("Blocked %s's %s!" % [blocked_name, blocked_attack])
 		return
 
 	print("Mob turn picked: ", atk.get("attack_name", "?")) 
@@ -470,20 +486,17 @@ func _do_mob_turn(mob_id: int) -> void:
 	# Self-destruct attacks (e.g. Kaze Shroom's Explode) kill the mob itself
 	# when used on its own turn, mirroring the death-explosion that already
 	# happens when the mob is killed by the player/a bomb.
-	if SELF_DESTRUCT_ATTACKS.get(atk.get("attack_name", ""), false):
-		await _self_destruct_mob(mob_id, atk.get("attack_name", ""), damage)
-
 	if is_self_destruct:
-		_exploded[mob_id] = true
-		GameState.monsters[mob_id]["hp"] = 0
-		GameState.mark_dirty()
-		_on_mob_died(mob_id)
+		await _self_destruct_mob(
+			mob_id,
+			"%s explodes for %d damage!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]
+		)
 
 ## Kills a mob that self-destructed as part of its own turn (e.g. Kaze
 ## Shroom's Explode) and routes it through the normal death flow — grey
-## fade, XP, loot, tile update — without re-applying the explosion damage,
-## which was already dealt above in _do_mob_turn.
-func _self_destruct_mob(mob_id: int, attack_name: String, damage: int) -> void:
+## fade, XP, loot, tile update — without re-applying its explosion damage.
+## This also covers a shielded explosion, whose damage was prevented.
+func _self_destruct_mob(mob_id: int, explosion_msg: String) -> void:
 	if mob_id >= GameState.monsters.size():
 		return
 	var mob = GameState.monsters[mob_id]
@@ -497,8 +510,8 @@ func _self_destruct_mob(mob_id: int, attack_name: String, damage: int) -> void:
 	if card:
 		card.refresh_from_state()   # grey fade fires immediately, same as other mobs
 
-	var explode_msg = "%s explodes for %d damage!" % [mob.get("name", "Mob"), damage]
-	await _on_mob_died(mob_id, explode_msg)
+	_exploded[mob_id] = true  # death flow must not apply the explosion twice
+	await _on_mob_died(mob_id, explosion_msg)
 
 ## Applies the poison status. First application just starts the timer with
 ## no damage. Getting poisoned again while already poisoned costs a heart
@@ -695,6 +708,45 @@ func _spawn_mob_attack_effect(mob_id: int, attack_name: String) -> void:
 	fx.position = Vector2(60, 40)  # roughly centered over MobCard's sprite
 	card.add_child(fx)
 
+
+## Shows the outcome where the action happened, rather than leaving the
+## player to infer a successful block from the combat log alone.
+func _show_block_feedback(mob_id: int, attack_name: String, card: Control) -> void:
+	if card == null or not is_instance_valid(card):
+		return
+
+	var mob_name: String = GameState.monsters[mob_id].get("name", "Mob")
+	var feedback := Label.new()
+	feedback.text = "SHIELD BLOCK!\n%s's %s" % [mob_name, attack_name]
+	feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	feedback.add_theme_font_size_override("font_size", 15)
+	feedback.add_theme_color_override("font_color", Color(0.82, 0.94, 1.0))
+	feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	feedback.z_index = 20
+
+	var panel := StyleBoxFlat.new()
+	panel.bg_color = Color(0.06, 0.18, 0.33, 0.94)
+	panel.border_color = Color(0.42, 0.79, 1.0, 1.0)
+	panel.set_border_width_all(2)
+	panel.set_corner_radius_all(6)
+	panel.content_margin_left = 8
+	panel.content_margin_right = 8
+	panel.content_margin_top = 4
+	panel.content_margin_bottom = 4
+	feedback.add_theme_stylebox_override("normal", panel)
+
+	add_child(feedback)
+	feedback.size = feedback.get_combined_minimum_size()
+	feedback.position = card.get_global_rect().get_center() - global_position - feedback.size / 2.0
+
+	var start_position := feedback.position
+	feedback.modulate.a = 0.0
+	var tween := create_tween()
+	tween.tween_property(feedback, "modulate:a", 1.0, 0.12)
+	tween.parallel().tween_property(feedback, "position:y", start_position.y - 16.0, 0.55)
+	tween.tween_property(feedback, "modulate:a", 0.0, 0.25)
+	tween.tween_callback(feedback.queue_free)
+
 ## If the dying mob has a self-destruct attack (e.g. Kaze Shroom's Explode),
 ## apply its damage to the player and play its effect, even though the mob
 ## never got to take its normal turn.
@@ -786,6 +838,7 @@ func _on_shield_pressed() -> void:
 	if _active_mob_ids.is_empty() or _mob_turns_running:
 		return
 	_shielded_this_turn = true
+	_log("Shield raised — the next telegraphed attack will be blocked.")
 	_on_pass_turn_pressed(true)
 
 func _resolve_pending_bomb(mob_id: int) -> void:
