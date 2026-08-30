@@ -31,6 +31,7 @@ var _target_position: Vector2 = Vector2.ZERO
 var _target_zoom:     Vector2 = Vector2.ONE
 var _spawned_tiles: Array = []
 var _door_node: Node2D = null
+var _debug_portal_destination: Dictionary = {}
 
 # Scratch dungeon-generation state (only valid while generate_tiles() runs).
 var _gen_floor: Dictionary = {}
@@ -283,7 +284,7 @@ func restore_combat(combat_ui: Control) -> void:
 
 # ── Door ──────────────────────────────────────────────────────────────────────
 
-func spawn_exit_door() -> void:
+func spawn_exit_door(force: bool = false) -> void:
 	if _door_node != null:
 		return
 
@@ -292,7 +293,7 @@ func spawn_exit_door() -> void:
 			continue
 		var tdata = GameState.tiles[key]
 		var mob_key: String = tdata.get("mob", "")
-		if mob_key != "" and not tdata.get("mob_dead", false):
+		if not force and mob_key != "" and not tdata.get("mob_dead", false):
 			return
 
 	var revealed: Array = []
@@ -359,6 +360,15 @@ func spawn_exit_door() -> void:
 	SaveManager.save()
 
 
+## Debug-only callers use this to make the standard exit door lead to an exact
+## zone/floor, without clearing the current dungeon first.
+func open_debug_portal(zone: String, zone_stage: int) -> void:
+	if zone not in ZoneRegistry.get_zone_ids() or zone_stage < 1 or zone_stage > ZONE_CYCLE_LENGTH:
+		return
+	_debug_portal_destination = {"zone": zone, "zone_stage": zone_stage}
+	spawn_exit_door(true)
+
+
 func _check_restore_door() -> void:
 	if not GameState.tiles.has("door_spawned"):
 		return
@@ -382,7 +392,7 @@ func _build_door_node(world_pos: Vector2) -> Node2D:
 	door.add_child(tex_rect)
 
 	var lbl               := Label.new()
-	lbl.text              = "Next Floor"
+	lbl.text              = _get_door_label()
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.position         = Vector2(-40, -45)
 	lbl.add_theme_color_override("font_color", Color.WHITE)
@@ -407,23 +417,36 @@ func _on_door_clicked(_viewport: Node, event: InputEvent, _shape_idx: int) -> vo
 			call_deferred("_enter_next_level")
 
 
+func _get_door_label() -> String:
+	if _debug_portal_destination.is_empty():
+		return "Next Floor"
+	return "Portal: %s %d" % [
+		_debug_portal_destination["zone"].capitalize(),
+		_debug_portal_destination["zone_stage"],
+	]
+
+
 func _enter_next_level() -> void:
 	GameState.tiles = {}
 	GameState.monsters = []
 	GameState.level += 1
+	if not _debug_portal_destination.is_empty():
+		GameState.zone = _debug_portal_destination["zone"]
+		GameState.zone_stage = _debug_portal_destination["zone_stage"]
+	else:
 
-	# ── Zone cycling ──────────────────────────────────────────────────────────
-	# Floors run in fixed-length cycles per zone. Floor 1 is always "default"
-	# (set by GameState's initial values / reset()) — this only advances the
-	# cycle on floors after that.
-	GameState.zone_stage += 1
-	if GameState.zone_stage > ZONE_CYCLE_LENGTH:
-		GameState.zone_stage = 1
-		var choices: Array = ZoneRegistry.get_zone_ids(true)  # exclude "default"
-		# Avoid picking the same zone twice in a row when more than one exists.
-		if choices.size() > 1:
-			choices.erase(GameState.zone)
-		GameState.zone = choices[randi() % choices.size()]
+		# ── Zone cycling ──────────────────────────────────────────────────────
+		# Floors run in fixed-length cycles per zone. Floor 1 is always "default"
+		# (set by GameState's initial values / reset()) — this only advances the
+		# cycle on floors after that.
+		GameState.zone_stage += 1
+		if GameState.zone_stage > ZONE_CYCLE_LENGTH:
+			GameState.zone_stage = 1
+			var choices: Array = ZoneRegistry.get_zone_ids(true)  # exclude "default"
+			# Avoid picking the same zone twice in a row when more than one exists.
+			if choices.size() > 1:
+				choices.erase(GameState.zone)
+			GameState.zone = choices[randi() % choices.size()]
 
 	GameState.mark_dirty()
 	SaveManager.save()
