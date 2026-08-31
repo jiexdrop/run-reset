@@ -39,6 +39,7 @@ const SELF_DESTRUCT_ATTACKS: Dictionary = {
 @onready var effect_icon:      TextureRect     = $MarginContainer/ContentArea/VBox/StatsSection/EffectBadge/Icon
 @onready var effect_label:     Label           = $MarginContainer/ContentArea/VBox/StatsSection/EffectBadge/Label
 @onready var pass_turn_button: Button          = $MarginContainer/ContentArea/VBox/CombatSection/PassTurnButton
+@onready var turn_label:       Label           = $MarginContainer/ContentArea/VBox/TurnLabel
 
 var _active_mob_ids: Array = []
 var _player_stunned: bool  = false
@@ -55,16 +56,17 @@ const MOVE_TURN_DELAY = 0.35   # pause between each mob's turn in a move-trigger
 const LUNGE_OUT_DIST  = 18.0
 
 var _mob_turns_running: bool = false
+var _turn_phase: String = "player"
 var _skip_next_turn: Dictionary = {}
 var _telegraphed: Dictionary = {}  # mob_id -> attack selected for its next turn
 var _shielded_this_turn: bool = false
 var _pending_bombs: Dictionary = {}   # mob_id -> pending damage
-var _exploded: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group("combat_ui")
 	refresh_stats()
 	pass_turn_button.disabled = true
+	turn_label.text = "Your Turn"
 	if inv_ui:
 		inv_ui.slot_clicked.connect(_on_inventory_slot_clicked)
 		inv_ui.bag_opened.connect(_on_bag_opened)
@@ -109,7 +111,6 @@ func add_mob_to_combat(mob_idx: int) -> void:
 	else:
 		_active_mob_ids.append(mob_idx)
 		_log("A new enemy joins the fight!")
-	_skip_next_turn[mob_idx] = true
 	pass_turn_button.disabled = false
 	_rebuild_mob_cards()
 
@@ -121,6 +122,9 @@ func end_combat() -> void:
 	_telegraphed.clear()
 	_shielded_this_turn = false
 	_pending_bombs.clear()
+	_turn_phase = "player"
+	set_combat_input_enabled(true)
+	turn_label.text = "Your Turn"
 	_clear_children(mob_row)
 	_log("")
 
@@ -209,13 +213,14 @@ func _rebuild_attack_bar() -> void:
 			var shield_button := Button.new()
 			shield_button.text = "Shield"
 			shield_button.icon = ItemRegistry.get_icon(shield_key)
-			shield_button.tooltip_text = "Block the next telegraphed attack this turn."
+			shield_button.tooltip_text = "Blocks the next enemy attack that resolves this turn. Uses your whole turn."
 			shield_button.pressed.connect(_on_shield_pressed)
+			shield_button.disabled = _turn_phase != "player"
 			attack_bar.add_child(shield_button)
 
 
 func _on_attack_requested(mob_id: int) -> void:
-	if _attack_in_progress:
+	if _attack_in_progress or _turn_phase != "player":
 		return
 	_do_player_attack(mob_id)
 
@@ -290,11 +295,8 @@ func _do_player_attack(mob_id: int) -> void:
 		pass   # underground — sits out this attack; _run_mob_turn_sequence
 			   # (triggered by the player's next move) will consume _skip_next_turn
 			   # and resurface it there, exactly once
-	elif _skip_next_turn.get(mob_id, false):
-		_skip_next_turn.erase(mob_id)
 	else:
-		_do_mob_turn(mob_id)
-		_resolve_pending_bomb(mob_id)
+		on_player_moved()
 
 func _throw_bomb(mob_id: int, atk: Dictionary) -> void:
 	var target_mob = GameState.monsters[mob_id]
@@ -327,7 +329,7 @@ func _spawn_attack_effect(mob_id: int, type_data: Dictionary) -> void:
 	card.add_child(fx)
 
 
-func _on_mob_died(mob_id: int, explosion_msg: String = "") -> void:
+func _on_mob_died(mob_id: int) -> void:
 	var xp_gain = GameState.monsters[mob_id].get("xp_reward", 1)
 	var p       = GameState.player
 	p["xp"]     = p.get("xp", 0) + xp_gain
@@ -338,11 +340,7 @@ func _on_mob_died(mob_id: int, explosion_msg: String = "") -> void:
 	GameState.player = p
 	refresh_stats()
 
-	# If the mob just self-destructed on its own turn, the explosion damage
-	# was already applied there — reuse that message instead of applying
-	# the damage a second time via _apply_death_explosion.
-	var explode_msg = explosion_msg if explosion_msg != "" else _apply_death_explosion(mob_id)
-	var drop_msg     = _roll_loot(mob_id)
+	var drop_msg = _roll_loot(mob_id)
 
 	_notify_tile_mob_dead(mob_id)
 
@@ -351,7 +349,6 @@ func _on_mob_died(mob_id: int, explosion_msg: String = "") -> void:
 	SaveManager.save()
 
 	var final_msgs: Array = []
-	if explode_msg != "": final_msgs.append(explode_msg)
 	if drop_msg    != "": final_msgs.append(drop_msg)
 	if not final_msgs.is_empty():
 		_log(" ".join(final_msgs))
@@ -419,10 +416,8 @@ func _do_mob_turn(mob_id: int) -> void:
 		if SELF_DESTRUCT_ATTACKS.get(blocked_attack, false):
 			# A self-destruct still consumes the monster.  The shield prevents
 			# damage, but it must not cancel the explosion or leave the mob alive.
-			await _self_destruct_mob(
-				mob_id,
-				"%s explodes harmlessly against your shield!" % blocked_name
-			)
+			_log("%s explodes harmlessly against your shield!" % blocked_name)
+			await _self_destruct_mob(mob_id)
 		else:
 			_log("Blocked %s's %s!" % [blocked_name, blocked_attack])
 		return
@@ -483,20 +478,15 @@ func _do_mob_turn(mob_id: int) -> void:
 		_on_player_died()
 		return
 
-	# Self-destruct attacks (e.g. Kaze Shroom's Explode) kill the mob itself
-	# when used on its own turn, mirroring the death-explosion that already
-	# happens when the mob is killed by the player/a bomb.
+	# Self-destruct attacks (e.g. Kaze Shroom's Explode) kill the mob after
+	# resolving through the normal telegraph-and-shield attack flow.
 	if is_self_destruct:
-		await _self_destruct_mob(
-			mob_id,
-			"%s explodes for %d damage!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]
-		)
+		await _self_destruct_mob(mob_id)
 
 ## Kills a mob that self-destructed as part of its own turn (e.g. Kaze
 ## Shroom's Explode) and routes it through the normal death flow — grey
-## fade, XP, loot, tile update — without re-applying its explosion damage.
-## This also covers a shielded explosion, whose damage was prevented.
-func _self_destruct_mob(mob_id: int, explosion_msg: String) -> void:
+## fade, XP, loot, tile update.
+func _self_destruct_mob(mob_id: int) -> void:
 	if mob_id >= GameState.monsters.size():
 		return
 	var mob = GameState.monsters[mob_id]
@@ -510,8 +500,7 @@ func _self_destruct_mob(mob_id: int, explosion_msg: String) -> void:
 	if card:
 		card.refresh_from_state()   # grey fade fires immediately, same as other mobs
 
-	_exploded[mob_id] = true  # death flow must not apply the explosion twice
-	await _on_mob_died(mob_id, explosion_msg)
+	await _on_mob_died(mob_id)
 
 ## Applies the poison status. First application just starts the timer with
 ## no damage. Getting poisoned again while already poisoned costs a heart
@@ -601,6 +590,8 @@ func _scroll_mobs(direction: int) -> void:
 	mob_scroll.scroll_horizontal = _scroll_index * CARD_WIDTH
 
 func _on_inventory_slot_clicked(index: int) -> void:
+	if _turn_phase != "player":
+		return
 	var slot = InventoryState.hotbar[index]
 	var item_key = slot.get("item_key", "")
 	if slot.get("frozen", false) or item_key == "":
@@ -747,33 +738,14 @@ func _show_block_feedback(mob_id: int, attack_name: String, card: Control) -> vo
 	tween.tween_property(feedback, "modulate:a", 0.0, 0.25)
 	tween.tween_callback(feedback.queue_free)
 
-## If the dying mob has a self-destruct attack (e.g. Kaze Shroom's Explode),
-## apply its damage to the player and play its effect, even though the mob
-## never got to take its normal turn.
-func _apply_death_explosion(mob_id: int) -> String:
-	if _exploded.get(mob_id, false):
-		return ""
-	var attacks: Array = GameState.monsters[mob_id].get("attacks", [])
-	for atk in attacks:
-		var atk_name: String = atk.get("attack_name", "")
-		if SELF_DESTRUCT_ATTACKS.get(atk_name, false):
-			_exploded[mob_id] = true
-			_spawn_mob_attack_effect(mob_id, atk_name)
-			var damage: int = atk.get("damage", 0)
-			var p = GameState.player
-			p["hp"] = max(0, p.get("hp", 0) - damage)
-			GameState.player = p
-			refresh_stats()
-			if p["hp"] <= 0:
-				_on_player_died()
-			return "%s explodes for %d damage!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]
-	return ""
-
 func on_player_moved(shielded: bool = false) -> void:
 	if _mob_turns_running or _attack_in_progress:
 		return
 	if _active_mob_ids.is_empty():
 		return
+	_turn_phase = "enemy"
+	turn_label.text = "Enemy Turn"
+	set_combat_input_enabled(false)
 	_run_mob_turn_sequence(shielded)
 
 
@@ -812,6 +784,18 @@ func _run_mob_turn_sequence(shielded: bool = false) -> void:
 		await get_tree().create_timer(MOVE_TURN_DELAY).timeout
 	_mob_turns_running = false
 	_shielded_this_turn = false
+	_turn_phase = "player"
+	turn_label.text = "Your Turn"
+	set_combat_input_enabled(true)
+
+
+func set_combat_input_enabled(enabled: bool) -> void:
+	for child in attack_bar.get_children():
+		if child is Button:
+			child.disabled = not enabled
+	pass_turn_button.disabled = not enabled or _active_mob_ids.is_empty()
+	if inv_ui:
+		inv_ui.mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
 
 ## Quick back-and-forth "lunge" on the mob's card to sell an attack —
 ## moves toward the player, then springs back to its original spot.
@@ -829,13 +813,13 @@ func _play_attack_lunge(card: Control) -> void:
 		return
 
 func _on_pass_turn_pressed(shielded: bool = false) -> void:
-	if _active_mob_ids.is_empty():
+	if _attack_in_progress or _turn_phase != "player" or _active_mob_ids.is_empty():
 		return
 	on_player_moved(shielded)
 
 
 func _on_shield_pressed() -> void:
-	if _active_mob_ids.is_empty() or _mob_turns_running:
+	if _attack_in_progress or _turn_phase != "player" or _active_mob_ids.is_empty() or _mob_turns_running:
 		return
 	_shielded_this_turn = true
 	_log("Shield raised — the next telegraphed attack will be blocked.")

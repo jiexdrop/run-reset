@@ -84,6 +84,12 @@ layout_mode = 2
 layout_mode = 2
 size_flags_vertical = 0
 
+[node name="TurnLabel" type="Label" parent="MarginContainer/ContentArea/VBox" unique_id=200000041]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Your Turn"
+horizontal_alignment = 1
+
 [node name="CombatSection" type="VBoxContainer" parent="MarginContainer/ContentArea/VBox" unique_id=200000009]
 layout_mode = 2
 size_flags_vertical = 0
