@@ -20,8 +20,8 @@ func _build_launcher() -> void:
 	var launcher := Button.new()
 	launcher.text = "Zones"
 	launcher.tooltip_text = "Debug zone and floor portal"
-	launcher.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	launcher.position = Vector2(-158, 14)
+	launcher.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	launcher.position = Vector2(14, 14)
 	launcher.size = Vector2(68, 34)
 	launcher.pressed.connect(func() -> void: _panel.visible = not _panel.visible)
 	add_child(launcher)

@@ -23,8 +23,8 @@ func _build_launcher() -> void:
 	var launcher := Button.new()
 	launcher.text = "Items"
 	launcher.tooltip_text = "Debug item browser"
-	launcher.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	launcher.position = Vector2(-82, 14)
+	launcher.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	launcher.position = Vector2(90, 14)
 	launcher.size = Vector2(68, 34)
 	launcher.pressed.connect(func() -> void:
 		_panel.visible = not _panel.visible
