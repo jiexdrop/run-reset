@@ -133,10 +133,11 @@ var _items: Dictionary = {
 	"wood_shield": {
 		"name": "Wood Shield",
 		"icon": preload("res://assets/items/shield.png"),
-		"desc": "A simple wooden shield.",
+		"desc": "A simple wooden shield. Blocks 2 damage from the next telegraphed attack.",
 		"max_stack": 1,
 		"type": "shield",
-		"block_amount": 999,
+		"block_amount": 2,
+		"energy_cost": 2,
 	},
 }
 

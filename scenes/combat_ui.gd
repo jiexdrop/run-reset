@@ -413,13 +413,63 @@ func _do_mob_turn(mob_id: int) -> void:
 
 		var blocked_name: String = GameState.monsters[mob_id].get("name", "Mob")
 		var blocked_attack: String = atk.get("attack_name", "attack")
-		if SELF_DESTRUCT_ATTACKS.get(blocked_attack, false):
-			# A self-destruct still consumes the monster.  The shield prevents
-			# damage, but it must not cancel the explosion or leave the mob alive.
-			_log("%s explodes harmlessly against your shield!" % blocked_name)
-			await _self_destruct_mob(mob_id)
+		var shield_idx := InventoryState.equipped_shield_index
+		var shield_key: String = ""
+		if shield_idx >= 0 and shield_idx < InventoryState.hotbar.size():
+			shield_key = InventoryState.hotbar[shield_idx].get("item_key", "")
+		var block_amount = ItemRegistry.get_block_amount(shield_key)
+		var damage = max(0, atk.get("damage", 1) - block_amount)
+		var p = GameState.player
+		var effect = atk.get("effect", 0)
+
+		p["hp"] = max(0, p.get("hp", 0) - damage)
+		var msg: String
+		if SELF_DESTRUCT_ATTACKS.get(blocked_attack, false) and damage == 0:
+			msg = "%s explodes harmlessly against your shield!" % blocked_name
+		elif SELF_DESTRUCT_ATTACKS.get(blocked_attack, false):
+			msg = "%s's %s was partially blocked — %d damage gets through before it self-destructs!" % [blocked_name, blocked_attack, damage]
+		elif damage == 0:
+			msg = "Blocked %s's %s!" % [blocked_name, blocked_attack]
 		else:
-			_log("Blocked %s's %s!" % [blocked_name, blocked_attack])
+			msg = "%s's %s was partially blocked — %d damage gets through!" % [blocked_name, blocked_attack, damage]
+
+		match int(effect):
+			MobAttackData.Effect.POISON:
+				msg += _apply_poison_status(p)
+			MobAttackData.Effect.STUN:
+				_player_stunned = true
+				msg += " You are stunned!"
+			MobAttackData.Effect.STEAL:
+				var stolen = _steal_random_item()
+				if stolen != "":
+					msg += " Gomelin steals your %s!" % ItemRegistry.get_item_name(stolen)
+			MobAttackData.Effect.FREEZE:
+				msg += _apply_freeze_status(p)
+
+		# Poison ticks down once per mob turn — but not on the turn it was just
+		# applied/refreshed, so a fresh poison always lasts its full 3-5 turns.
+		if effect != MobAttackData.Effect.POISON and p.get("poison_turns", 0) > 0:
+			p["poison_turns"] = max(0, p["poison_turns"] - 1)
+			if p["poison_turns"] == 0:
+				msg += " Poison wears off."
+		if effect != MobAttackData.Effect.FREEZE and p.get("frozen_turns", 0) > 0:
+			p["frozen_turns"] = max(0, p["frozen_turns"] - 1)
+			if p["frozen_turns"] == 0:
+				InventoryState.thaw_all_slots()
+				msg += " Your inventory thaws."
+
+		GameState.player = p
+		GameState.mark_dirty()
+		SaveManager.save()
+		refresh_stats()
+		_log(msg)
+
+		if p["hp"] <= 0:
+			_on_player_died()
+			return
+
+		if SELF_DESTRUCT_ATTACKS.get(blocked_attack, false):
+			await _self_destruct_mob(mob_id)
 		return
 
 	print("Mob turn picked: ", atk.get("attack_name", "?")) 
@@ -821,8 +871,26 @@ func _on_pass_turn_pressed(shielded: bool = false) -> void:
 func _on_shield_pressed() -> void:
 	if _attack_in_progress or _turn_phase != "player" or _active_mob_ids.is_empty() or _mob_turns_running:
 		return
+
+	var shield_idx := InventoryState.equipped_shield_index
+	if shield_idx < 0 or shield_idx >= InventoryState.hotbar.size():
+		return
+	var shield_key: String = InventoryState.hotbar[shield_idx].get("item_key", "")
+	if ItemRegistry.get_type(shield_key) != "shield":
+		return
+
+	var energy_needed = ItemRegistry.get_energy_cost(shield_key)
+	var p = GameState.player
+	if energy_needed > 0 and p.get("energy", 0) < energy_needed:
+		_log("Not enough energy to raise your shield!")
+		return
+
+	p["energy"] = max(0, p.get("energy", 0) - energy_needed)
+	GameState.player = p
+	refresh_stats()
+
 	_shielded_this_turn = true
-	_log("Shield raised — the next telegraphed attack will be blocked.")
+	_log("Shield raised — the next telegraphed attack will be partially blocked.")
 	_on_pass_turn_pressed(true)
 
 func _resolve_pending_bomb(mob_id: int) -> void:
