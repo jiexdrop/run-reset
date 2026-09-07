@@ -101,7 +101,8 @@ func _refresh() -> void:
 	var tex: Texture2D = MOB_SPRITES.get(sprite_key, null)
 	sprite.texture = tex
 	if tex:
-		sprite.custom_minimum_size = tex.get_size()
+		# Leave a 20px gutter on each side so the left warning icon never covers the sprite.
+		sprite.custom_minimum_size = tex.get_size() + Vector2(40, 0)
 
 	var hp     = mob_data.get("hp",     1)
 	var max_hp = mob_data.get("max_hp", hp)
