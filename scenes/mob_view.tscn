@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://d1dpc737586na"]
 
 [ext_resource type="Script" uid="uid://g3qdr8fumjp6" path="res://scenes/mob_view.gd" id="1_ck5q1"]
-[ext_resource type="Texture2D" path="res://assets/ui/telegraph_warning.png" id="2_telegraph"]
+[ext_resource type="Texture2D" uid="uid://5h52cgogw7hu" path="res://assets/ui/telegraph_warning.png" id="2_telegraph"]
 
 [node name="MobView" type="VBoxContainer" unique_id=100000001]
 alignment = 1
@@ -27,19 +27,17 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 stretch_mode = 4
 
-[node name="TelegraphIcon" type="TextureRect" parent="Sprite"]
+[node name="TelegraphIcon" type="TextureRect" parent="Sprite" unique_id=42587441]
+visible = false
 layout_mode = 0
-anchor_left = 0.0
-anchor_right = 0.0
 anchor_top = 0.5
 anchor_bottom = 0.5
 offset_left = -26.0
-offset_right = -6.0
 offset_top = -10.0
+offset_right = -6.0
 offset_bottom = 10.0
 grow_horizontal = 0
+mouse_filter = 2
 texture = ExtResource("2_telegraph")
 expand_mode = 1
 stretch_mode = 5
-mouse_filter = 2
-visible = false

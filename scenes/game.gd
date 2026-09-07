@@ -235,6 +235,9 @@ func generate_tiles() -> void:
 
 		var has_bush: bool = false
 		var has_ground_item: bool = false
+		if tile_type == "room" and key != "0,0" and mob_key == "":
+			has_bush = rng.randf() < BUSH_SPAWN_CHANCE
+
 		if tile_type == "room" and key != "0,0" and mob_key == "" and not has_bush \
 				and ground_items_placed < MAX_GROUND_ITEMS_PER_FLOOR:
 			has_ground_item = rng.randf() < GROUND_ITEM_SPAWN_CHANCE

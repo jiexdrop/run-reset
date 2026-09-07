@@ -2,6 +2,7 @@
 Roguelite dungeon exploration
 
 ## todo
+- better terrain generation, some levels have berrie bushes, others dont
 - enemies attack for each action the player take (example, reveal new tile)
 - add a shop that sells items to the player
 - add a shop owner npc
