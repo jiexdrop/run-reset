@@ -21,23 +21,25 @@ alignment = 1
 [node name="HPBar" type="ProgressBar" parent="." unique_id=516037640]
 layout_mode = 2
 
-[node name="Sprite" type="TextureRect" parent="." unique_id=512652130]
+[node name="SpriteRow" type="HBoxContainer" parent="." unique_id=512652131]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-stretch_mode = 4
+theme_override_constants/separation = 4
+alignment = 1
 
-[node name="TelegraphIcon" type="TextureRect" parent="Sprite" unique_id=42587441]
-visible = false
-layout_mode = 0
-anchor_top = 0.5
-anchor_bottom = 0.5
-offset_left = -26.0
-offset_top = -10.0
-offset_right = -6.0
-offset_bottom = 10.0
-grow_horizontal = 0
+[node name="TelegraphIcon" type="TextureRect" parent="SpriteRow" unique_id=512652132]
+modulate = Color(1, 1, 1, 0)
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
 mouse_filter = 2
 texture = ExtResource("2_telegraph")
 expand_mode = 1
 stretch_mode = 5
+
+[node name="Sprite" type="TextureRect" parent="SpriteRow" unique_id=512652130]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+stretch_mode = 4
