@@ -288,6 +288,14 @@ func _do_player_attack(mob_id: int) -> void:
 	GameState.mark_dirty()
 	SaveManager.save()
 
+	# Striking a self-destruct mob (e.g. Kaze Shroom) with any weapon or
+	# spell makes it explode immediately, damaging the unshielded attacker.
+	mob = GameState.monsters[mob_id]
+	var retaliation := _get_retaliatory_attack(mob)
+	if not retaliation.is_empty():
+		_apply_retaliatory_explosion(mob_id, retaliation)
+		return
+
 	mob = GameState.monsters[mob_id]
 	if mob.get("hp", 0) <= 0:
 		_on_mob_died(mob_id)
@@ -532,6 +540,69 @@ func _do_mob_turn(mob_id: int) -> void:
 	# resolving through the normal telegraph-and-shield attack flow.
 	if is_self_destruct:
 		await _self_destruct_mob(mob_id)
+
+## Returns the self-destruct attack (e.g. Kaze Shroom's Explode) carried by
+## a runtime mob dict, or {} if it has none. Used for retaliatory explosions
+## when the mob is struck by a weapon or spell.
+func _get_retaliatory_attack(mob: Dictionary) -> Dictionary:
+	for atk in mob.get("attacks", []):
+		if SELF_DESTRUCT_ATTACKS.get(atk.get("attack_name", ""), false):
+			return atk
+	return {}
+
+
+## Striking a self-destruct mob (any weapon or spell, unshielded) makes it
+## explode immediately: full Explode damage to the player, then the mob dies
+## through the normal death flow (XP, loot, tile update). Shielded attacker
+## damage is reduced by the equipped shield's block amount.
+func _apply_retaliatory_explosion(mob_id: int, retaliation: Dictionary) -> void:
+	if mob_id >= GameState.monsters.size():
+		return
+	var mob = GameState.monsters[mob_id]
+	var mob_name: String = mob.get("name", "Mob")
+	var atk_name: String = retaliation.get("attack_name", "Explode")
+	var damage: int = int(retaliation.get("damage", 1))
+
+	_spawn_mob_attack_effect(mob_id, atk_name)
+	var card = _get_card_for_mob(mob_id)
+	if card:
+		card.set_telegraphed(false)
+	_telegraphed.erase(mob_id)
+	_pending_bombs.erase(mob_id)
+
+	if _shielded_this_turn:
+		var shield_idx := InventoryState.equipped_shield_index
+		var shield_key: String = ""
+		if shield_idx >= 0 and shield_idx < InventoryState.hotbar.size():
+			shield_key = InventoryState.hotbar[shield_idx].get("item_key", "")
+		damage = max(0, damage - ItemRegistry.get_block_amount(shield_key))
+		_shielded_this_turn = false
+
+	var p = GameState.player
+	p["hp"] = max(0, p.get("hp", 0) - damage)
+	GameState.player = p
+	GameState.mark_dirty()
+	SaveManager.save()
+	refresh_stats()
+	if damage == 0:
+		_log("%s explodes harmlessly against your shield!" % mob_name)
+	else:
+		_log("%s explodes! It hits you for %d!" % [mob_name, damage])
+
+	if p.get("hp", 0) <= 0:
+		_on_player_died()
+		return
+
+	mob = GameState.monsters[mob_id]
+	if mob.get("hp", 0) > 0:
+		mob["hp"] = 0
+		GameState.monsters[mob_id] = mob
+		if card:
+			card.refresh_from_state()
+		GameState.mark_dirty()
+		SaveManager.save()
+	_on_mob_died(mob_id)
+
 
 ## Kills a mob that self-destructed as part of its own turn (e.g. Kaze
 ## Shroom's Explode) and routes it through the normal death flow — grey
@@ -912,10 +983,16 @@ func _resolve_pending_bomb(mob_id: int) -> void:
 	var card = _get_card_for_mob(mob_id)
 	if card:
 		card.refresh_from_state()
-
-	_log("The bomb goes off — %s takes %d damage!" % [mob.get("name", "Mob"), dmg])
 	GameState.mark_dirty()
 	SaveManager.save()
+
+	# Bombs are spells too — hitting a self-destruct mob sets it off.
+	var retaliation := _get_retaliatory_attack(GameState.monsters[mob_id])
+	if not retaliation.is_empty():
+		_apply_retaliatory_explosion(mob_id, retaliation)
+		return
+
+	_log("The bomb goes off — %s takes %d damage!" % [mob.get("name", "Mob"), dmg])
 
 	if mob["hp"] <= 0:
 		_on_mob_died(mob_id)
