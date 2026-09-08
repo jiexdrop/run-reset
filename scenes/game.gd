@@ -3,16 +3,16 @@ extends Node2D
 const TILE = preload("uid://ceosbosrytods")
 const BUSH = preload("res://scenes/bush.tscn")
 const GROUND_ITEM = preload("res://scenes/ground_item.tscn")
-const GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield"]
-const GROUND_ITEM_SPAWN_CHANCE = 0.18
-const MAX_GROUND_ITEMS_PER_FLOOR = 2
+const GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield", "health_potion", "energy_potion"]
+const GROUND_ITEM_SPAWN_CHANCE = 0.25
+const MAX_GROUND_ITEMS_PER_FLOOR = 4
 
 @onready var camera_2d: Camera2D = $Camera2D
 
 const TILE_SIZE = 70
 const NUM_ROOMS = 12
 const MOB_SPAWN_CHANCE  = 0.6
-const BUSH_SPAWN_CHANCE = 1.0
+const BUSH_SPAWN_CHANCE = 0.3
 const ZONE_CYCLE_LENGTH = 3
 
 const CAMERA_PADDING  = 1.5
