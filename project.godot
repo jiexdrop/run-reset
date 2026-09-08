@@ -28,6 +28,7 @@ ZoneRegistry="*uid://cqd6aemck54nh"
 
 folder_colors={
 "res://assets/": "orange",
+"res://assets/sounds/": "pink",
 "res://autoloads/": "yellow",
 "res://scenes/": "teal"
 }
