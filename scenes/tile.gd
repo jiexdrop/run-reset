@@ -3,6 +3,8 @@ extends Area2D
 @export var grid_x: int = 0
 @export var grid_y: int = 0
 
+const DISCOVER_SOUND: AudioStream = preload("res://assets/sounds/actions/discovering_tile.wav")
+
 var _mob_key:  String = ""
 var _mob_dead: bool   = false
 
@@ -20,6 +22,7 @@ func reveal() -> void:
 	GameState.tiles["%d,%d" % [grid_x, grid_y]]["visible"] = true
 	GameState.mark_dirty()
 	SaveManager.save()
+	_play_discover_sound()
 	get_tree().get_first_node_in_group("game").center_camera_on_revealed()
 	_refresh_mob_indicator()  # show indicator now that tile is visible
 
@@ -32,6 +35,13 @@ func reveal() -> void:
 	var combat_ui = get_tree().get_first_node_in_group("combat_ui")
 	if combat_ui and combat_ui.has_method("on_player_moved"):
 		combat_ui.on_player_moved()
+
+func _play_discover_sound() -> void:
+	var player := AudioStreamPlayer.new()
+	player.stream = DISCOVER_SOUND
+	add_child(player)
+	player.finished.connect(player.queue_free)
+	player.play()
 
 func _refresh_mob_indicator() -> void:
 	print("_refresh_mob_indicator")
