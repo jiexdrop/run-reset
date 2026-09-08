@@ -21,6 +21,13 @@ const MOB_ATTACK_EFFECTS: Dictionary = {
 	"Explode": preload("res://scenes/effects/explosion_effect.tscn"),
 }
 
+const SWORD_SOUND: AudioStream = preload("res://assets/sounds/items/sword.mp3")
+const HURT_SOUNDS = [
+	preload("res://assets/sounds/hurt/hurt_1.ogg"),
+	preload("res://assets/sounds/hurt/hurt_2.ogg"),
+	preload("res://assets/sounds/hurt/hurt_3.ogg"),
+]
+
 const SELF_DESTRUCT_ATTACKS: Dictionary = {
 	"Explode": true,
 }
@@ -253,6 +260,7 @@ func _do_player_attack(mob_id: int) -> void:
 	dmg_per_hit = max(1, int(round(dmg_per_hit * resist_mult)))
 	
 	_attack_in_progress = true
+	var is_sword := String(atk.get("item_key", "")).ends_with("sword")
 	for i in range(hits):
 		var mob = GameState.monsters[mob_id]
 		if mob.get("hp", 0) <= 0:
@@ -260,6 +268,8 @@ func _do_player_attack(mob_id: int) -> void:
 		mob["hp"] = max(0, mob.get("hp", 0) - dmg_per_hit)
 		GameState.monsters[mob_id] = mob
 
+		if is_sword:
+			_play_sword_sound()
 		_spawn_attack_effect(mob_id, type_data)
 		var card = _get_card_for_mob(mob_id)
 		if card:
@@ -335,6 +345,26 @@ func _spawn_attack_effect(mob_id: int, type_data: Dictionary) -> void:
 	var fx: Node2D = scene.instantiate()
 	fx.position = Vector2(60, 40)  # roughly centered over MobCard's sprite
 	card.add_child(fx)
+
+
+func _play_sound(stream: AudioStream) -> void:
+	if stream == null:
+		return
+	var player := AudioStreamPlayer.new()
+	player.stream = stream
+	add_child(player)
+	player.finished.connect(player.queue_free)
+	player.play()
+
+
+func _play_sword_sound() -> void:
+	_play_sound(SWORD_SOUND)
+
+
+func _play_hurt_sound() -> void:
+	if HURT_SOUNDS.is_empty():
+		return
+	_play_sound(HURT_SOUNDS[randi() % HURT_SOUNDS.size()])
 
 
 func _on_mob_died(mob_id: int) -> void:
@@ -429,6 +459,7 @@ func _do_mob_turn(mob_id: int) -> void:
 		var damage = max(0, atk.get("damage", 1) - block_amount)
 		var p = GameState.player
 		var effect = atk.get("effect", 0)
+		var hp_before: int = p.get("hp", 0)
 
 		p["hp"] = max(0, p.get("hp", 0) - damage)
 		var msg: String
@@ -470,6 +501,8 @@ func _do_mob_turn(mob_id: int) -> void:
 		GameState.mark_dirty()
 		SaveManager.save()
 		refresh_stats()
+		if p.get("hp", 0) < hp_before:
+			_play_hurt_sound()
 		_log(msg)
 
 		if p["hp"] <= 0:
@@ -494,6 +527,7 @@ func _do_mob_turn(mob_id: int) -> void:
 	var damage = atk.get("damage", 1)
 	var effect = atk.get("effect", 0)
 	#print("DEBUG atk=", atk, " effect=", effect, " typeof=", typeof(effect))
+	var hp_before: int = p.get("hp", 0)
 
 	p["hp"] = max(0, p.get("hp", 0) - damage)
 	var msg = "%s hits you for %d!" % [GameState.monsters[mob_id].get("name", "Mob"), damage]
@@ -530,6 +564,8 @@ func _do_mob_turn(mob_id: int) -> void:
 	GameState.mark_dirty()
 	SaveManager.save()
 	refresh_stats()
+	if p.get("hp", 0) < hp_before:
+		_play_hurt_sound()
 	_log(msg)
 
 	if p["hp"] <= 0:
@@ -579,11 +615,14 @@ func _apply_retaliatory_explosion(mob_id: int, retaliation: Dictionary) -> void:
 		_shielded_this_turn = false
 
 	var p = GameState.player
+	var hp_before: int = p.get("hp", 0)
 	p["hp"] = max(0, p.get("hp", 0) - damage)
 	GameState.player = p
 	GameState.mark_dirty()
 	SaveManager.save()
 	refresh_stats()
+	if p.get("hp", 0) < hp_before:
+		_play_hurt_sound()
 	if damage == 0:
 		_log("%s explodes harmlessly against your shield!" % mob_name)
 	else:
@@ -766,6 +805,10 @@ func _on_inventory_slot_clicked(index: int) -> void:
 
 func _on_bag_opened() -> void:
 	if is_instance_valid(_bag_ui):
+		var open_ui = _bag_ui
+		_bag_ui = null
+		inv_ui.set_drag_enabled(false)
+		open_ui.queue_free()
 		return
 	_bag_ui = BagUIScene.instantiate()
 	get_tree().current_scene.add_child(_bag_ui)
