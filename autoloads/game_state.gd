@@ -14,6 +14,7 @@ var player: Dictionary = {
 	"max_energy":   10,
 	"poison_turns": 0,
 	"frozen_turns": 0,
+	"electrified_turns": 0,
 }
 var zone: String = "default"
 var zone_stage: int = 1

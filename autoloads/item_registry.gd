@@ -63,6 +63,15 @@ var _items: Dictionary = {
 		"type": "consumable",
 		"energy_amount": 6,
 	},
+	"lemon": {
+		"name": "Lemon",
+		"icon": preload("res://assets/items/lemon.png"),
+		"desc": "A sour cistronian lemon. Restores 6 energy and electrifies you for 5 turns — needed to finish foes in Cistronia.",
+		"max_stack": 8,
+		"type": "consumable",
+		"energy_amount": 6,
+		"electrified_turns": 5,
+	},
 	
 	# ── Swords ────────────────────────────────────────────────────────────────
 	"iron_sword": {
@@ -190,6 +199,11 @@ func get_heal_amount(item_key: String) -> int:
 func get_energy_amount(item_key: String) -> int:
 	if _items.has(item_key):
 		return _items[item_key].get("energy_amount", 0)
+	return 0
+
+func get_electrified_turns(item_key: String) -> int:
+	if _items.has(item_key):
+		return _items[item_key].get("electrified_turns", 0)
 	return 0
 	
 func get_attack_type(item_key: String) -> String:

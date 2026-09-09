@@ -3,7 +3,7 @@ extends Node2D
 const TILE = preload("uid://ceosbosrytods")
 const BUSH = preload("res://scenes/bush.tscn")
 const GROUND_ITEM = preload("res://scenes/ground_item.tscn")
-const GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield", "health_potion", "energy_potion"]
+const DEFAULT_GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield", "health_potion", "energy_potion"]
 const GROUND_ITEM_SPAWN_CHANCE = 0.25
 const MAX_GROUND_ITEMS_PER_FLOOR = 4
 
@@ -220,8 +220,13 @@ func generate_tiles() -> void:
 	if place_boss and not boss_candidates.is_empty():
 		boss_room_key = boss_candidates[rng.randi_range(0, boss_candidates.size() - 1)]
 
-	# Ground items can appear in every zone, but remain uncommon and are capped
-	# so a floor never becomes cluttered with pickups.
+	# Ground items are zone-specific (see ZoneRegistry.get_ground_items):
+	# regular zones drop the standard survival kit, Cistronia drops only
+	# lemons. Berry bushes spawn in every zone, including Cistronia.
+	# Items remain uncommon and are capped so a floor never gets cluttered.
+	var ground_item_pool: Array = ZoneRegistry.get_ground_items(GameState.zone)
+	if ground_item_pool.is_empty():
+		ground_item_pool = DEFAULT_GROUND_ITEM_KEYS
 	var ground_items_placed := 0
 	for key in _gen_floor:
 		var tile_type = _gen_floor[key]
@@ -252,7 +257,7 @@ func generate_tiles() -> void:
 			"has_bush":       has_bush,
 			"bush_harvested": false,
 			"has_ground_item":   has_ground_item,
-			"item_key":          GROUND_ITEM_KEYS[rng.randi_range(0, GROUND_ITEM_KEYS.size() - 1)] if has_ground_item else "",
+			"item_key":          str(ground_item_pool[rng.randi_range(0, ground_item_pool.size() - 1)]) if has_ground_item else "",
 			"item_collected":    false,
 		}
 

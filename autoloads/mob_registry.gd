@@ -252,8 +252,9 @@ func _build_registry() -> void:
 	skeleton.xp_reward  = 2
 	skeleton.attacks    = [bone_slash, splinter] as Array[MobAttackData]
 	skeleton.loot_table = [
-		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
-		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
+		{ "item_key": "lemon", "chance": 0.45, "min": 1, "max": 1 },
+		{ "item_key": "health_potion", "chance": 0.15, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.15, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["skeleton"] = skeleton
 
@@ -276,7 +277,8 @@ func _build_registry() -> void:
 	raptor_skeleton.attacks    = [fossil_bite, talon_rend] as Array[MobAttackData]
 	raptor_skeleton.resistances = {"physical": 0.5}
 	raptor_skeleton.loot_table  = [
-		{ "item_key": "health_potion", "chance": 1.0, "min": 1, "max": 1 },
+		{ "item_key": "lemon", "chance": 1.0, "min": 1, "max": 2 },
+		{ "item_key": "health_potion", "chance": 0.3, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.3, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["raptor_skeleton"] = raptor_skeleton

@@ -8,6 +8,7 @@ const EXP_FULL     = preload("res://assets/ui/exp_full.png")
 const EXP_EMPTY    = preload("res://assets/ui/exp_empty.png")
 const POISON_ICON        = preload("res://assets/ui/poison.png")
 const FROZEN_ICON        = preload("res://assets/ui/frozen.png")
+const ELECTRIFIED_ICON   = preload("res://assets/ui/energy_full.png")
 const HEART_FULL_POISON  = preload("res://assets/ui/heart_full_poison.png")
 const HEART_EMPTY_POISON = preload("res://assets/ui/heart_empty_poison.png")
 
@@ -99,13 +100,17 @@ func refresh_stats() -> void:
 func _update_effect_badge(p: Dictionary) -> void:
 	var frozen_turns = p.get("frozen_turns", 0)
 	var poison_turns = p.get("poison_turns", 0)
-	effect_badge.visible = frozen_turns > 0 or poison_turns > 0
+	var electrified_turns = p.get("electrified_turns", 0)
+	effect_badge.visible = frozen_turns > 0 or poison_turns > 0 or electrified_turns > 0
 	if frozen_turns > 0:
 		effect_icon.texture = FROZEN_ICON
 		effect_label.text = "FRZ x%d" % frozen_turns
 	elif poison_turns > 0:
 		effect_icon.texture = POISON_ICON
 		effect_label.text = "PSN x%d" % poison_turns
+	elif electrified_turns > 0:
+		effect_icon.texture = ELECTRIFIED_ICON
+		effect_label.text = "ELC x%d" % electrified_turns
 		
 
 func add_mob_to_combat(mob_idx: int) -> void:
@@ -280,6 +285,28 @@ func _get_first_spell_target() -> int:
 	return -1
 
 
+## Cistronia rule: skeletons can only be finished while the player is
+## Electrified (granted by eating a lemon). Without it, lethal damage stops
+## at 1 HP — the enemy clings to unlife.
+func _is_electrified() -> bool:
+	return int(GameState.player.get("electrified_turns", 0)) > 0
+
+
+func _guard_cistronia_lethal(hp_after_hit: int) -> int:
+	if hp_after_hit <= 0 and GameState.zone == "cistronia" and not _is_electrified():
+		return 1
+	return hp_after_hit
+
+
+func _tick_electrified(p: Dictionary) -> String:
+	if int(p.get("electrified_turns", 0)) <= 0:
+		return ""
+	p["electrified_turns"] = max(0, int(p.get("electrified_turns", 0)) - 1)
+	if int(p.get("electrified_turns", 0)) == 0:
+		return " The current leaves your body."
+	return ""
+
+
 func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 	var atk = atk_override if not atk_override.is_empty() else _get_equipped_attack()
 	var type_data = ItemRegistry.get_attack_type_data(atk.attack_type)
@@ -309,11 +336,16 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 	
 	_attack_in_progress = true
 	var is_sword := String(atk.get("item_key", "")).ends_with("sword")
+	var cistronia_guard_hit := false
 	for i in range(hits):
 		var mob = GameState.monsters[mob_id]
 		if mob.get("hp", 0) <= 0:
 			break
-		mob["hp"] = max(0, mob.get("hp", 0) - dmg_per_hit)
+		var hp_after = max(0, mob.get("hp", 0) - dmg_per_hit)
+		var guarded = _guard_cistronia_lethal(hp_after)
+		if guarded != hp_after:
+			cistronia_guard_hit = true
+		mob["hp"] = guarded
 		GameState.monsters[mob_id] = mob
 
 		if is_sword:
@@ -357,6 +389,9 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 	mob = GameState.monsters[mob_id]
 	if mob.get("hp", 0) <= 0:
 		_on_mob_died(mob_id)
+	elif cistronia_guard_hit:
+		_log("%s clings to unlife at 1 HP — eat a lemon to become Electrified and finish it!" % mob.get("name", "Mob"))
+		on_player_moved()
 	elif mob.get("burrowed", false):
 		pass   # underground — sits out this attack; _run_mob_turn_sequence
 			   # (triggered by the player's next move) will consume _skip_next_turn
@@ -544,6 +579,7 @@ func _do_mob_turn(mob_id: int) -> void:
 			if p["frozen_turns"] == 0:
 				InventoryState.thaw_all_slots()
 				msg += " Your inventory thaws."
+		msg += _tick_electrified(p)
 
 		GameState.player = p
 		GameState.mark_dirty()
@@ -607,6 +643,7 @@ func _do_mob_turn(mob_id: int) -> void:
 		if p["frozen_turns"] == 0:
 			InventoryState.thaw_all_slots()
 			msg += " Your inventory thaws."
+	msg += _tick_electrified(p)
 
 	GameState.player = p
 	GameState.mark_dirty()
@@ -855,6 +892,18 @@ func _on_inventory_slot_clicked(index: int) -> void:
 		_log("You drink an Energy Potion and restore %d energy." % ItemRegistry.get_energy_amount(item_key))
 		return
 
+	if item_key == "lemon":
+		var p = GameState.player
+		p["energy"] = min(p.get("energy", 0) + ItemRegistry.get_energy_amount(item_key), p.get("max_energy", 10))
+		p["electrified_turns"] = ItemRegistry.get_electrified_turns(item_key)
+		GameState.player = p
+		InventoryState.consume_hotbar_item(index)
+		GameState.mark_dirty()
+		SaveManager.save()
+		refresh_stats()
+		_log("You bite a lemon — sour current courses through you! Restored %d energy, Electrified for %d turns. You can now finish foes in Cistronia." % [ItemRegistry.get_energy_amount(item_key), ItemRegistry.get_electrified_turns(item_key)])
+		return
+
 func _on_bag_opened() -> void:
 	if is_instance_valid(_bag_ui):
 		var open_ui = _bag_ui
@@ -1071,7 +1120,7 @@ func _resolve_pending_bomb(mob_id: int) -> void:
 	if mob.get("hp", 0) <= 0:
 		return
 
-	mob["hp"] = max(0, mob.get("hp", 0) - dmg)
+	mob["hp"] = _guard_cistronia_lethal(max(0, mob.get("hp", 0) - dmg))
 	GameState.monsters[mob_id] = mob
 
 	_spawn_attack_effect(mob_id, ItemRegistry.get_attack_type_data("bomb_throw"))
@@ -1087,7 +1136,10 @@ func _resolve_pending_bomb(mob_id: int) -> void:
 		_apply_retaliatory_explosion(mob_id, retaliation)
 		return
 
-	_log("The bomb goes off — %s takes %d damage!" % [mob.get("name", "Mob"), dmg])
+	if mob["hp"] == 1 and GameState.zone == "cistronia" and not _is_electrified():
+		_log("The bomb goes off — %s clings to unlife at 1 HP! Eat a lemon to become Electrified." % mob.get("name", "Mob"))
+	else:
+		_log("The bomb goes off — %s takes %d damage!" % [mob.get("name", "Mob"), dmg])
 
 	if mob["hp"] <= 0:
 		_on_mob_died(mob_id)

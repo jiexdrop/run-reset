@@ -38,6 +38,12 @@ func get_bg_color(zone: String) -> Color:
 	return _registry.get(zone, _registry[DEFAULT_ZONE]).get("bg_color", Color(0.796, 0.781, 0.718))
 
 
+## Ground-item pool per zone. Regular zones drop the standard survival kit;
+## Cistronia drops only lemons (berry bushes still spawn there separately).
+func get_ground_items(zone: String) -> Array:
+	return _registry.get(zone, _registry[DEFAULT_ZONE]).get("ground_items", [])
+
+
 ## Returns zone ids eligible for random selection when starting a new cycle.
 ## exclude_default = true skips "default" (used for floor 4+ picks).
 func get_zone_ids(exclude_default: bool = false) -> Array:
@@ -59,6 +65,7 @@ func _build_registry() -> void:
 		"mob_pool": ["spider", "rat"],
 		"boss": "",
 		"bg_color": Color(0.796, 0.781, 0.718, 1.0),
+		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion"],
 	}
 
 	_registry["desert"] = {
@@ -68,6 +75,7 @@ func _build_registry() -> void:
 		"mob_pool": ["cactus", "sandipper"],
 		"boss": "",
 		"bg_color": Color(0.93, 0.80, 0.55, 1.0),
+		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion"],
 	}
 
 	_registry["ribera"] = {
@@ -78,6 +86,7 @@ func _build_registry() -> void:
 		"mob_pool": ["frozelin"],
 		"boss": "glaciarch",
 		"bg_color": Color(0.75, 0.88, 0.95, 1.0),
+		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion"],
 	}
 
 	_registry["pikoterra"] = {
@@ -87,6 +96,7 @@ func _build_registry() -> void:
 		"mob_pool": ["pikonaut"],
 		"boss": "gomelin",
 		"bg_color": Color(0.922, 0.719, 0.578, 1.0),
+		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion"],
 	}
 	
 	_registry["evergreen"] = {
@@ -96,6 +106,7 @@ func _build_registry() -> void:
 		"mob_pool": ["kaze_shroom"],
 		"boss": "sapguard",
 		"bg_color": Color(0.72, 0.80, 0.55, 1.0),
+		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion"],
 	}
 
 	_registry["cistronia"] = {
@@ -105,4 +116,5 @@ func _build_registry() -> void:
 		"mob_pool": ["skeleton"],
 		"boss": "raptor_skeleton",
 		"bg_color": Color("7a8794ff"),
+		"ground_items": ["lemon"],
 	}

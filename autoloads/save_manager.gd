@@ -47,6 +47,7 @@ func reset() -> void:
 		"max_energy": 10,
 		"poison_turns": 0,
 		"frozen_turns": 0,
+		"electrified_turns": 0,
 	}
 	GameState.zone       = "default"
 	GameState.zone_stage = 1
