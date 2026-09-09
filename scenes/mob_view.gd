@@ -22,6 +22,8 @@ const MOB_SPRITES: Dictionary = {
 	"kaze_shroom":     preload("res://assets/mobs/evergreen/kaze_shroom.png"),
 	"sapguard":        preload("res://assets/mobs/evergreen/sapguard.png"),
 	"sapguard_block":  preload("res://assets/mobs/evergreen/sapguard_block.png"),
+	"skeleton":        preload("res://assets/mobs/cistronia/skeleton.png"),
+	"raptor_skeleton": preload("res://assets/mobs/cistronia/raptor-skeleton.png"),
 }
 
 const HEALTH_BAR_SIZE: Vector2 = Vector2(56, 8)

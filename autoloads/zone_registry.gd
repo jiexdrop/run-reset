@@ -97,3 +97,12 @@ func _build_registry() -> void:
 		"boss": "sapguard",
 		"bg_color": Color(0.72, 0.80, 0.55, 1.0),
 	}
+
+	_registry["cistronia"] = {
+		"tiles": [
+			preload("res://assets/tiles/cistronia/tile_0.png"),
+		],
+		"mob_pool": ["skeleton"],
+		"boss": "raptor_skeleton",
+		"bg_color": Color("7a8794ff"),
+	}

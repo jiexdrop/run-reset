@@ -234,4 +234,51 @@ func _build_registry() -> void:
 	] as Array[Dictionary]
 	_registry["sapguard"] = sapguard
 
+	# ── Skeleton (Cistronia regular) ───────────────────────────────────────────
+	var bone_slash         = MobAttackData.new()
+	bone_slash.attack_name = "Bone Slash"
+	bone_slash.damage      = 2
+	bone_slash.effect      = MobAttackData.Effect.NONE
+
+	var splinter         = MobAttackData.new()
+	splinter.attack_name = "Splinter"
+	splinter.damage      = 1
+	splinter.effect      = MobAttackData.Effect.BLEED
+
+	var skeleton        = MobDef.new()
+	skeleton.mob_name   = "Skeleton"
+	skeleton.sprite     = "skeleton"
+	skeleton.max_hp     = 4
+	skeleton.xp_reward  = 2
+	skeleton.attacks    = [bone_slash, splinter] as Array[MobAttackData]
+	skeleton.loot_table = [
+		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
+	] as Array[Dictionary]
+	_registry["skeleton"] = skeleton
+
+	# ── Raptor Skeleton (Cistronia boss) ───────────────────────────────────────
+	var fossil_bite         = MobAttackData.new()
+	fossil_bite.attack_name = "Fossil Bite"
+	fossil_bite.damage      = 2
+	fossil_bite.effect      = MobAttackData.Effect.NONE
+
+	var talon_rend         = MobAttackData.new()
+	talon_rend.attack_name = "Talon Rend"
+	talon_rend.damage      = 1
+	talon_rend.effect      = MobAttackData.Effect.BLEED
+
+	var raptor_skeleton        = MobDef.new()
+	raptor_skeleton.mob_name   = "Raptor Skeleton"
+	raptor_skeleton.sprite     = "raptor_skeleton"
+	raptor_skeleton.max_hp     = 8
+	raptor_skeleton.xp_reward  = 6
+	raptor_skeleton.attacks    = [fossil_bite, talon_rend] as Array[MobAttackData]
+	raptor_skeleton.resistances = {"physical": 0.5}
+	raptor_skeleton.loot_table  = [
+		{ "item_key": "health_potion", "chance": 1.0, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.3, "min": 1, "max": 1 },
+	] as Array[Dictionary]
+	_registry["raptor_skeleton"] = raptor_skeleton
+
 	# ── Add more mobs here ────────────────────
