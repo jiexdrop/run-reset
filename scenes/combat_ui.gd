@@ -176,20 +176,21 @@ func _rebuild_mob_cards() -> void:
 
 ## Reads the currently equipped hotbar item and returns a normalized attack
 ## dict. Falls back to bare-handed "Fists" if nothing valid is equipped.
+## Only weapons can be equipped — spells are cast directly from the hotbar.
 func _get_equipped_attack() -> Dictionary:
 	var idx = InventoryState.equipped_index
 	if idx >= 0 and idx < InventoryState.hotbar.size():
 		var slot = InventoryState.hotbar[idx]
 		var key  = slot.get("item_key", "")
 		var item_type = ItemRegistry.get_type(key)
-		if key != "" and (item_type == "weapon" or item_type == "spell"):
+		if key != "" and item_type == "weapon":
 			return {
 				"item_key":     key,
 				"name":         ItemRegistry.get_item_name(key),
 				"damage":       ItemRegistry.get_damage(key),
 				"energy_cost":  ItemRegistry.get_energy_cost(key),
 				"attack_type":  ItemRegistry.get_attack_type(key),
-				"is_spell":     item_type == "spell",
+				"is_spell":     false,
 				"hotbar_index": idx,
 			}
 	return {
@@ -232,8 +233,55 @@ func _on_attack_requested(mob_id: int) -> void:
 	_do_player_attack(mob_id)
 
 
-func _do_player_attack(mob_id: int) -> void:
-	var atk       = _get_equipped_attack()
+## Spells are never equipped — clicking one casts it immediately at the
+## first available enemy. Does not consume the spell when there is no
+## valid target or the cast cannot start.
+func _cast_spell_from_hotbar(slot_idx: int) -> void:
+	if _attack_in_progress or _turn_phase != "player":
+		return
+	if slot_idx < 0 or slot_idx >= InventoryState.hotbar.size():
+		return
+	var slot = InventoryState.hotbar[slot_idx]
+	var item_key = slot.get("item_key", "")
+	if slot.get("frozen", false) or item_key == "":
+		return
+	if ItemRegistry.get_type(item_key) != "spell":
+		return
+
+	var target_id := _get_first_spell_target()
+	if target_id < 0:
+		_log("No enemy to cast on.")
+		return
+
+	var atk := {
+		"item_key":     item_key,
+		"name":         ItemRegistry.get_item_name(item_key),
+		"damage":       ItemRegistry.get_damage(item_key),
+		"energy_cost":  ItemRegistry.get_energy_cost(item_key),
+		"attack_type":  ItemRegistry.get_attack_type(item_key),
+		"is_spell":     true,
+		"hotbar_index": slot_idx,
+	}
+	_do_player_attack(target_id, atk)
+
+
+## First alive, unburrowed mob in combat — the implicit target for
+## click-to-cast spells (mirrors MobView's click guards).
+func _get_first_spell_target() -> int:
+	for mob_id in _active_mob_ids:
+		if mob_id < 0 or mob_id >= GameState.monsters.size():
+			continue
+		var mob = GameState.monsters[mob_id]
+		if mob.get("hp", 0) <= 0:
+			continue
+		if mob.get("burrowed", false):
+			continue
+		return mob_id
+	return -1
+
+
+func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
+	var atk = atk_override if not atk_override.is_empty() else _get_equipped_attack()
 	var type_data = ItemRegistry.get_attack_type_data(atk.attack_type)
 	var p         = GameState.player
 
@@ -759,10 +807,14 @@ func _on_inventory_slot_clicked(index: int) -> void:
 
 	var item_type = ItemRegistry.get_type(item_key)
 
-	if item_type == "weapon" or item_type == "spell":
+	if item_type == "weapon":
 		InventoryState.equip_item(index)
 		var equipped = InventoryState.equipped_index == index
 		_log("%s %s." % [ItemRegistry.get_item_name(item_key), "equipped" if equipped else "unequipped"])
+		return
+
+	if item_type == "spell":
+		_cast_spell_from_hotbar(index)
 		return
 
 	if item_type == "shield":
