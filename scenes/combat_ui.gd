@@ -56,6 +56,9 @@ var _attack_in_progress: bool = false
 var _scroll_index: int = 0
 const CARD_WIDTH = 130
 
+const LOG_PREVIEW_CHARS = 110
+const LOG_TOOLTIP_LINE_WIDTH = 45
+
 var _bag_ui: Control = null
 const ICONS_PER_ROW = 12
 
@@ -72,6 +75,7 @@ var _pending_bombs: Dictionary = {}   # mob_id -> pending damage
 
 func _ready() -> void:
 	add_to_group("combat_ui")
+	_setup_log_label()
 	refresh_stats()
 	pass_turn_button.disabled = true
 	turn_label.text = "Your Turn"
@@ -818,9 +822,55 @@ func _get_card_for_mob(mob_id: int) -> Node:
 	return null
 
 
-func _log(msg: String) -> void:
-	if log_label:
-		log_label.text = msg
+func _log(msg: String, tooltip_msg: String = "") -> void:
+	if log_label == null:
+		return
+	# Compact display + full text on hover so long messages can't push the
+	# layout into the inventory area.
+	var full := tooltip_msg if tooltip_msg != "" else msg
+	var preview := msg
+	if preview.length() > LOG_PREVIEW_CHARS:
+		preview = preview.substr(0, LOG_PREVIEW_CHARS).strip_edges(false, true) + "…"
+	log_label.text = preview
+	# Only keep a tooltip when there's more to show; empty tooltip disables hover popup.
+	# Default tooltips never wrap, so pre-break lines to avoid a huge horizontal popup.
+	if full.length() > preview.length():
+		log_label.tooltip_text = _wrap_tooltip(full)
+	else:
+		log_label.tooltip_text = ""
+
+
+## Default engine tooltips don't autowrap — a long single line runs
+## off-screen horizontally. Pre-insert newlines at word boundaries.
+func _wrap_tooltip(text: String, line_width: int = LOG_TOOLTIP_LINE_WIDTH) -> String:
+	var words := text.split(" ", false)
+	var lines: Array[String] = []
+	var current := ""
+	for w in words:
+		var candidate := w if current == "" else current + " " + w
+		if candidate.length() > line_width and current != "":
+			lines.append(current)
+			current = w
+		else:
+			current = candidate
+	if current != "":
+		lines.append(current)
+	return "\n".join(lines)
+
+
+## Locks the combat log to a fixed 2-line height: wraps short messages,
+## ellipsizes anything longer, and reserves space so growing text never
+## overlaps the inventory below. Full text stays available via tooltip.
+func _setup_log_label() -> void:
+	if log_label == null:
+		return
+	log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	log_label.max_lines_visible = 2
+	log_label.clip_text = true
+	log_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_WORD_ELLIPSIS
+	log_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	# Reserve ~2 lines so the VBox doesn't resize/reflow when messages change.
+	log_label.custom_minimum_size = Vector2(0, 32)
 
 
 func _clear_children(node: Node) -> void:
@@ -901,7 +951,12 @@ func _on_inventory_slot_clicked(index: int) -> void:
 		GameState.mark_dirty()
 		SaveManager.save()
 		refresh_stats()
-		_log("You bite a lemon — sour current courses through you! Restored %d energy, Electrified for %d turns. You can now finish foes in Cistronia." % [ItemRegistry.get_energy_amount(item_key), ItemRegistry.get_electrified_turns(item_key)])
+		var energy_gain := ItemRegistry.get_energy_amount(item_key)
+		var zap_turns := ItemRegistry.get_electrified_turns(item_key)
+		_log(
+			"Lemon bite! Electrified %d turns (+%d energy)." % [zap_turns, energy_gain],
+			"You bite a lemon — sour current courses through you! Restored %d energy, Electrified for %d turns. You can now finish foes in Cistronia." % [energy_gain, zap_turns]
+		)
 		return
 
 func _on_bag_opened() -> void:
