@@ -869,8 +869,8 @@ func _setup_log_label() -> void:
 	log_label.clip_text = true
 	log_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_WORD_ELLIPSIS
 	log_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	# Reserve ~2 lines so the VBox doesn't resize/reflow when messages change.
-	log_label.custom_minimum_size = Vector2(0, 32)
+	# Reserve 2 full lines so the VBox doesn't resize/reflow when messages change.
+	log_label.custom_minimum_size = Vector2(0, 80)
 
 
 func _clear_children(node: Node) -> void:
@@ -954,7 +954,7 @@ func _on_inventory_slot_clicked(index: int) -> void:
 		var energy_gain := ItemRegistry.get_energy_amount(item_key)
 		var zap_turns := ItemRegistry.get_electrified_turns(item_key)
 		_log(
-			"Lemon bite! Electrified %d turns (+%d energy)." % [zap_turns, energy_gain],
+			"Lemon bite! Electrified %d turns\n(+%d energy)." % [zap_turns, energy_gain],
 			"You bite a lemon — sour current courses through you! Restored %d energy, Electrified for %d turns. You can now finish foes in Cistronia." % [energy_gain, zap_turns]
 		)
 		return
