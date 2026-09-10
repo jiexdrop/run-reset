@@ -6,6 +6,10 @@ const GROUND_ITEM = preload("res://scenes/ground_item.tscn")
 const DEFAULT_GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield", "health_potion", "energy_potion"]
 const GROUND_ITEM_SPAWN_CHANCE = 0.25
 const MAX_GROUND_ITEMS_PER_FLOOR = 4
+# Cistronia runs on lemons (Electrified is required to finish foes there),
+# so it gets a much richer ground-item spread than other zones.
+const CISTRONIA_GROUND_ITEM_SPAWN_CHANCE = 0.75
+const CISTRONIA_MAX_GROUND_ITEMS_PER_FLOOR = 10
 
 @onready var camera_2d: Camera2D = $Camera2D
 
@@ -223,10 +227,14 @@ func generate_tiles() -> void:
 	# Ground items are zone-specific (see ZoneRegistry.get_ground_items):
 	# regular zones drop the standard survival kit, Cistronia drops only
 	# lemons. Berry bushes spawn in every zone, including Cistronia.
-	# Items remain uncommon and are capped so a floor never gets cluttered.
+	# Items remain uncommon and are capped so a floor never gets cluttered,
+	# except in Cistronia where lemons are plentiful (they fuel Electrified).
 	var ground_item_pool: Array = ZoneRegistry.get_ground_items(GameState.zone)
 	if ground_item_pool.is_empty():
 		ground_item_pool = DEFAULT_GROUND_ITEM_KEYS
+	var is_cistronia: bool = GameState.zone == "cistronia"
+	var ground_item_chance: float = CISTRONIA_GROUND_ITEM_SPAWN_CHANCE if is_cistronia else GROUND_ITEM_SPAWN_CHANCE
+	var max_ground_items: int = CISTRONIA_MAX_GROUND_ITEMS_PER_FLOOR if is_cistronia else MAX_GROUND_ITEMS_PER_FLOOR
 	var ground_items_placed := 0
 	for key in _gen_floor:
 		var tile_type = _gen_floor[key]
@@ -243,9 +251,12 @@ func generate_tiles() -> void:
 		if tile_type == "room" and key != "0,0" and mob_key == "":
 			has_bush = rng.randf() < BUSH_SPAWN_CHANCE
 
-		if tile_type == "room" and key != "0,0" and mob_key == "" and not has_bush \
-				and ground_items_placed < MAX_GROUND_ITEMS_PER_FLOOR:
-			has_ground_item = rng.randf() < GROUND_ITEM_SPAWN_CHANCE
+		# In Cistronia, lemons also sprout along corridors so the floor is
+		# never starved of them (corridors never hold mobs or bushes).
+		var ground_item_eligible: bool = key != "0,0" and mob_key == "" and not has_bush \
+				and (tile_type == "room" or (is_cistronia and tile_type == "corridor"))
+		if ground_item_eligible and ground_items_placed < max_ground_items:
+			has_ground_item = rng.randf() < ground_item_chance
 			if has_ground_item:
 				ground_items_placed += 1
 
