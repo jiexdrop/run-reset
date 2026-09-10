@@ -65,7 +65,7 @@ func _build_registry() -> void:
 		"mob_pool": ["spider", "rat"],
 		"boss": "",
 		"bg_color": Color(0.796, 0.781, 0.718, 1.0),
-		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion"],
+		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion", "arrow", "bow"],
 	}
 
 	_registry["desert"] = {
@@ -75,7 +75,7 @@ func _build_registry() -> void:
 		"mob_pool": ["cactus", "sandipper"],
 		"boss": "",
 		"bg_color": Color(0.93, 0.80, 0.55, 1.0),
-		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion"],
+		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion", "arrow", "bow"],
 	}
 
 	_registry["ribera"] = {
@@ -86,7 +86,7 @@ func _build_registry() -> void:
 		"mob_pool": ["frozelin"],
 		"boss": "glaciarch",
 		"bg_color": Color(0.75, 0.88, 0.95, 1.0),
-		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion"],
+		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion", "arrow", "bow"],
 	}
 
 	_registry["pikoterra"] = {
@@ -96,7 +96,7 @@ func _build_registry() -> void:
 		"mob_pool": ["pikonaut"],
 		"boss": "gomelin",
 		"bg_color": Color(0.922, 0.719, 0.578, 1.0),
-		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion"],
+		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion", "arrow", "bow"],
 	}
 	
 	_registry["evergreen"] = {
@@ -106,7 +106,7 @@ func _build_registry() -> void:
 		"mob_pool": ["kaze_shroom"],
 		"boss": "sapguard",
 		"bg_color": Color(0.72, 0.80, 0.55, 1.0),
-		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion"],
+		"ground_items": ["bomb", "wood_shield", "health_potion", "energy_potion", "arrow", "bow"],
 	}
 
 	_registry["cistronia"] = {
@@ -116,5 +116,8 @@ func _build_registry() -> void:
 		"mob_pool": ["skeleton"],
 		"boss": "raptor_skeleton",
 		"bg_color": Color("7a8794ff"),
-		"ground_items": ["lemon"],
+		# Lemons stay common (Electrified is still required to finish foes
+		# here), with bombs/arrows/bows mixed in so the Raptor's armored
+		# phase is always beatable on-site.
+		"ground_items": ["lemon", "lemon", "lemon", "bomb", "arrow", "bow"],
 	}

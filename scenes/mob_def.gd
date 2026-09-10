@@ -20,3 +20,14 @@ class_name MobDef
 @export var loot_table: Array[Dictionary]    = []
 @export var resistances: Dictionary          = {} 
 @export var burrows:    bool                 = false
+
+## Optional two-phase armor (used by the Raptor Skeleton boss).
+## When phase_split_hp >= 0, the fight is split by current HP:
+##   Phase 1 (hp > phase_split_hp): only `phase1_allowed` categories land.
+##   Phase 2 (hp <= phase_split_hp): only `phase2_allowed` categories land.
+## Categories are "throwable" (bombs, bows/arrows), "sword", or "other".
+@export var phase_split_hp:       int          = -1
+@export var phase1_allowed:       Array[String] = ["throwable"]
+@export var phase2_allowed:       Array[String] = ["sword"]
+@export var phase1_deny_message:  String        = ""
+@export var phase2_deny_message:  String        = ""

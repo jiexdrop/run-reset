@@ -33,6 +33,13 @@ const SELF_DESTRUCT_ATTACKS: Dictionary = {
 	"Explode": true,
 }
 
+## Two-phase boss armor (Raptor Skeleton). Attack categories:
+##   "throwable" — bombs (bomb_throw) and bows/arrows (bow_shot)
+##   "sword"     — any equipped item whose key ends with "sword"
+##   "other"     — everything else (spells, fists, shields); never breaks armor.
+const THROWABLE_ATTACK_TYPES: Array = ["bomb_throw", "bow_shot"]
+const BOW_SOUND_PATH := "res://assets/sounds/items/bow.mp3"
+
 @onready var level_label:      Label           = $MarginContainer/ContentArea/VBox/StatsSection/LevelLabel
 @onready var hearts_grid:      GridContainer   = $MarginContainer/ContentArea/VBox/StatsSection/HeartsGrid
 @onready var energy_grid:      GridContainer   = $MarginContainer/ContentArea/VBox/StatsSection/EnergyGrid
@@ -302,6 +309,52 @@ func _guard_cistronia_lethal(hp_after_hit: int) -> int:
 	return hp_after_hit
 
 
+## ── Two-phase armor ─────────────────────────────────────────────────────────
+## Category of a player attack for phase gating. Note Fists use single_swing
+## too, so swords are detected by item key — bare hands never count as swords.
+func _get_attack_category(atk: Dictionary) -> String:
+	var attack_type := String(atk.get("attack_type", "single_swing"))
+	if attack_type in THROWABLE_ATTACK_TYPES:
+		return "throwable"
+	if String(atk.get("item_key", "")).ends_with("sword"):
+		return "sword"
+	return "other"
+
+
+## Current armor phase of a runtime mob dict: 0 = no phases, else 1 or 2.
+## Phase 1 lasts while hp is above the split; phase 2 at/below it.
+func _get_mob_phase(mob: Dictionary) -> int:
+	var split := int(mob.get("phase_split_hp", -1))
+	if split < 0:
+		return 0
+	return 1 if int(mob.get("hp", 1)) > split else 2
+
+
+## Whether `atk` can damage `mob` right now. Returns
+## {"allowed": bool, "deny_message": String, "phase": int}.
+func _get_phase_allowance(mob: Dictionary, atk: Dictionary) -> Dictionary:
+	var split := int(mob.get("phase_split_hp", -1))
+	if split < 0:
+		return {"allowed": true, "deny_message": "", "phase": 0}
+	var phase := _get_mob_phase(mob)
+	var category := _get_attack_category(atk)
+	if phase == 1:
+		var allowed1: Array = mob.get("phase1_allowed", ["throwable"])
+		if category in allowed1:
+			return {"allowed": true, "deny_message": "", "phase": 1}
+		return {"allowed": false,
+			"deny_message": String(mob.get("phase1_deny_message",
+				"Thick armor deflects the blow — use bombs, bows and arrows!")),
+			"phase": 1}
+	var allowed2: Array = mob.get("phase2_allowed", ["sword"])
+	if category in allowed2:
+		return {"allowed": true, "deny_message": "", "phase": 2}
+	return {"allowed": false,
+		"deny_message": String(mob.get("phase2_deny_message",
+			"Loose fragments scatter harmlessly — finish it with a sword!")),
+		"phase": 2}
+
+
 func _tick_electrified(p: Dictionary) -> String:
 	if int(p.get("electrified_turns", 0)) <= 0:
 		return ""
@@ -315,6 +368,15 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 	var atk = atk_override if not atk_override.is_empty() else _get_equipped_attack()
 	var type_data = ItemRegistry.get_attack_type_data(atk.attack_type)
 	var p         = GameState.player
+
+	# Phase gating first: a deflected attack costs nothing (no energy, no
+	# consumable, no turn) so the player can freely switch weapons.
+	var target_mob    = GameState.monsters[mob_id]
+	var phase_before  = _get_mob_phase(target_mob)
+	var phase_check   = _get_phase_allowance(target_mob, atk)
+	if not phase_check["allowed"]:
+		_log(String(phase_check["deny_message"]))
+		return
 
 	var energy_needed = int(ceil(atk.energy_cost * type_data.get("energy_mult", 1.0)))
 	if energy_needed > 0 and p.get("energy", 0) < energy_needed:
@@ -332,7 +394,6 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 	var hits        = max(1, type_data.get("hits", 1))
 	var dmg_per_hit = max(1, int(round(atk.damage * type_data.get("damage_mult", 1.0) / hits)))
 
-	var target_mob    = GameState.monsters[mob_id]
 	var resistances    = target_mob.get("resistances", {})
 	var atk_element     = ItemRegistry.get_element(atk.item_key) if atk.item_key != "" else "physical"
 	var resist_mult     = resistances.get(atk_element, 1.0)
@@ -340,6 +401,7 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 	
 	_attack_in_progress = true
 	var is_sword := String(atk.get("item_key", "")).ends_with("sword")
+	var is_bow_shot := String(atk.get("attack_type", "")) == "bow_shot"
 	var cistronia_guard_hit := false
 	for i in range(hits):
 		var mob = GameState.monsters[mob_id]
@@ -354,6 +416,8 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 
 		if is_sword:
 			_play_sword_sound()
+		elif is_bow_shot:
+			_play_bow_sound()
 		_spawn_attack_effect(mob_id, type_data)
 		var card = _get_card_for_mob(mob_id)
 		if card:
@@ -393,6 +457,20 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 	mob = GameState.monsters[mob_id]
 	if mob.get("hp", 0) <= 0:
 		_on_mob_died(mob_id)
+		return
+	# Armor cracked mid-swing: phase 1 -> phase 2. Refresh once more so the
+	# exposed sprite shows immediately, then tell the player to switch weapons.
+	var phase_after = _get_mob_phase(mob)
+	var phase_transitioned := phase_before == 1 and phase_after == 2
+	if phase_transitioned:
+		var trans_card = _get_card_for_mob(mob_id)
+		if trans_card:
+			trans_card.refresh_from_state()
+		if cistronia_guard_hit:
+			_log("The fossil armor cracks apart! %s clings to unlife at 1 HP — eat a lemon to become Electrified and finish its exposed bones with a sword!" % mob.get("name", "Mob"))
+		else:
+			_log("The fossil armor cracks apart! Its bones lie exposed — finish it with a sword!")
+		on_player_moved()
 	elif cistronia_guard_hit:
 		_log("%s clings to unlife at 1 HP — eat a lemon to become Electrified and finish it!" % mob.get("name", "Mob"))
 		on_player_moved()
@@ -446,6 +524,15 @@ func _play_sound(stream: AudioStream) -> void:
 
 func _play_sword_sound() -> void:
 	_play_sound(SWORD_SOUND)
+
+
+## Bow twang — falls back to the sword swoosh until
+## res://assets/sounds/items/bow.mp3 has been added.
+func _play_bow_sound() -> void:
+	if ResourceLoader.exists(BOW_SOUND_PATH):
+		_play_sound(load(BOW_SOUND_PATH) as AudioStream)
+	else:
+		_play_sound(SWORD_SOUND)
 
 
 func _play_hurt_sound() -> void:
@@ -870,7 +957,7 @@ func _setup_log_label() -> void:
 	log_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_WORD_ELLIPSIS
 	log_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	# Reserve 2 full lines so the VBox doesn't resize/reflow when messages change.
-	log_label.custom_minimum_size = Vector2(0, 80)
+	log_label.custom_minimum_size = Vector2(0, 60)
 
 
 func _clear_children(node: Node) -> void:
@@ -1175,6 +1262,18 @@ func _resolve_pending_bomb(mob_id: int) -> void:
 	if mob.get("hp", 0) <= 0:
 		return
 
+	# A bomb thrown during the throwable phase can detonate after the armor
+	# already cracked — in the sword phase it scatters harmlessly.
+	var bomb_probe := {"item_key": "bomb", "attack_type": "bomb_throw"}
+	var bomb_check := _get_phase_allowance(mob, bomb_probe)
+	if not bomb_check["allowed"]:
+		_spawn_attack_effect(mob_id, ItemRegistry.get_attack_type_data("bomb_throw"))
+		_log("The bomb goes off against bare bone — the fragments scatter harmlessly! Finish it with a sword!")
+		GameState.mark_dirty()
+		SaveManager.save()
+		return
+
+	var phase_before := _get_mob_phase(mob)
 	mob["hp"] = _guard_cistronia_lethal(max(0, mob.get("hp", 0) - dmg))
 	GameState.monsters[mob_id] = mob
 
@@ -1193,6 +1292,8 @@ func _resolve_pending_bomb(mob_id: int) -> void:
 
 	if mob["hp"] == 1 and GameState.zone == "cistronia" and not _is_electrified():
 		_log("The bomb goes off — %s clings to unlife at 1 HP! Eat a lemon to become Electrified." % mob.get("name", "Mob"))
+	elif phase_before == 1 and _get_mob_phase(GameState.monsters[mob_id]) == 2:
+		_log("The bomb goes off — %s takes %d damage! The fossil armor cracks apart — finish its exposed bones with a sword!" % [mob.get("name", "Mob"), dmg])
 	else:
 		_log("The bomb goes off — %s takes %d damage!" % [mob.get("name", "Mob"), dmg])
 

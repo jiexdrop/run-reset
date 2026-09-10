@@ -230,6 +230,7 @@ func _build_registry() -> void:
 		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "iron_sword", "chance": 0.52, "min": 1, "max": 1 },
+		{ "item_key": "bow", "chance": 0.5, "min": 1, "max": 1 },
 		{ "item_key": "bomb", "chance": 0.25, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["sapguard"] = sapguard
@@ -253,12 +254,16 @@ func _build_registry() -> void:
 	skeleton.attacks    = [bone_slash, splinter] as Array[MobAttackData]
 	skeleton.loot_table = [
 		{ "item_key": "lemon", "chance": 0.45, "min": 1, "max": 1 },
+		{ "item_key": "arrow", "chance": 0.35, "min": 1, "max": 2 },
 		{ "item_key": "health_potion", "chance": 0.15, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.15, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["skeleton"] = skeleton
 
 	# ── Raptor Skeleton (Cistronia boss) ───────────────────────────────────────
+	# Two-phase fight: 16 HP split into an armored throwable phase (bombs,
+	# bows, arrows) and an exposed sword phase. See MobDef phase_* fields and
+	# the gating logic in combat_ui.gd.
 	var fossil_bite         = MobAttackData.new()
 	fossil_bite.attack_name = "Fossil Bite"
 	fossil_bite.damage      = 2
@@ -272,12 +277,19 @@ func _build_registry() -> void:
 	var raptor_skeleton        = MobDef.new()
 	raptor_skeleton.mob_name   = "Raptor Skeleton"
 	raptor_skeleton.sprite     = "raptor_skeleton"
-	raptor_skeleton.max_hp     = 8
-	raptor_skeleton.xp_reward  = 6
+	raptor_skeleton.max_hp     = 16
+	raptor_skeleton.xp_reward  = 8
 	raptor_skeleton.attacks    = [fossil_bite, talon_rend] as Array[MobAttackData]
 	raptor_skeleton.resistances = {"physical": 0.5}
+	raptor_skeleton.phase_split_hp      = 8
+	raptor_skeleton.phase1_allowed      = ["throwable"] as Array[String]
+	raptor_skeleton.phase2_allowed      = ["sword"] as Array[String]
+	raptor_skeleton.phase1_deny_message = "Thick fossil plates deflect the blow — crack its armor with bombs, bows and arrows!"
+	raptor_skeleton.phase2_deny_message = "Loose fragments scatter harmlessly — finish its exposed bones with a sword!"
 	raptor_skeleton.loot_table  = [
 		{ "item_key": "lemon", "chance": 1.0, "min": 1, "max": 2 },
+		{ "item_key": "arrow", "chance": 0.6, "min": 2, "max": 4 },
+		{ "item_key": "bomb", "chance": 0.4, "min": 1, "max": 1 },
 		{ "item_key": "health_potion", "chance": 0.3, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.3, "min": 1, "max": 1 },
 	] as Array[Dictionary]

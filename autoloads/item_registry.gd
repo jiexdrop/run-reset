@@ -35,6 +35,10 @@ const ATTACK_TYPES: Dictionary = {
 		"hits": 1, "damage_mult": 1.0, "energy_mult": 1.0, "label": " (Fused)",
 		"effect_scene": preload("res://scenes/effects/explosion_effect.tscn"),
 	},
+	"bow_shot": {
+		"hits": 1, "damage_mult": 1.0, "energy_mult": 1.0, "label": "",
+		"effect_scene": preload("res://scenes/effects/arrow_effect.tscn"),
+	},
 }
 
 var _items: Dictionary = {
@@ -77,7 +81,7 @@ var _items: Dictionary = {
 	"iron_sword": {
 		"name": "Iron Sword",
 		"icon": preload("res://assets/items/iron_sword.png"),
-		"desc": "A sturdy iron blade.",
+		"desc": "A sturdy iron blade. Swords finish the Raptor Skeleton once its armor is cracked.",
 		"max_stack": 1,
 		"type": "weapon",
 		"damage": 3,
@@ -86,7 +90,7 @@ var _items: Dictionary = {
 	"steel_sword": {
 		"name": "Steel Sword",
 		"icon": preload("res://assets/items/steel_sword.png"),
-		"desc": "A sharpened steel blade. Strikes twice in quick succession.",
+		"desc": "A sharpened steel blade. Strikes twice in quick succession. Swords finish the Raptor Skeleton once its armor is cracked.",
 		"max_stack": 1,
 		"type": "weapon",
 		"damage": 4,
@@ -95,7 +99,7 @@ var _items: Dictionary = {
 	"stone_sword": {
 		"name": "Stone Sword",
 		"icon": preload("res://assets/items/stone_sword.png"),
-		"desc": "A crude, heavy blade chipped from stone.",
+		"desc": "A crude, heavy blade chipped from stone. Swords finish the Raptor Skeleton once its armor is cracked.",
 		"max_stack": 1,
 		"type": "weapon",
 		"damage": 2,
@@ -129,12 +133,38 @@ var _items: Dictionary = {
 	"bomb": {
 		"name": "Bomb",
 		"icon": preload("res://assets/items/bomb.png"),
-		"desc": "Lob it and step back — the fuse takes one enemy turn to burn down before it goes off.",
+		"desc": "Lob it and step back — the fuse takes one enemy turn to burn down before it goes off. Throwable: cracks the Raptor Skeleton's armored plates.",
 		"max_stack": 4,
 		"type": "spell",
 		"damage": 5,
 		"energy_cost": 0,
 		"attack_type": "bomb_throw",
+		"element": "physical",
+	},
+
+	# ── Bows & Arrows (throwable damage) ────────────────────────────────────
+	# Both count as "throwable" for phased bosses (see combat_ui phase gating).
+	# Icons use load() instead of preload() so the game still runs (with a
+	# placeholder icon) before the art files below have been added.
+	"bow": {
+		"name": "Hunting Bow",
+		"icon": load("res://assets/items/bow.png"),
+		"desc": "A short hunting bow. Equip it and click an enemy to loose an arrow. Throwable: cracks the Raptor Skeleton's armored plates.",
+		"max_stack": 1,
+		"type": "weapon",
+		"damage": 2,
+		"energy_cost": 1,
+		"attack_type": "bow_shot",
+	},
+	"arrow": {
+		"name": "Arrow",
+		"icon": load("res://assets/items/arrow.png"),
+		"desc": "A flint-tipped arrow. Loose it straight from the hotbar. Throwable: cracks the Raptor Skeleton's armored plates.",
+		"max_stack": 8,
+		"type": "spell",
+		"damage": 3,
+		"energy_cost": 0,
+		"attack_type": "bow_shot",
 		"element": "physical",
 	},
 
@@ -153,7 +183,12 @@ var _items: Dictionary = {
 
 func get_icon(item_key: String) -> Texture2D:
 	if _items.has(item_key):
-		return _items[item_key].get("icon", null)
+		var icon: Texture2D = _items[item_key].get("icon", null)
+		if icon == null and (item_key == "bow" or item_key == "arrow"):
+			# Placeholder until res://assets/items/bow.png /
+			# res://assets/items/arrow.png are added.
+			return _items.get("bomb", {}).get("icon", null)
+		return icon
 	return null
 
 func get_item_name(item_key: String) -> String:

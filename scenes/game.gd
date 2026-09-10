@@ -3,12 +3,12 @@ extends Node2D
 const TILE = preload("uid://ceosbosrytods")
 const BUSH = preload("res://scenes/bush.tscn")
 const GROUND_ITEM = preload("res://scenes/ground_item.tscn")
-const DEFAULT_GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield", "health_potion", "energy_potion"]
+const DEFAULT_GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield", "health_potion", "energy_potion", "arrow", "bow"]
 const GROUND_ITEM_SPAWN_CHANCE = 0.25
 const MAX_GROUND_ITEMS_PER_FLOOR = 4
 # Cistronia runs on lemons (Electrified is required to finish foes there),
 # so it gets a much richer ground-item spread than other zones.
-const CISTRONIA_GROUND_ITEM_SPAWN_CHANCE = 0.75
+const CISTRONIA_GROUND_ITEM_SPAWN_CHANCE = 0.5
 const CISTRONIA_MAX_GROUND_ITEMS_PER_FLOOR = 10
 
 @onready var camera_2d: Camera2D = $Camera2D

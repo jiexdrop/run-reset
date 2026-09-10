@@ -31,6 +31,11 @@ const HP_BAR_FILL_COLOR: Color = Color(0.75, 0.2, 0.2)
 const HP_BAR_BG_COLOR:   Color = Color(0.2, 0.2, 0.2)
 const DEAD_MODULATE: Color = Color(0.4, 0.4, 0.4, 0.7)
 
+## Raptor Skeleton phase sprites. Loaded at runtime (not preloaded) so the
+## game keeps running with the base sprite until these art files are added.
+const RAPTOR_ARMORED_PATH := "res://assets/mobs/cistronia/raptor-skeleton-armored.png"
+const RAPTOR_EXPOSED_PATH := "res://assets/mobs/cistronia/raptor-skeleton-exposed.png"
+
 var mob_id:   int        = -1
 var mob_data: Dictionary = {}
 var _mob_attacks: Array = []
@@ -93,7 +98,7 @@ func set_telegraphed(active: bool) -> void:
 
 
 func _refresh() -> void:
-	name_label.text = mob_data.get("name", "???")
+	_refresh_name_label()
 	_refresh_resist_label()
 
 	var is_burrowed = mob_data.get("burrowed", false)
@@ -101,6 +106,12 @@ func _refresh() -> void:
 	var block_key   = base_sprite + "_block"
 	var sprite_key  = block_key if (is_burrowed and MOB_SPRITES.has(block_key)) else base_sprite
 	var tex: Texture2D = MOB_SPRITES.get(sprite_key, null)
+	# Phased bosses (Raptor Skeleton) swap sprites by current HP — but only
+	# when not burrowed, and only if the phase art files exist.
+	if not is_burrowed:
+		var phased_tex := _get_phased_sprite_texture()
+		if phased_tex:
+			tex = phased_tex
 	sprite.texture = tex
 	if tex:
 		# Leave a 20px gutter on each side so the left warning icon never covers the sprite.
@@ -112,6 +123,34 @@ func _refresh() -> void:
 	hp_bar.value     = clampi(hp, 0, max_hp)
 
 	sprite.modulate = DEAD_MODULATE if hp <= 0 else Color.WHITE
+
+
+## Name plus armor-phase hint for phased bosses, so the player always
+## knows which weapon type the current phase demands.
+func _refresh_name_label() -> void:
+	var base_name := String(mob_data.get("name", "???"))
+	var split := int(mob_data.get("phase_split_hp", -1))
+	if split < 0 or String(mob_data.get("sprite", "")) != "raptor_skeleton":
+		name_label.text = base_name
+		return
+	if int(mob_data.get("hp", 1)) > split:
+		name_label.text = "%s (Armored: bombs/bows!)" % base_name
+	else:
+		name_label.text = "%s (Exposed: swords!)" % base_name
+
+
+## Phase sprite for the Raptor Skeleton, or null to keep the base sprite.
+## Returns null when the phase art files haven't been added yet.
+func _get_phased_sprite_texture() -> Texture2D:
+	if String(mob_data.get("sprite", "")) != "raptor_skeleton":
+		return null
+	var split := int(mob_data.get("phase_split_hp", -1))
+	if split < 0:
+		return null
+	var want := RAPTOR_ARMORED_PATH if int(mob_data.get("hp", 1)) > split else RAPTOR_EXPOSED_PATH
+	if not ResourceLoader.exists(want):
+		return null
+	return load(want) as Texture2D
 
 
 func _style_hp_bar() -> void:

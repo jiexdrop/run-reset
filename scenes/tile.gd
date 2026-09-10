@@ -106,6 +106,11 @@ func _trigger_combat() -> void:
 			"loot_table":  def.loot_table,
 			"resistances": def.resistances,
 			"tile_key":    tile_key_str,
+			"phase_split_hp":      def.phase_split_hp,
+			"phase1_allowed":      def.phase1_allowed.duplicate(),
+			"phase2_allowed":      def.phase2_allowed.duplicate(),
+			"phase1_deny_message": def.phase1_deny_message,
+			"phase2_deny_message": def.phase2_deny_message,
 		}
 		for atk in def.attacks:
 			mob_entry["attacks"].append({
