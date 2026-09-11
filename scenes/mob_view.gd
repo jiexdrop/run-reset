@@ -129,14 +129,32 @@ func _refresh() -> void:
 ## knows which weapon type the current phase demands.
 func _refresh_name_label() -> void:
 	var base_name := String(mob_data.get("name", "???"))
+	name_label.text = base_name
+
+
+func _add_armor_phase_badge() -> void:
 	var split := int(mob_data.get("phase_split_hp", -1))
 	if split < 0 or String(mob_data.get("sprite", "")) != "raptor_skeleton":
-		name_label.text = base_name
 		return
-	if int(mob_data.get("hp", 1)) > split:
-		name_label.text = "%s (Armored: bombs/bows!)" % base_name
+	var hp := int(mob_data.get("hp", 1))
+	var badge := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.35, 0.3, 0.15)
+	style.set_corner_radius_all(3)
+	style.content_margin_left = 4
+	style.content_margin_right = 4
+	style.content_margin_top = 1
+	style.content_margin_bottom = 1
+	badge.add_theme_stylebox_override("panel", style)
+	var lbl := Label.new()
+	if hp > split:
+		lbl.text = "Armored: bombs/bows!"
 	else:
-		name_label.text = "%s (Exposed: swords!)" % base_name
+		lbl.text = "Exposed: swords!"
+	lbl.add_theme_font_size_override("font_size", 10)
+	lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.5))
+	badge.add_child(lbl)
+	resist_row.add_child(badge)
 
 
 ## Phase sprite for the Raptor Skeleton, or null to keep the base sprite.
@@ -174,6 +192,8 @@ func _refresh_resist_label() -> void:
 
 	var resistances: Dictionary = mob_data.get("resistances", {})
 	var has_any := false
+
+	_add_armor_phase_badge()
 
 	for element in resistances:
 		var mult: float = resistances[element]
