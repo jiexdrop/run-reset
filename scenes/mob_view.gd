@@ -27,6 +27,11 @@ const MOB_SPRITES: Dictionary = {
 }
 
 const HEALTH_BAR_SIZE: Vector2 = Vector2(56, 8)
+## Maximum bounding box a mob sprite may occupy. Sprites smaller than this
+## keep their native size (no upscaling); sprites larger than this are
+## scaled down (preserving aspect ratio) so oversized art — e.g. Glaciarch —
+## never blows out MobScroll's height and gets clipped.
+const SPRITE_MAX_SIZE: Vector2 = Vector2(64, 64)
 const HP_BAR_FILL_COLOR: Color = Color(0.75, 0.2, 0.2)
 const HP_BAR_BG_COLOR:   Color = Color(0.2, 0.2, 0.2)
 const DEAD_MODULATE: Color = Color(0.4, 0.4, 0.4, 0.7)
@@ -114,8 +119,11 @@ func _refresh() -> void:
 			tex = phased_tex
 	sprite.texture = tex
 	if tex:
+		var fitted := _capped_sprite_size(tex)
 		# Leave a 20px gutter on each side so the left warning icon never covers the sprite.
-		sprite.custom_minimum_size = tex.get_size() + Vector2(40, 0)
+		sprite.custom_minimum_size = fitted + Vector2(40, 0)
+	else:
+		sprite.custom_minimum_size = Vector2(40, 40)
 
 	var hp     = mob_data.get("hp",     1)
 	var max_hp = mob_data.get("max_hp", hp)
@@ -123,6 +131,19 @@ func _refresh() -> void:
 	hp_bar.value     = clampi(hp, 0, max_hp)
 
 	sprite.modulate = DEAD_MODULATE if hp <= 0 else Color.WHITE
+
+
+## Returns tex's native size unchanged if it already fits within
+## SPRITE_MAX_SIZE. Otherwise scales it down (preserving aspect ratio) to
+## fit — sprites are never scaled up past their native size.
+func _capped_sprite_size(tex: Texture2D) -> Vector2:
+	var sz := tex.get_size()
+	if sz.x <= 0.0 or sz.y <= 0.0:
+		return sz
+	if sz.x <= SPRITE_MAX_SIZE.x and sz.y <= SPRITE_MAX_SIZE.y:
+		return sz   # already fits — leave native size alone
+	var scale: float = min(SPRITE_MAX_SIZE.x / sz.x, SPRITE_MAX_SIZE.y / sz.y)
+	return sz * scale
 
 
 ## Name plus armor-phase hint for phased bosses, so the player always
