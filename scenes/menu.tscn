@@ -1,3 +1,43 @@
 [gd_scene format=3 uid="uid://b5gw22wreg0t4"]
 
+[ext_resource type="Script" uid="uid://c4rkut7x0t5qx" path="res://scenes/menu.gd" id="1_yqeox"]
+[ext_resource type="PackedScene" uid="uid://fixvjduslfig" path="res://scenes/game.tscn" id="2_vjb58"]
+
 [node name="Menu" type="Node2D" unique_id=1768106164]
+script = ExtResource("1_yqeox")
+next_scene = ExtResource("2_vjb58")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1447954720]
+
+[node name="Control" type="Control" parent="CanvasLayer" unique_id=338449943]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/Control" unique_id=1302225136]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -39.5
+offset_top = -33.0
+offset_right = 39.5
+offset_bottom = 33.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ContinueButton" type="Button" parent="CanvasLayer/Control/VBoxContainer" unique_id=1085348749]
+layout_mode = 2
+text = "Continue"
+
+[node name="NewGameButton" type="Button" parent="CanvasLayer/Control/VBoxContainer" unique_id=666433362]
+layout_mode = 2
+text = "New Game"
+
+[connection signal="pressed" from="CanvasLayer/Control/VBoxContainer/ContinueButton" to="." method="_on_continue_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/Control/VBoxContainer/NewGameButton" to="." method="_on_new_game_button_pressed"]
