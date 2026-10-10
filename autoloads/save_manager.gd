@@ -28,8 +28,26 @@ func load_save() -> void:
 			InventoryState.from_dict(parsed["inventory"])
 		GameState.zone       = parsed.get("zone", "default")
 		GameState.zone_stage = parsed.get("zone_stage", 1)
+		_sync_phase_config()
 	#if InventoryState.DEBUG_GIVE_WEAPONS:
 		#InventoryState.debug_grant_weapons_and_spells()
+
+## Phase-gating config is stored on each saved mob. Re-sync it from the
+## MobDef so saves written before the phase categories were renamed (e.g.
+## "throwable"/"sword" -> "ranged"/"melee") keep matching the current attack
+## range classification instead of deflecting every attack.
+func _sync_phase_config() -> void:
+	for mob in GameState.monsters:
+		if not (mob is Dictionary):
+			continue
+		var def = MobRegistry.get_def(String(mob.get("mob_key", "")))
+		if def == null:
+			continue
+		mob["phase_split_hp"]      = def.phase_split_hp
+		mob["phase1_allowed"]      = def.phase1_allowed.duplicate()
+		mob["phase2_allowed"]      = def.phase2_allowed.duplicate()
+		mob["phase1_deny_message"] = def.phase1_deny_message
+		mob["phase2_deny_message"] = def.phase2_deny_message
 
 func reset() -> void:
 	if FileAccess.file_exists(SAVE_PATH):

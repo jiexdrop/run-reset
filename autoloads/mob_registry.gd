@@ -261,9 +261,10 @@ func _build_registry() -> void:
 	_registry["skeleton"] = skeleton
 
 	# ── Raptor Skeleton (Cistronia boss) ───────────────────────────────────────
-	# Two-phase fight: 16 HP split into an armored throwable phase (bombs,
-	# bows, arrows) and an exposed sword phase. See MobDef phase_* fields and
-	# the gating logic in combat_ui.gd.
+	# Two-phase fight: 16 HP split into an armored phase that only ranged
+	# attacks land, and an exposed phase that only close-combat (melee)
+	# attacks land. Phases select weapons by attack range classification, not
+	# by weapon type. See MobDef phase_* fields and combat_ui.gd gating.
 	var fossil_bite         = MobAttackData.new()
 	fossil_bite.attack_name = "Fossil Bite"
 	fossil_bite.damage      = 2
@@ -282,8 +283,8 @@ func _build_registry() -> void:
 	raptor_skeleton.attacks    = [fossil_bite, talon_rend] as Array[MobAttackData]
 	raptor_skeleton.resistances = {"physical": 0.5}
 	raptor_skeleton.phase_split_hp      = 8
-	raptor_skeleton.phase1_allowed      = ["throwable"] as Array[String]
-	raptor_skeleton.phase2_allowed      = ["sword"] as Array[String]
+	raptor_skeleton.phase1_allowed      = ["ranged"] as Array[String]
+	raptor_skeleton.phase2_allowed      = ["melee"] as Array[String]
 	raptor_skeleton.phase1_deny_message = "Thick fossil plates deflect the blow — crack its armor with bombs, bows and arrows!"
 	raptor_skeleton.phase2_deny_message = "Loose fragments scatter harmlessly — finish its exposed bones with a sword!"
 	raptor_skeleton.loot_table  = [

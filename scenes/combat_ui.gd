@@ -33,11 +33,11 @@ const SELF_DESTRUCT_ATTACKS: Dictionary = {
 	"Explode": true,
 }
 
-## Two-phase boss armor (Raptor Skeleton). Attack categories:
-##   "throwable" — bombs (bomb_throw) and bows/arrows (bow_shot)
-##   "sword"     — any equipped item whose key ends with "sword"
-##   "other"     — everything else (spells, fists, shields); never breaks armor.
-const THROWABLE_ATTACK_TYPES: Array = ["bomb_throw", "bow_shot"]
+## Two-phase boss armor (Raptor Skeleton). Attack categories come from the
+## range classification of each attack type (ItemRegistry ATTACK_TYPES):
+##   "ranged" — ranged attacks (bombs, bows/arrows, …)
+##   "melee"  — close-combat attacks (swords, …)
+##   "other"  — everything else (spells, shields); never breaks armor.
 const BOW_SOUND_PATH := "res://assets/sounds/items/bow.mp3"
 
 @onready var level_label:      Label           = $MarginContainer/ContentArea/VBox/StatsSection/LevelLabel
@@ -310,15 +310,11 @@ func _guard_cistronia_lethal(hp_after_hit: int) -> int:
 
 
 ## ── Two-phase armor ─────────────────────────────────────────────────────────
-## Category of a player attack for phase gating. Note Fists use single_swing
-## too, so swords are detected by item key — bare hands never count as swords.
+## Category of a player attack for phase gating: the range classification of
+## its attack type ("ranged" / "melee" / "other"). Bare Fists use
+## single_swing, so they classify as melee like any close-combat attack.
 func _get_attack_category(atk: Dictionary) -> String:
-	var attack_type := String(atk.get("attack_type", "single_swing"))
-	if attack_type in THROWABLE_ATTACK_TYPES:
-		return "throwable"
-	if String(atk.get("item_key", "")).ends_with("sword"):
-		return "sword"
-	return "other"
+	return ItemRegistry.get_attack_range(String(atk.get("attack_type", "single_swing")))
 
 
 ## Current armor phase of a runtime mob dict: 0 = no phases, else 1 or 2.
@@ -339,14 +335,14 @@ func _get_phase_allowance(mob: Dictionary, atk: Dictionary) -> Dictionary:
 	var phase := _get_mob_phase(mob)
 	var category := _get_attack_category(atk)
 	if phase == 1:
-		var allowed1: Array = mob.get("phase1_allowed", ["throwable"])
+		var allowed1: Array = mob.get("phase1_allowed", ["ranged"])
 		if category in allowed1:
 			return {"allowed": true, "deny_message": "", "phase": 1}
 		return {"allowed": false,
 			"deny_message": String(mob.get("phase1_deny_message",
 				"Thick armor deflects the blow — use bombs, bows and arrows!")),
 			"phase": 1}
-	var allowed2: Array = mob.get("phase2_allowed", ["sword"])
+	var allowed2: Array = mob.get("phase2_allowed", ["melee"])
 	if category in allowed2:
 		return {"allowed": true, "deny_message": "", "phase": 2}
 	return {"allowed": false,
@@ -1262,8 +1258,8 @@ func _resolve_pending_bomb(mob_id: int) -> void:
 	if mob.get("hp", 0) <= 0:
 		return
 
-	# A bomb thrown during the throwable phase can detonate after the armor
-	# already cracked — in the sword phase it scatters harmlessly.
+	# A bomb thrown during the ranged phase can detonate after the armor
+	# already cracked — in the melee phase it scatters harmlessly.
 	var bomb_probe := {"item_key": "bomb", "attack_type": "bomb_throw"}
 	var bomb_check := _get_phase_allowance(mob, bomb_probe)
 	if not bomb_check["allowed"]:

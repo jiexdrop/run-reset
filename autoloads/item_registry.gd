@@ -6,21 +6,29 @@ extends Node
 ## energy_mult  : multiplies the item's base `energy_cost`
 ## label        : appended to the attack name in the UI (e.g. " x2")
 ## effect_scene : VFX played on the mob for each hit
+## range        : attack range classification — "ranged" or "melee". Attack
+##                types without it (e.g. spells) are not range-classified and
+##                resolve to "other" (see get_attack_range). Phased bosses
+##                gate attacks by this classification.
 const ATTACK_TYPES: Dictionary = {
 	"single_swing": {
 		"hits": 1, "damage_mult": 1.0, "energy_mult": 1.0, "label": "",
+		"range": "melee",
 		"effect_scene": preload("res://scenes/effects/slash_effect.tscn"),
 	},
 	"double_swing": {
 		"hits": 2, "damage_mult": 0.6, "energy_mult": 1.5, "label": " x2",
+		"range": "melee",
 		"effect_scene": preload("res://scenes/effects/slash_effect.tscn"),
 	},
 	"heavy_swing": {
 		"hits": 1, "damage_mult": 1.8, "energy_mult": 2.0, "label": " (Heavy)",
+		"range": "melee",
 		"effect_scene": preload("res://scenes/effects/slash_effect.tscn"),
 	},
 	"heavy_swing_basic": {
 		"hits": 1, "damage_mult": 1.0, "energy_mult": 1.0, "label": " (Heavy)",
+		"range": "melee",
 		"effect_scene": preload("res://scenes/effects/slash_effect.tscn"),
 	},
 	"fire_spell": {
@@ -33,10 +41,12 @@ const ATTACK_TYPES: Dictionary = {
 	},
 	"bomb_throw": {
 		"hits": 1, "damage_mult": 1.0, "energy_mult": 1.0, "label": " (Fused)",
+		"range": "ranged",
 		"effect_scene": preload("res://scenes/effects/explosion_effect.tscn"),
 	},
 	"bow_shot": {
 		"hits": 1, "damage_mult": 1.0, "energy_mult": 1.0, "label": "",
+		"range": "ranged",
 		"effect_scene": preload("res://scenes/effects/arrow_effect.tscn"),
 	},
 }
@@ -143,7 +153,8 @@ var _items: Dictionary = {
 	},
 
 	# ── Bows & Arrows (throwable damage) ────────────────────────────────────
-	# Both count as "throwable" for phased bosses (see combat_ui phase gating).
+	# Both classify as ranged (bow_shot) for phased bosses (see ATTACK_TYPES
+	# `range` classification).
 	# Icons use load() instead of preload() so the game still runs (with a
 	# placeholder icon) before the art files below have been added.
 	"bow": {
@@ -266,6 +277,13 @@ func get_item_keys() -> Array[String]:
 
 func get_attack_type_data(attack_type: String) -> Dictionary:
 	return ATTACK_TYPES.get(attack_type, ATTACK_TYPES["single_swing"])
+
+## Range classification of an attack type: "ranged", "melee", or "other" for
+## attack types that declare no range (e.g. spells). Unknown attack types fall
+## back to single_swing, mirroring get_attack_type_data.
+func get_attack_range(attack_type: String) -> String:
+	var data: Dictionary = ATTACK_TYPES.get(attack_type, ATTACK_TYPES["single_swing"])
+	return String(data.get("range", "other"))
 
 func register(item_key: String, data: Dictionary) -> void:
 	_items[item_key] = data
