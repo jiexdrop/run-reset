@@ -442,13 +442,15 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 	GameState.mark_dirty()
 	SaveManager.save()
 
-	# Striking a self-destruct mob (e.g. Kaze Shroom) with any weapon or
-	# spell makes it explode immediately, damaging the unshielded attacker.
+	# Striking a self-destruct mob (e.g. Kaze Shroom) with a melee attack
+	# makes it explode immediately, damaging the unshielded attacker.
+	# Ranged attacks (bows, bombs) and spells just damage it normally.
 	mob = GameState.monsters[mob_id]
-	var retaliation := _get_retaliatory_attack(mob)
-	if not retaliation.is_empty():
-		_apply_retaliatory_explosion(mob_id, retaliation)
-		return
+	if _get_attack_category(atk) == "melee":
+		var retaliation := _get_retaliatory_attack(mob)
+		if not retaliation.is_empty():
+			_apply_retaliatory_explosion(mob_id, retaliation)
+			return
 
 	mob = GameState.monsters[mob_id]
 	if mob.get("hp", 0) <= 0:
@@ -751,7 +753,7 @@ func _do_mob_turn(mob_id: int) -> void:
 
 ## Returns the self-destruct attack (e.g. Kaze Shroom's Explode) carried by
 ## a runtime mob dict, or {} if it has none. Used for retaliatory explosions
-## when the mob is struck by a weapon or spell.
+## when the mob is struck by a melee attack.
 func _get_retaliatory_attack(mob: Dictionary) -> Dictionary:
 	for atk in mob.get("attacks", []):
 		if SELF_DESTRUCT_ATTACKS.get(atk.get("attack_name", ""), false):
@@ -759,7 +761,7 @@ func _get_retaliatory_attack(mob: Dictionary) -> Dictionary:
 	return {}
 
 
-## Striking a self-destruct mob (any weapon or spell, unshielded) makes it
+## Striking a self-destruct mob with a melee attack (unshielded) makes it
 ## explode immediately: full Explode damage to the player, then the mob dies
 ## through the normal death flow (XP, loot, tile update). Shielded attacker
 ## damage is reduced by the equipped shield's block amount.
@@ -1280,11 +1282,8 @@ func _resolve_pending_bomb(mob_id: int) -> void:
 	GameState.mark_dirty()
 	SaveManager.save()
 
-	# Bombs are spells too — hitting a self-destruct mob sets it off.
-	var retaliation := _get_retaliatory_attack(GameState.monsters[mob_id])
-	if not retaliation.is_empty():
-		_apply_retaliatory_explosion(mob_id, retaliation)
-		return
+	# Bombs are ranged — they never set off a self-destruct mob, only a
+	# melee strike does.
 
 	if mob["hp"] == 1 and GameState.zone == "cistronia" and not _is_electrified():
 		_log("The bomb goes off — %s clings to unlife at 1 HP! Eat a lemon to become Electrified." % mob.get("name", "Mob"))
