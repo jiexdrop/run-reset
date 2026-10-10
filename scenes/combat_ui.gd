@@ -185,7 +185,7 @@ func _rebuild_mob_cards() -> void:
 		var mob_view = MobViewScene.instantiate()
 		mob_row.add_child(mob_view)
 		mob_view.setup(mob_id, GameState.monsters[mob_id])
-		mob_view.set_telegraphed(_telegraphed.has(mob_id))
+		mob_view.set_telegraphed(_telegraphed.has(mob_id), _telegraphed.get(mob_id, {}))
 		mob_view.attack_requested.connect(_on_attack_requested)
 		mob_view.mob_died.connect(_on_mob_died)
 
@@ -604,8 +604,8 @@ func _do_mob_turn(mob_id: int) -> void:
 		if selected_atk.is_empty():
 			return
 		_telegraphed[mob_id] = selected_atk
-		card.set_telegraphed(true)
-		_log("%s is telegraphing an attack!" % GameState.monsters[mob_id].get("name", "Mob"))
+		card.set_telegraphed(true, selected_atk)
+		_log("%s readies %s!" % [GameState.monsters[mob_id].get("name", "Mob"), selected_atk.get("attack_name", "an attack")])
 		return
 
 	var atk: Dictionary = _telegraphed[mob_id]

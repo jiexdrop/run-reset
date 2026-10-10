@@ -21,6 +21,14 @@ alignment = 1
 [node name="HPBar" type="ProgressBar" parent="." unique_id=516037640]
 layout_mode = 2
 
+[node name="TelegraphLabel" type="Label" parent="." unique_id=512652133]
+modulate = Color(1, 1, 1, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_font_sizes/font_size = 10
+text = " "
+horizontal_alignment = 1
+
 [node name="SpriteRow" type="HBoxContainer" parent="." unique_id=512652131]
 layout_mode = 2
 size_flags_horizontal = 4

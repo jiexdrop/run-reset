@@ -50,6 +50,7 @@ var _mob_attacks: Array = []
 @onready var hp_bar:       ProgressBar   = $HPBar
 @onready var sprite:       TextureRect   = $SpriteRow/Sprite
 @onready var telegraph_icon: TextureRect = $SpriteRow/TelegraphIcon
+@onready var telegraph_label: Label = $TelegraphLabel
 
 const ELEMENT_DISPLAY: Dictionary = {
 	"physical": "Physical", "fire": "Fire", "ice": "Ice",
@@ -98,8 +99,32 @@ func do_mob_turn() -> Dictionary:
 	return _mob_attacks[randi() % _mob_attacks.size()]
 
 
-func set_telegraphed(active: bool) -> void:
+func set_telegraphed(active: bool, atk: Dictionary = {}) -> void:
 	telegraph_icon.modulate.a = 1.0 if active else 0.0
+	telegraph_label.modulate.a = 1.0 if active else 0.0
+	if active:
+		telegraph_label.text = _format_telegraph(atk)
+
+
+## Short, always-readable summary of the incoming attack, e.g. "Venom: 1 dmg + PSN".
+func _format_telegraph(atk: Dictionary) -> String:
+	if atk.is_empty():
+		return " "
+	var txt := "%s: %d dmg" % [atk.get("attack_name", "Attack"), int(atk.get("damage", 1))]
+	var tag := _effect_tag(int(atk.get("effect", 0)))   # int(): saves reload enums as floats
+	if tag != "":
+		txt += " + " + tag
+	return txt
+
+
+func _effect_tag(effect: int) -> String:
+	match effect:
+		MobAttackData.Effect.POISON: return "PSN"
+		MobAttackData.Effect.STUN:   return "STUN"
+		MobAttackData.Effect.BLEED:  return "BLEED"
+		MobAttackData.Effect.STEAL:  return "STEAL"
+		MobAttackData.Effect.FREEZE: return "FRZ"
+	return ""
 
 
 func _refresh() -> void:

@@ -47,7 +47,7 @@ func _build_registry() -> void:
 	var spider        = MobDef.new()
 	spider.mob_name   = "Cave Spider"
 	spider.sprite     = "spider"
-	spider.max_hp     = 3
+	spider.max_hp     = 6
 	spider.xp_reward  = 1
 	spider.attacks    = [bite, venom] as Array[MobAttackData]
 	spider.loot_table = [
@@ -66,7 +66,7 @@ func _build_registry() -> void:
 	var rat        = MobDef.new()
 	rat.mob_name   = "Sewer Rat"
 	rat.sprite     = "rat"
-	rat.max_hp     = 2
+	rat.max_hp     = 5
 	rat.xp_reward  = 1
 	rat.attacks    = [gnaw] as Array[MobAttackData]
 	rat.loot_table = [
@@ -84,7 +84,7 @@ func _build_registry() -> void:
 	var cactus        = MobDef.new()
 	cactus.mob_name   = "Cactus"
 	cactus.sprite     = "cactus"
-	cactus.max_hp     = 4
+	cactus.max_hp     = 7
 	cactus.xp_reward  = 2
 	cactus.attacks    = [thorn] as Array[MobAttackData]
 	cactus.loot_table = [
@@ -102,7 +102,7 @@ func _build_registry() -> void:
 	var sandipper        = MobDef.new()
 	sandipper.mob_name   = "Sandipper"
 	sandipper.sprite     = "sandipper"
-	sandipper.max_hp     = 3
+	sandipper.max_hp     = 6
 	sandipper.xp_reward  = 1
 	sandipper.attacks    = [peck] as Array[MobAttackData]
 	sandipper.burrows    = true
@@ -125,7 +125,7 @@ func _build_registry() -> void:
 	var glaciarch        = MobDef.new()
 	glaciarch.mob_name   = "Glaciarch"
 	glaciarch.sprite     = "glaciarch"
-	glaciarch.max_hp     = 8
+	glaciarch.max_hp     = 14
 	glaciarch.xp_reward  = 6
 	glaciarch.attacks    = [frost_bite, freeze] as Array[MobAttackData]
 	glaciarch.resistances = {"physical": 0.5, "ice": 0.1, "fire": 2.0}
@@ -144,7 +144,7 @@ func _build_registry() -> void:
 	var frozelin        = MobDef.new()
 	frozelin.mob_name   = "Frozelin"
 	frozelin.sprite     = "frozelin"
-	frozelin.max_hp     = 3
+	frozelin.max_hp     = 6
 	frozelin.xp_reward  = 2
 	frozelin.attacks    = [chill] as Array[MobAttackData]
 	frozelin.loot_table = [
@@ -163,7 +163,7 @@ func _build_registry() -> void:
 	var gomelin         = MobDef.new()
 	gomelin.mob_name    = "Gomelin"
 	gomelin.sprite      = "gomelin"
-	gomelin.max_hp      = 8
+	gomelin.max_hp      = 14
 	gomelin.xp_reward   = 6
 	gomelin.attacks     = [pilfer] as Array[MobAttackData]
 	gomelin.resistances = {"physical": 0.5, "ice": 2.0, "fire": 0.1}
@@ -182,7 +182,7 @@ func _build_registry() -> void:
 	var pikonaut         = MobDef.new()
 	pikonaut.mob_name    = "Pikonaut"
 	pikonaut.sprite      = "pikonaut"
-	pikonaut.max_hp      = 3
+	pikonaut.max_hp      = 5
 	pikonaut.xp_reward   = 2
 	pikonaut.attacks     = [poke] as Array[MobAttackData]
 	pikonaut.resistances = {"physical": 0.5, "ice": 2.0, "fire": 0.1}
@@ -249,7 +249,7 @@ func _build_registry() -> void:
 	var skeleton        = MobDef.new()
 	skeleton.mob_name   = "Skeleton"
 	skeleton.sprite     = "skeleton"
-	skeleton.max_hp     = 4
+	skeleton.max_hp     = 7
 	skeleton.xp_reward  = 2
 	skeleton.attacks    = [bone_slash, splinter] as Array[MobAttackData]
 	skeleton.loot_table = [
