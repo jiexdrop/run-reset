@@ -60,7 +60,7 @@ func _build_registry() -> void:
 	# ── Sewer Rat ──────────────────────────────────────────────────────────────
 	var gnaw        = MobAttackData.new()
 	gnaw.attack_name = "Gnaw"
-	gnaw.damage      = 2
+	gnaw.damage      = 1
 	gnaw.effect      = MobAttackData.Effect.NONE
 
 	var rat        = MobDef.new()

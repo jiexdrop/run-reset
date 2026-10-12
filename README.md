@@ -9,6 +9,7 @@ Roguelite dungeon exploration
 - add gomelin ring drop
 - add a way to delete items
 - add rocks that block the path forward
+- arrows can only be shot if I have a bow
 - poison takes 1 turn to damage
 - poison colors hearts in green
 - poison has a subtle hiss or toxic "tick" sound

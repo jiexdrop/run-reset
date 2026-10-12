@@ -1282,8 +1282,8 @@ func _resolve_pending_bomb(mob_id: int) -> void:
 	GameState.mark_dirty()
 	SaveManager.save()
 
-	# Bombs are ranged — they never set off a self-destruct mob, only a
-	# melee strike does.
+	# Bombs are ranged — the blast is the bomb's own explosion, not the mob's
+	# self-destruct, so the player takes no retaliation damage here.
 
 	if mob["hp"] == 1 and GameState.zone == "cistronia" and not _is_electrified():
 		_log("The bomb goes off — %s clings to unlife at 1 HP! Eat a lemon to become Electrified." % mob.get("name", "Mob"))
