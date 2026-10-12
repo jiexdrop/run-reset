@@ -40,7 +40,7 @@ const ATTACK_TYPES: Dictionary = {
 		"effect_scene": preload("res://scenes/effects/ice_effect.tscn"),
 	},
 	"bomb_throw": {
-		"hits": 1, "damage_mult": 1.0, "energy_mult": 1.0, "label": " (Fused)",
+		"hits": 1, "damage_mult": 1.0, "energy_mult": 1.0, "label": "",
 		"range": "ranged",
 		"effect_scene": preload("res://scenes/effects/explosion_effect.tscn"),
 	},
@@ -143,7 +143,7 @@ var _items: Dictionary = {
 	"bomb": {
 		"name": "Bomb",
 		"icon": preload("res://assets/items/bomb.png"),
-		"desc": "Lob it and step back — the fuse takes one enemy turn to burn down before it goes off. Throwable: cracks the Raptor Skeleton's armored plates.",
+		"desc": "Lob it at an enemy — it detonates on impact. Ranged: cracks the Raptor Skeleton's armored plates, and sets off a Kaze Shroom from a safe distance.",
 		"max_stack": 4,
 		"type": "spell",
 		"damage": 5,

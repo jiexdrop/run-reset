@@ -23,6 +23,7 @@ const MOB_ATTACK_EFFECTS: Dictionary = {
 }
 
 const SWORD_SOUND: AudioStream = preload("res://assets/sounds/items/sword.mp3")
+const EXPLOSION_SOUND: AudioStream = preload("res://assets/sounds/explosion/explosion.wav")
 const HURT_SOUNDS = [
 	preload("res://assets/sounds/hurt/hurt_1.ogg"),
 	preload("res://assets/sounds/hurt/hurt_2.ogg"),
@@ -82,7 +83,6 @@ var _turn_phase: String = "player"
 var _skip_next_turn: Dictionary = {}
 var _telegraphed: Dictionary = {}  # mob_id -> attack selected for its next turn
 var _shielded_this_turn: bool = false
-var _pending_bombs: Dictionary = {}   # mob_id -> pending damage
 
 func _ready() -> void:
 	add_to_group("combat_ui")
@@ -148,7 +148,6 @@ func end_combat() -> void:
 	_skip_next_turn.clear()
 	_telegraphed.clear()
 	_shielded_this_turn = false
-	_pending_bombs.clear()
 	_turn_phase = "player"
 	set_combat_input_enabled(true)
 	turn_label.text = "Your Turn"
@@ -483,24 +482,84 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 	else:
 		on_player_moved()
 
+## Bombs resolve immediately on throw. The armor-phase check already happened
+## in _do_player_attack before we got here, so a deflected bomb is never consumed.
 func _throw_bomb(mob_id: int, atk: Dictionary) -> void:
 	var target_mob = GameState.monsters[mob_id]
 	var resistances = target_mob.get("resistances", {})
 	var atk_element = ItemRegistry.get_element(atk.item_key)
-	var resist_mult  = resistances.get(atk_element, 1.0)
+	var resist_mult = resistances.get(atk_element, 1.0)
 	var dmg = max(1, int(round(atk.damage * resist_mult)))
 
-	_pending_bombs[mob_id] = _pending_bombs.get(mob_id, 0) + dmg
 
 	if atk.hotbar_index >= 0:
 		InventoryState.consume_hotbar_item(atk.hotbar_index)
 
-	_log("You lob a bomb and step back — fuse burning...")
+
+	_detonate_bomb(mob_id, dmg)
+
+
+
+
+func _detonate_bomb(mob_id: int, dmg: int) -> void:
+	if mob_id >= GameState.monsters.size():
+		return
+	_play_explosion_sound()
+	var mob = GameState.monsters[mob_id]
+	var mob_name: String = mob.get("name", "Mob")
+	var phase_before := _get_mob_phase(mob)
+
+
+	# Bombs are ranged: a self-destruct mob (Kaze Shroom) still goes off when
+	# hit, but at a distance, so the player takes no damage and no turn passes.
+	var retaliation := _get_retaliatory_attack(mob)
+	if not retaliation.is_empty():
+		_spawn_mob_attack_effect(mob_id, retaliation.get("attack_name", "Explode"))
+		_telegraphed.erase(mob_id)
+		var shroom_card = _get_card_for_mob(mob_id)
+		if shroom_card:
+			shroom_card.set_telegraphed(false)
+		mob["hp"] = 0
+		GameState.monsters[mob_id] = mob
+		if shroom_card:
+			shroom_card.refresh_from_state()
+		GameState.mark_dirty()
+		SaveManager.save()
+		_log("The bomb sets off %s — it explodes harmlessly at a distance!" % mob_name)
+		_on_mob_died(mob_id)
+		return
+
+
+	var raw_hp: int = max(0, mob.get("hp", 0) - dmg)
+	var new_hp: int = _guard_cistronia_lethal(raw_hp)
+	var cistronia_guarded: bool = new_hp != raw_hp
+	mob["hp"] = new_hp
+	GameState.monsters[mob_id] = mob
+
+
+	_spawn_attack_effect(mob_id, ItemRegistry.get_attack_type_data("bomb_throw"))
+	var card = _get_card_for_mob(mob_id)
+	if card:
+		card.refresh_from_state()
 	GameState.mark_dirty()
 	SaveManager.save()
-	# Deliberately no _do_mob_turn call here — that's the whole point of the
-	# quirk: the mob gets its next turn opportunity for free, then the bomb
-	# goes off once that turn resolves (see _resolve_pending_bomb).
+
+
+	if cistronia_guarded:
+		_log("The bomb goes off — %s clings to unlife at 1 HP! Eat a lemon to become Electrified." % mob_name)
+	elif phase_before == 1 and _get_mob_phase(mob) == 2:
+		_log("The bomb goes off — %s takes %d damage! The fossil armor cracks apart — finish its exposed bones with a sword!" % [mob_name, dmg])
+	else:
+		_log("The bomb goes off — %s takes %d damage!" % [mob_name, dmg])
+
+
+	if new_hp <= 0:
+		_on_mob_died(mob_id)
+		return
+
+
+	# Surviving target: the throw uses the turn, like any other attack.
+	on_player_moved()
 
 func _spawn_attack_effect(mob_id: int, type_data: Dictionary) -> void:
 	var scene: PackedScene = type_data.get("effect_scene", null)
@@ -526,6 +585,10 @@ func _play_sound(stream: AudioStream) -> void:
 
 func _play_sword_sound() -> void:
 	_play_sound(SWORD_SOUND)
+
+
+func _play_explosion_sound() -> void:
+	_play_sound(EXPLOSION_SOUND)
 
 
 ## Bow twang — falls back to the sword swoosh until
@@ -790,7 +853,6 @@ func _apply_retaliatory_explosion(mob_id: int, retaliation: Dictionary) -> void:
 	if card:
 		card.set_telegraphed(false)
 	_telegraphed.erase(mob_id)
-	_pending_bombs.erase(mob_id)
 
 	if _shielded_this_turn:
 		var shield_idx := InventoryState.equipped_shield_index
@@ -1184,12 +1246,10 @@ func _run_mob_turn_sequence(shielded: bool = false) -> void:
 				var seq_card = _get_card_for_mob(mob_id)
 				if seq_card:
 					seq_card.refresh_from_state()
-			_resolve_pending_bomb(mob_id)
 			continue
 			
 		await _do_mob_turn(mob_id)
 		
-		_resolve_pending_bomb(mob_id)
 
 		if not is_inside_tree():
 			_mob_turns_running = false
@@ -1260,49 +1320,3 @@ func _on_shield_pressed() -> void:
 	_log("Shield raised — the next telegraphed attack will be partially blocked.")
 	_on_pass_turn_pressed(true)
 
-func _resolve_pending_bomb(mob_id: int) -> void:
-	if not _pending_bombs.has(mob_id):
-		return
-	var dmg = _pending_bombs[mob_id]
-	_pending_bombs.erase(mob_id)
-
-	if mob_id >= GameState.monsters.size():
-		return
-	var mob = GameState.monsters[mob_id]
-	if mob.get("hp", 0) <= 0:
-		return
-
-	# A bomb thrown during the ranged phase can detonate after the armor
-	# already cracked — in the melee phase it scatters harmlessly.
-	var bomb_probe := {"item_key": "bomb", "attack_type": "bomb_throw"}
-	var bomb_check := _get_phase_allowance(mob, bomb_probe)
-	if not bomb_check["allowed"]:
-		_spawn_attack_effect(mob_id, ItemRegistry.get_attack_type_data("bomb_throw"))
-		_log("The bomb goes off against bare bone — the fragments scatter harmlessly! Finish it with a sword!")
-		GameState.mark_dirty()
-		SaveManager.save()
-		return
-
-	var phase_before := _get_mob_phase(mob)
-	mob["hp"] = _guard_cistronia_lethal(max(0, mob.get("hp", 0) - dmg))
-	GameState.monsters[mob_id] = mob
-
-	_spawn_attack_effect(mob_id, ItemRegistry.get_attack_type_data("bomb_throw"))
-	var card = _get_card_for_mob(mob_id)
-	if card:
-		card.refresh_from_state()
-	GameState.mark_dirty()
-	SaveManager.save()
-
-	# Bombs are ranged — the blast is the bomb's own explosion, not the mob's
-	# self-destruct, so the player takes no retaliation damage here.
-
-	if mob["hp"] == 1 and GameState.zone == "cistronia" and not _is_electrified():
-		_log("The bomb goes off — %s clings to unlife at 1 HP! Eat a lemon to become Electrified." % mob.get("name", "Mob"))
-	elif phase_before == 1 and _get_mob_phase(GameState.monsters[mob_id]) == 2:
-		_log("The bomb goes off — %s takes %d damage! The fossil armor cracks apart — finish its exposed bones with a sword!" % [mob.get("name", "Mob"), dmg])
-	else:
-		_log("The bomb goes off — %s takes %d damage!" % [mob.get("name", "Mob"), dmg])
-
-	if mob["hp"] <= 0:
-		_on_mob_died(mob_id)
