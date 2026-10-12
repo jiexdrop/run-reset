@@ -11,6 +11,7 @@ func save() -> void:
 		"inventory":  InventoryState.to_dict(),
 		"zone":       GameState.zone,
 		"zone_stage": GameState.zone_stage,
+		"level":      GameState.level,
 	}
 	var f = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	f.store_string(JSON.stringify(data))
@@ -28,6 +29,7 @@ func load_save() -> void:
 			InventoryState.from_dict(parsed["inventory"])
 		GameState.zone       = parsed.get("zone", "default")
 		GameState.zone_stage = parsed.get("zone_stage", 1)
+		GameState.level      = parsed.get("level", 1)
 		_sync_phase_config()
 	#if InventoryState.DEBUG_GIVE_WEAPONS:
 		#InventoryState.debug_grant_weapons_and_spells()
@@ -60,7 +62,7 @@ func reset() -> void:
 		"attack":      1,
 		"level":       1,
 		"xp":          0,
-		"xp_to_next": 10,
+		"xp_to_next": 4,
 		"energy":     10,
 		"max_energy": 10,
 		"poison_turns": 0,
@@ -69,7 +71,9 @@ func reset() -> void:
 	}
 	GameState.zone       = "default"
 	GameState.zone_stage = 1
+	GameState.level      = 1
 	GameState.dirty      = false
 	InventoryState.from_dict({})
+	InventoryState.add_item("health_potion", 1)   # starter kit: one free potion
 	if InventoryState.DEBUG_GIVE_WEAPONS:
 		InventoryState.debug_grant_weapons_and_spells()

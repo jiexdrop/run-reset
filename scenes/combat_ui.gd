@@ -73,6 +73,12 @@ const DEATH_VFX_DURATION = 1.5
 const MOVE_TURN_DELAY = 0.35   # pause between each mob's turn in a move-triggered sequence
 const LUNGE_OUT_DIST  = 18.0
 
+## XP needed to reach the next level, indexed by current player level - 1.
+## The last value repeats for all higher levels.
+const XP_TO_NEXT_BY_LEVEL: Array[int] = [4, 6, 8, 10]
+const LEVEL_UP_MAX_HP_GAIN = 1
+const LEVEL_UP_HEAL        = 3
+
 var _mob_turns_running: bool = false
 var _turn_phase: String = "player"
 var _skip_next_turn: Dictionary = {}
@@ -539,14 +545,22 @@ func _play_hurt_sound() -> void:
 	_play_sound(HURT_SOUNDS[randi() % HURT_SOUNDS.size()])
 
 
+func _xp_needed_for_level(level: int) -> int:
+	return XP_TO_NEXT_BY_LEVEL[clampi(level - 1, 0, XP_TO_NEXT_BY_LEVEL.size() - 1)]
+
+
 func _on_mob_died(mob_id: int) -> void:
 	var xp_gain = GameState.monsters[mob_id].get("xp_reward", 1)
 	var p       = GameState.player
 	p["xp"]     = p.get("xp", 0) + xp_gain
-	if p["xp"] >= p.get("xp_to_next", 10):
-		p["xp"]    -= p["xp_to_next"]
-		p["level"]  = p.get("level", 1) + 1
-		_log("Level up! Now level %d" % p["level"])
+	var level_msg := ""
+	while p["xp"] >= p.get("xp_to_next", 4):
+		p["xp"]         -= p["xp_to_next"]
+		p["level"]       = p.get("level", 1) + 1
+		p["xp_to_next"]  = _xp_needed_for_level(p["level"])
+		p["max_hp"]      = p.get("max_hp", 10) + LEVEL_UP_MAX_HP_GAIN
+		p["hp"]          = min(p.get("hp", 0) + LEVEL_UP_HEAL, p["max_hp"])
+		level_msg = "Level up! Now level %d (+%d max HP, healed)." % [p["level"], LEVEL_UP_MAX_HP_GAIN]
 	GameState.player = p
 	refresh_stats()
 
@@ -559,6 +573,7 @@ func _on_mob_died(mob_id: int) -> void:
 	SaveManager.save()
 
 	var final_msgs: Array = []
+	if level_msg   != "": final_msgs.append(level_msg)
 	if drop_msg    != "": final_msgs.append(drop_msg)
 	if not final_msgs.is_empty():
 		_log(" ".join(final_msgs))

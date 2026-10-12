@@ -15,7 +15,11 @@ const CISTRONIA_MAX_GROUND_ITEMS_PER_FLOOR = 10
 
 const TILE_SIZE = 70
 const NUM_ROOMS = 12
-const MOB_SPAWN_CHANCE  = 0.6
+# Mob density ramps up with the floor number (GameState.level):
+# floor 1 = 0.35, floor 2 = 0.45, floor 3 = 0.55, floor 4+ = 0.6 (old value).
+const MOB_SPAWN_CHANCE_START = 0.35
+const MOB_SPAWN_CHANCE_STEP  = 0.1
+const MOB_SPAWN_CHANCE_MAX   = 0.6
 const BUSH_SPAWN_CHANCE = 0.3
 const ZONE_CYCLE_LENGTH = 3
 
@@ -120,6 +124,11 @@ func _room_cell_ok(pos: Vector2i, entry_key: String, anchor: Vector2i) -> bool:
 	return true
 
 
+func _get_mob_spawn_chance() -> float:
+	return minf(MOB_SPAWN_CHANCE_MAX,
+		MOB_SPAWN_CHANCE_START + MOB_SPAWN_CHANCE_STEP * (GameState.level - 1))
+
+
 func generate_tiles() -> void:
 	_gen_floor = {}
 
@@ -211,6 +220,8 @@ func generate_tiles() -> void:
 
 	# Populate GameState.
 	var pool = MobRegistry.get_pool(GameState.zone)
+	var mob_spawn_chance: float = _get_mob_spawn_chance()
+	print("[gen] floor ", GameState.level, " mob_spawn_chance=", mob_spawn_chance)   # TEMP: remove after verifying
 	var boss_key: String = ZoneRegistry.get_boss(GameState.zone)
 	var place_boss: bool = (GameState.zone_stage == ZONE_CYCLE_LENGTH) and boss_key != ""
 
@@ -243,7 +254,7 @@ func generate_tiles() -> void:
 		if key == boss_room_key:
 			mob_key = boss_key
 		elif tile_type == "room" and key != "0,0" and not pool.is_empty():
-			if randf() < MOB_SPAWN_CHANCE:
+			if randf() < mob_spawn_chance:
 				mob_key = pool[randi() % pool.size()]
 
 		var has_bush: bool = false
