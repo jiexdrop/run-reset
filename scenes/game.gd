@@ -39,6 +39,7 @@ var _target_position: Vector2 = Vector2.ZERO
 var _target_zoom:     Vector2 = Vector2.ONE
 var _spawned_tiles: Array = []
 var _door_node: Node2D = null
+var _player_marker: Node2D = null
 var _debug_portal_destination: Dictionary = {}
 
 # Scratch dungeon-generation state (only valid while generate_tiles() runs).
@@ -56,12 +57,39 @@ func _ready() -> void:
 		_check_restore_door()
 
 	call_deferred("_snap_camera_initial")
+	call_deferred("_ensure_exit_available")
 
 
 func _snap_camera_initial() -> void:
 	_update_camera_target()
 	camera_2d.position = _target_position
 	camera_2d.zoom     = _target_zoom
+
+
+## The exit is normally spawned when the last living mob dies. A floor that
+## generated without any mob (or one restored already cleared) would never
+## reach that path, leaving the run with no way forward — so check once at
+## floor start too. spawn_exit_door() no-ops while any mob is still alive.
+func _ensure_exit_available() -> void:
+	spawn_exit_door()
+
+
+## Whether the map may accept a player action right now. Clicks that arrive
+## while enemy turns are still resolving are dropped, so the player can't
+## chain-reveal tiles and skip the attacks they triggered.
+func _can_player_act() -> bool:
+	var combat_ui = get_tree().get_first_node_in_group("combat_ui")
+	if combat_ui == null:
+		return true
+	if combat_ui.has_method("can_player_act"):
+		return combat_ui.can_player_act()
+	return true
+
+
+func _deny_action() -> void:
+	var combat_ui = get_tree().get_first_node_in_group("combat_ui")
+	if combat_ui and combat_ui.has_method("log_message"):
+		combat_ui.log_message("Wait for your turn to finish.")
 
 func _apply_theme() -> void:
 	RenderingServer.set_default_clear_color(ZoneRegistry.get_bg_color(GameState.zone))
@@ -221,7 +249,6 @@ func generate_tiles() -> void:
 	# Populate GameState.
 	var pool = MobRegistry.get_pool(GameState.zone)
 	var mob_spawn_chance: float = _get_mob_spawn_chance()
-	print("[gen] floor ", GameState.level, " mob_spawn_chance=", mob_spawn_chance)   # TEMP: remove after verifying
 	var boss_key: String = ZoneRegistry.get_boss(GameState.zone)
 	var place_boss: bool = (GameState.zone_stage == ZONE_CYCLE_LENGTH) and boss_key != ""
 
@@ -449,6 +476,9 @@ func _build_door_node(world_pos: Vector2) -> Node2D:
 func _on_door_clicked(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			if not _can_player_act():
+				_deny_action()
+				return
 			call_deferred("_enter_next_level")
 
 
@@ -464,6 +494,7 @@ func _get_door_label() -> String:
 func _enter_next_level() -> void:
 	GameState.tiles = {}
 	GameState.monsters = []
+	GameState.player_tile = "0,0"
 	GameState.level += 1
 	if not _debug_portal_destination.is_empty():
 		GameState.zone = _debug_portal_destination["zone"]
@@ -528,6 +559,8 @@ func _spawn_tiles() -> void:
 				GameState.tiles[key].get("item_collected", false))
 
 	update_edge_dots()
+	_ensure_player_marker()
+	_update_player_marker()
 
 func _spawn_bush(tile_key: String, gx: int, gy: int, tile_visible: bool, harvested: bool) -> void:
 	var tile_node: Node2D = null
@@ -573,10 +606,71 @@ func _spawn_ground_item(tile_key: String, gx: int, gy: int, tile_visible: bool,
 		item.visible = tile_node.visible
 	)
 
+# ── Player marker ─────────────────────────────────────────────────────────────
+# A static "you are here" ring on the tile the player last stepped onto.
+# Drawn from primitives so no extra art is needed. Z-order on a tile:
+# tile art 0 < player marker 1 < mob indicator 2 < bushes/items 5, so loot
+# and monsters always stay readable above it.
+
+func _ensure_player_marker() -> void:
+	if is_instance_valid(_player_marker):
+		return
+
+	_player_marker = Node2D.new()
+	_player_marker.name   = "PlayerMarker"
+	# Above the tile art (0) but below the mob indicator on a tile (2), so a
+	# monster standing on your tile still reads clearly.
+	_player_marker.z_index = 1
+
+	var halo := Polygon2D.new()
+	halo.polygon = _circle_polygon(27.0, 36)
+	halo.color   = Color(1.0, 1.0, 1.0, 0.28)
+	_player_marker.add_child(halo)
+
+	var ring := Polygon2D.new()
+	ring.polygon = _circle_polygon(19.0, 32)
+	ring.color   = Color(0.1, 0.1, 0.1, 0.35)
+	_player_marker.add_child(ring)
+
+	var core := Polygon2D.new()
+	core.polygon = _circle_polygon(7.0, 20)
+	core.color   = Color(1.0, 1.0, 1.0, 0.95)
+	_player_marker.add_child(core)
+
+	add_child(_player_marker)
+
+
+func _circle_polygon(radius: float, segments: int) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	for i in range(segments):
+		var angle := TAU * float(i) / float(segments)
+		points.append(Vector2(cos(angle), sin(angle)) * radius)
+	return points
+
+
+func _update_player_marker() -> void:
+	if not is_instance_valid(_player_marker):
+		return
+
+	var key: String = GameState.player_tile
+	if key == "door_spawned" or not GameState.tiles.has(key):
+		key = "0,0"
+		GameState.player_tile = key
+
+	var parts = key.split(",")
+	if parts.size() < 2:
+		_player_marker.visible = false
+		return
+
+	_player_marker.position = Vector2(parts[0].to_int(), parts[1].to_int()) * TILE_SIZE
+	_player_marker.visible  = GameState.tiles[key].get("visible", false)
+
+
 # ── Camera ────────────────────────────────────────────────────────────────────
 
 func center_camera_on_revealed() -> void:
 	_update_camera_target()
+	_update_player_marker()
 	update_edge_dots()
 
 func _update_camera_target() -> void:
@@ -683,6 +777,9 @@ func _spawn_edge_dot(key: String) -> void:
 func _on_edge_dot_clicked(_viewport: Node, event: InputEvent, _shape_idx: int, key: String) -> void:
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			if not _can_player_act():
+				_deny_action()
+				return
 			for tile in _spawned_tiles:
 				if "%d,%d" % [tile.grid_x, tile.grid_y] == key:
 					tile.reveal()

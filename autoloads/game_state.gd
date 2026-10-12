@@ -18,6 +18,9 @@ var player: Dictionary = {
 }
 var zone: String = "default"
 var zone_stage: int = 1
+## Key of the tile the player is standing on ("x,y"). Every tile reveal is a
+## step, so this follows the most recently revealed tile.
+var player_tile: String = "0,0"
 var dirty: bool = false
 
 func mark_dirty() -> void:

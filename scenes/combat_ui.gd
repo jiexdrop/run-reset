@@ -24,6 +24,7 @@ const MOB_ATTACK_EFFECTS: Dictionary = {
 
 const SWORD_SOUND: AudioStream = preload("res://assets/sounds/items/sword.mp3")
 const EXPLOSION_SOUND: AudioStream = preload("res://assets/sounds/explosion/explosion.wav")
+const FIRE_SPELL_SOUND: AudioStream = preload("res://assets/sounds/spells/fire.wav")
 const HURT_SOUNDS = [
 	preload("res://assets/sounds/hurt/hurt_1.ogg"),
 	preload("res://assets/sounds/hurt/hurt_2.ogg"),
@@ -87,6 +88,7 @@ var _shielded_this_turn: bool = false
 func _ready() -> void:
 	add_to_group("combat_ui")
 	_setup_log_label()
+	_setup_floor_label()
 	refresh_stats()
 	pass_turn_button.disabled = true
 	turn_label.text = "Your Turn"
@@ -95,6 +97,44 @@ func _ready() -> void:
 		inv_ui.bag_opened.connect(_on_bag_opened)
 	InventoryState.inventory_changed.connect(_rebuild_attack_bar)
 	_rebuild_attack_bar()
+
+
+## Public gate for the map: reveals, door clicks and other world actions are
+## only accepted between enemy turns, so a queued enemy sequence can't be
+## skipped by clicking faster than it resolves.
+func can_player_act() -> bool:
+	if int(GameState.player.get("hp", 0)) <= 0:
+		return false   # nothing to click while the death screen is up
+	return _turn_phase == "player" and not _attack_in_progress and not _mob_turns_running
+
+
+## Public write access to the combat log for world nodes (bushes, pickups…)
+## that have no direct handle on this UI.
+func log_message(msg: String) -> void:
+	_log(msg)
+
+
+## "Floor 3 · Ribera" — or just the floor in the starting zone.
+func _floor_display() -> String:
+	if String(GameState.zone) == ZoneRegistry.DEFAULT_ZONE:
+		return "Floor %d" % GameState.level
+	return "Floor %d · %s" % [GameState.level, String(GameState.zone).capitalize()]
+
+
+func _setup_floor_label() -> void:
+	if level_label == null:
+		return
+	var row := level_label.get_parent()
+	if row == null:
+		return
+	var lbl := Label.new()
+	lbl.name = "FloorLabel"
+	lbl.text = _floor_display()
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	lbl.add_theme_font_size_override("font_size", 14)
+	lbl.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	row.add_child(lbl)
 
 
 func refresh_stats() -> void:
@@ -152,7 +192,8 @@ func end_combat() -> void:
 	set_combat_input_enabled(true)
 	turn_label.text = "Your Turn"
 	_clear_children(mob_row)
-	_log("")
+	# The log is left untouched: the level-up / loot line from the killing
+	# blow is worth keeping on screen instead of being wiped here.
 
 
 func _build_icon_grid(grid: GridContainer, current: int, maximum: int,
@@ -218,6 +259,14 @@ func _get_equipped_attack() -> Dictionary:
 	}
 
 
+## True when a bow is the equipped weapon. Arrows are only usable with one.
+func _has_bow_equipped() -> bool:
+	var idx = InventoryState.equipped_index
+	if idx < 0 or idx >= InventoryState.hotbar.size():
+		return false
+	return InventoryState.hotbar[idx].get("item_key", "") == "bow"
+
+
 func _rebuild_attack_bar() -> void:
 	if attack_bar == null:
 		return
@@ -265,6 +314,11 @@ func _cast_spell_from_hotbar(slot_idx: int) -> void:
 	if slot.get("frozen", false) or item_key == "":
 		return
 	if ItemRegistry.get_type(item_key) != "spell":
+		return
+
+	# Loose arrows need a bow in hand — the hotbar alone isn't enough.
+	if item_key == "arrow" and not _has_bow_equipped():
+		_log("You need a Hunting Bow equipped to loose an arrow.")
 		return
 
 	var target_id := _get_first_spell_target()
@@ -390,6 +444,10 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 		_throw_bomb(mob_id, atk)
 		return
 
+	if atk.attack_type == "fire_spell" or atk.attack_type == "ice_spell":
+		_cast_aoe_spell(atk, type_data)
+		return
+
 	var hits        = max(1, type_data.get("hits", 1))
 	var dmg_per_hit = max(1, int(round(atk.damage * type_data.get("damage_mult", 1.0) / hits)))
 
@@ -481,6 +539,91 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 			   # and resurface it there, exactly once
 	else:
 		on_player_moved()
+
+
+## ── Area spells ──────────────────────────────────────────────────────────────
+## Fire and Ice resolve against every enemy in the fight instead of a single
+## target. Ice additionally freezes the mobs it hits: a frozen mob skips its
+## next attack and drops any attack it had already telegraphed.
+
+func _collect_aoe_targets(atk: Dictionary) -> Array:
+	var targets: Array = []
+	for mob_id in _active_mob_ids:
+		if mob_id < 0 or mob_id >= GameState.monsters.size():
+			continue
+		var mob: Dictionary = GameState.monsters[mob_id]
+		if int(mob.get("hp", 0)) <= 0 or mob.get("burrowed", false):
+			continue
+		# Phased armor still shrugs off spells it doesn't allow.
+		if not _get_phase_allowance(mob, atk)["allowed"]:
+			continue
+		targets.append(mob_id)
+	return targets
+
+
+func _cast_aoe_spell(atk: Dictionary, type_data: Dictionary) -> void:
+	var targets: Array = _collect_aoe_targets(atk)
+	if targets.is_empty():
+		_log("The spell fizzles — there is nothing to hit.")
+		return
+
+	var freezes    := String(atk.get("attack_type", "")) == "ice_spell"
+	var spell_name := String(atk.get("name", "Spell"))
+	var element    := ItemRegistry.get_element(String(atk.get("item_key", "")))
+	var base_dmg: int = max(1, int(round(float(atk.get("damage", 1)) * float(type_data.get("damage_mult", 1.0)))))
+
+	_attack_in_progress = true
+	if not freezes:
+		_play_sound(FIRE_SPELL_SOUND)
+	var killed: Array = []
+	for mob_id in targets:
+		var mob: Dictionary = GameState.monsters[mob_id]
+		var mult: float = mob.get("resistances", {}).get(element, 1.0)
+		var dmg: int = max(1, int(round(base_dmg * mult)))
+		var hp_after: int = max(0, int(mob.get("hp", 0)) - dmg)
+		mob["hp"] = _guard_cistronia_lethal(hp_after)
+		GameState.monsters[mob_id] = mob
+
+		_spawn_attack_effect(mob_id, type_data)
+		var card = _get_card_for_mob(mob_id)
+		if card:
+			card.refresh_from_state()
+
+		if freezes and int(GameState.monsters[mob_id].get("hp", 0)) > 0:
+			_skip_next_turn[mob_id] = true
+			_telegraphed.erase(mob_id)
+			if card:
+				card.set_telegraphed(false)
+
+		if int(GameState.monsters[mob_id].get("hp", 0)) <= 0:
+			killed.append(mob_id)
+
+		if targets.size() > 1:
+			await get_tree().create_timer(HIT_DELAY).timeout
+			if not is_inside_tree():
+				return
+	_attack_in_progress = false
+
+	if atk.get("is_spell", false) and int(atk.get("hotbar_index", -1)) >= 0:
+		InventoryState.consume_hotbar_item(int(atk.get("hotbar_index", -1)))
+
+	GameState.mark_dirty()
+	SaveManager.save()
+
+	if killed.size() < targets.size():
+		if freezes:
+			_log("%s freezes every enemy in place — they skip their next attack!" % spell_name)
+		else:
+			_log("%s engulfs every enemy in flames!" % spell_name)
+
+	for mob_id in killed:
+		await _on_mob_died(mob_id)
+		if not is_inside_tree():
+			return
+
+	if _active_mob_ids.is_empty():
+		return   # the death flow already closed the fight
+	on_player_moved()
 
 ## Bombs resolve immediately on throw. The armor-phase check already happened
 ## in _do_player_attack before we got here, so a deflected bomb is never consumed.
@@ -651,8 +794,7 @@ func _on_mob_died(mob_id: int) -> void:
 	if _active_mob_ids.is_empty():
 		end_combat()
 		_check_all_mobs_cleared()
-	else:
-		_log("")
+	# Otherwise the level-up / loot line stays up while the fight continues.
 
 func _check_all_mobs_cleared() -> void:
 	for monster in GameState.monsters:
@@ -666,7 +808,6 @@ func _check_all_mobs_cleared() -> void:
 
 
 func _do_mob_turn(mob_id: int) -> void:
-	print(">>> _do_mob_turn START, mob_id=", mob_id)
 	if _player_stunned:
 		_player_stunned = false
 		_log("You were stunned — mob skips!")
@@ -761,12 +902,8 @@ func _do_mob_turn(mob_id: int) -> void:
 			await _self_destruct_mob(mob_id)
 		return
 
-	print("Mob turn picked: ", atk.get("attack_name", "?")) 
-
 	await _play_attack_lunge(card)
-	print(">>> resumed after lunge, mob_id=", mob_id)
 	if not is_inside_tree():
-		print("_do_mob_turn bailed: not inside tree")
 		return
 
 	_spawn_mob_attack_effect(mob_id, atk.get("attack_name", ""))
@@ -925,7 +1062,6 @@ func _apply_poison_status(p: Dictionary) -> String:
 ## Freeze lasts exactly five subsequent mob turns. Repeated applications
 ## refresh the duration and lock one more inventory slot, up to three slots.
 func _apply_freeze_status(p: Dictionary) -> String:
-	print("_apply_freeze_status called, frozen_turns before: ", p.get("frozen_turns", 0))
 	var already_frozen = p.get("frozen_turns", 0) > 0
 	p["frozen_turns"] = 5
 	var froze_slot = InventoryState.freeze_random_slot(3)
@@ -943,7 +1079,8 @@ func _apply_freeze_status(p: Dictionary) -> String:
 	return msg
 	
 func _on_player_died() -> void:
-	_log("You died! Resetting...")
+	set_combat_input_enabled(false)
+	_log("You died on %s! Resetting..." % _floor_display())
 	await get_tree().create_timer(1.5).timeout
 	SaveManager.reset()
 	get_tree().change_scene_to_file("res://scenes/init.tscn")
@@ -1070,53 +1207,79 @@ func _on_inventory_slot_clicked(index: int) -> void:
 		return
 
 	if item_key == "berries":
-		var p = GameState.player
-		p["hp"] = min(p.get("hp", 0) + 3, p.get("max_hp", 10))
-		GameState.player = p
-		InventoryState.consume_hotbar_item(index)
-		GameState.mark_dirty()
-		SaveManager.save()
-		refresh_stats()
-		_log("You eat berries and restore 3 HP.")
+		_try_heal(index, 3, "You eat the berries and restore %d HP.")
+		return
 
 	if item_key == "health_potion":
-		var p = GameState.player
-		p["hp"] = min(p.get("hp", 0) + ItemRegistry.get_heal_amount(item_key), p.get("max_hp", 10))
-		GameState.player = p
-		InventoryState.consume_hotbar_item(index)
-		GameState.mark_dirty()
-		SaveManager.save()
-		refresh_stats()
-		_log("You drink a Health Potion and restore %d HP." % ItemRegistry.get_heal_amount(item_key))
+		_try_heal(index, ItemRegistry.get_heal_amount(item_key),
+			"You drink the Health Potion and restore %d HP.")
 		return
 
 	if item_key == "energy_potion":
 		var p = GameState.player
-		p["energy"] = min(p.get("energy", 0) + ItemRegistry.get_energy_amount(item_key), p.get("max_energy", 10))
+		if int(p.get("energy", 0)) >= int(p.get("max_energy", 10)):
+			_log("You're already brimming with energy.")
+			return
+		var energy_before: int = p.get("energy", 0)
+		p["energy"] = mini(energy_before + ItemRegistry.get_energy_amount(item_key),
+			int(p.get("max_energy", 10)))
+		var energy_restored: int = int(p["energy"]) - energy_before
 		GameState.player = p
 		InventoryState.consume_hotbar_item(index)
 		GameState.mark_dirty()
 		SaveManager.save()
 		refresh_stats()
-		_log("You drink an Energy Potion and restore %d energy." % ItemRegistry.get_energy_amount(item_key))
+		_log("You drink the Energy Potion and restore %d energy." % energy_restored)
 		return
 
 	if item_key == "lemon":
 		var p = GameState.player
-		p["energy"] = min(p.get("energy", 0) + ItemRegistry.get_energy_amount(item_key), p.get("max_energy", 10))
-		p["electrified_turns"] = ItemRegistry.get_electrified_turns(item_key)
+		var energy_gain := ItemRegistry.get_energy_amount(item_key)
+		var zap_turns := ItemRegistry.get_electrified_turns(item_key)
+		if int(p.get("energy", 0)) >= int(p.get("max_energy", 10)) \
+				and int(p.get("electrified_turns", 0)) > 0:
+			_log("You're full of energy and already Electrified.")
+			return
+		var energy_before: int = p.get("energy", 0)
+		p["energy"] = mini(energy_before + energy_gain, int(p.get("max_energy", 10)))
+		var energy_restored: int = int(p["energy"]) - energy_before
+		p["electrified_turns"] = zap_turns
 		GameState.player = p
 		InventoryState.consume_hotbar_item(index)
 		GameState.mark_dirty()
 		SaveManager.save()
 		refresh_stats()
-		var energy_gain := ItemRegistry.get_energy_amount(item_key)
-		var zap_turns := ItemRegistry.get_electrified_turns(item_key)
 		_log(
-			"Lemon bite! Electrified %d turns\n(+%d energy)." % [zap_turns, energy_gain],
-			"You bite a lemon — sour current courses through you! Restored %d energy, Electrified for %d turns. You can now finish foes in Cistronia." % [energy_gain, zap_turns]
+			"Lemon bite! Electrified %d turns\n(+%d energy)." % [zap_turns, energy_restored],
+			"You bite a lemon — sour current courses through you! Restored %d energy, Electrified for %d turns. You can now finish foes in Cistronia." % [energy_restored, zap_turns]
 		)
 		return
+
+
+## Shared heal path for berries and potions: never consumed at full HP, and
+## poisoned bodies recover only half (min 1) of the usual amount.
+func _try_heal(slot_idx: int, base_amount: int, verb: String) -> void:
+	var p = GameState.player
+	if int(p.get("hp", 0)) >= int(p.get("max_hp", 10)):
+		_log("You're already at full HP.")
+		return
+
+	var hp_before: int = p.get("hp", 0)
+	var amount: int = base_amount
+	if int(p.get("poison_turns", 0)) > 0:
+		amount = max(1, base_amount / 2)
+	p["hp"] = mini(hp_before + amount, int(p.get("max_hp", 10)))
+	var restored: int = int(p["hp"]) - hp_before
+	GameState.player = p
+	InventoryState.consume_hotbar_item(slot_idx)
+	GameState.mark_dirty()
+	SaveManager.save()
+	refresh_stats()
+
+	var msg := verb % restored
+	if int(GameState.player.get("poison_turns", 0)) > 0:
+		msg += " The poison saps some of the recovery."
+	_log(msg)
 
 func _on_bag_opened() -> void:
 	if is_instance_valid(_bag_ui):

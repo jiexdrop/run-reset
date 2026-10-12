@@ -44,6 +44,10 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 func _harvest() -> void:
 	if _harvested:
 		return
+	# The berries only leave the bush if they fit in the pack.
+	if InventoryState.add_item("berries", 1) > 0:
+		_log_message("Your pack is full — no room for berries.")
+		return
 	_harvested = true
 	_refresh()
 
@@ -52,10 +56,10 @@ func _harvest() -> void:
 		GameState.tiles[_tile_key]["bush_harvested"] = true
 	GameState.mark_dirty()
 	SaveManager.save()
-
-	# Add berries to the first free inventory slot (hotbar first, then bag).
-	_give_berries()
+	_log_message("You pick some berries.")
 
 
-func _give_berries() -> void:
-	InventoryState.add_item("berries", 1)
+func _log_message(msg: String) -> void:
+	var combat_ui = get_tree().get_first_node_in_group("combat_ui")
+	if combat_ui and combat_ui.has_method("log_message"):
+		combat_ui.log_message(msg)

@@ -19,11 +19,15 @@ func set_mob(mob_key: String, mob_dead: bool) -> void:
 
 func reveal() -> void:
 	visible = true
-	GameState.tiles["%d,%d" % [grid_x, grid_y]]["visible"] = true
+	var key = "%d,%d" % [grid_x, grid_y]
+	GameState.tiles[key]["visible"] = true
+	GameState.player_tile = key
 	GameState.mark_dirty()
 	SaveManager.save()
 	_play_discover_sound()
-	get_tree().get_first_node_in_group("game").center_camera_on_revealed()
+	var game = get_tree().get_first_node_in_group("game")
+	if game:
+		game.center_camera_on_revealed()   # camera, player marker, edge dots
 	_refresh_mob_indicator()  # show indicator now that tile is visible
 
 	# If this tile has a live mob, add it to combat automatically.
@@ -44,7 +48,6 @@ func _play_discover_sound() -> void:
 	player.play()
 
 func _refresh_mob_indicator() -> void:
-	print("_refresh_mob_indicator")
 	if is_instance_valid(_mob_indicator):
 		_mob_indicator.queue_free()
 	_mob_indicator = null
@@ -59,6 +62,7 @@ func _refresh_mob_indicator() -> void:
 	var indicator := Node2D.new()
 	indicator.name = "MobIndicator"
 	indicator.position = Vector2.ZERO
+	indicator.z_index = 2   # above the tile art and the player marker
 
 	var sprite : Sprite2D = Sprite2D.new()
 	sprite.texture = MobView.MOB_SPRITES.get(def.sprite)

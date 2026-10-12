@@ -3,15 +3,15 @@ extends Node
 const SAVE_PATH = "user://save.json"
 
 func save() -> void:
-	print("[SAVING]")
 	var data = {
-		"tiles":      GameState.tiles,
-		"monsters":   GameState.monsters,
-		"player":     GameState.player,
-		"inventory":  InventoryState.to_dict(),
-		"zone":       GameState.zone,
-		"zone_stage": GameState.zone_stage,
-		"level":      GameState.level,
+		"tiles":       GameState.tiles,
+		"monsters":    GameState.monsters,
+		"player":      GameState.player,
+		"player_tile": GameState.player_tile,
+		"inventory":   InventoryState.to_dict(),
+		"zone":        GameState.zone,
+		"zone_stage":  GameState.zone_stage,
+		"level":       GameState.level,
 	}
 	var f = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	f.store_string(JSON.stringify(data))
@@ -30,6 +30,8 @@ func load_save() -> void:
 		GameState.zone       = parsed.get("zone", "default")
 		GameState.zone_stage = parsed.get("zone_stage", 1)
 		GameState.level      = parsed.get("level", 1)
+		var saved_tile = str(parsed.get("player_tile", "0,0"))
+		GameState.player_tile = saved_tile if GameState.tiles.has(saved_tile) else "0,0"
 		_sync_phase_config()
 	#if InventoryState.DEBUG_GIVE_WEAPONS:
 		#InventoryState.debug_grant_weapons_and_spells()
@@ -72,6 +74,7 @@ func reset() -> void:
 	GameState.zone       = "default"
 	GameState.zone_stage = 1
 	GameState.level      = 1
+	GameState.player_tile = "0,0"
 	GameState.dirty      = false
 	InventoryState.from_dict({})
 	InventoryState.add_item("health_potion", 1)   # starter kit: one free potion

@@ -55,7 +55,7 @@ var _items: Dictionary = {
 	"berries": {
 		"name": "Berries",
 		"icon": preload("res://assets/items/berries.png"),
-		"desc": "A handful of wild berries. Restores 1 HP.",
+		"desc": "A handful of wild berries. Restores 3 HP — half as much while poisoned.",
 		"max_stack": 16,
 		"type": "consumable",
 	},
@@ -64,7 +64,7 @@ var _items: Dictionary = {
 	"health_potion": {
 		"name": "Health Potion",
 		"icon": preload("res://assets/items/health_potion.png"),
-		"desc": "A vial of restorative brew. Restores 6 HP.",
+		"desc": "A vial of restorative brew. Restores 6 HP — half as much while poisoned.",
 		"max_stack": 8,
 		"type": "consumable",
 		"heal_amount": 6,
@@ -120,7 +120,7 @@ var _items: Dictionary = {
 	"spell_ice": {
 		"name": "Ice Spell",
 		"icon": preload("res://assets/items/spell_ice.png"),
-		"desc": "Conjures a shard of ice to strike the enemy.",
+		"desc": "Conjures a freezing blast that hits every enemy in combat and freezes them solid — a frozen enemy skips its next attack.",
 		"max_stack": 8,
 		"type": "spell",
 		"damage": 2,
@@ -131,7 +131,7 @@ var _items: Dictionary = {
 	"spell_fire": {
 		"name": "Fire Spell",
 		"icon": preload("res://assets/items/spell_fire.png"),
-		"desc": "Hurls a burst of flame at the enemy.",
+		"desc": "Hurls a burst of flame that engulfs every enemy in combat.",
 		"max_stack": 8,
 		"type": "spell",
 		"damage": 3,
@@ -170,7 +170,7 @@ var _items: Dictionary = {
 	"arrow": {
 		"name": "Arrow",
 		"icon": load("res://assets/items/arrow.png"),
-		"desc": "A flint-tipped arrow. Loose it straight from the hotbar. Throwable: cracks the Raptor Skeleton's armored plates.",
+		"desc": "A flint-tipped arrow, loosed straight from the hotbar — but only while a Hunting Bow is equipped. Throwable: cracks the Raptor Skeleton's armored plates.",
 		"max_stack": 8,
 		"type": "spell",
 		"damage": 3,
