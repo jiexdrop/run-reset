@@ -76,8 +76,6 @@ const LUNGE_OUT_DIST  = 18.0
 ## XP needed to reach the next level, indexed by current player level - 1.
 ## The last value repeats for all higher levels.
 const XP_TO_NEXT_BY_LEVEL: Array[int] = [4, 6, 8, 10]
-const LEVEL_UP_MAX_HP_GAIN = 1
-const LEVEL_UP_HEAL        = 3
 
 var _mob_turns_running: bool = false
 var _turn_phase: String = "player"
@@ -558,9 +556,8 @@ func _on_mob_died(mob_id: int) -> void:
 		p["xp"]         -= p["xp_to_next"]
 		p["level"]       = p.get("level", 1) + 1
 		p["xp_to_next"]  = _xp_needed_for_level(p["level"])
-		p["max_hp"]      = p.get("max_hp", 10) + LEVEL_UP_MAX_HP_GAIN
-		p["hp"]          = min(p.get("hp", 0) + LEVEL_UP_HEAL, p["max_hp"])
-		level_msg = "Level up! Now level %d (+%d max HP, healed)." % [p["level"], LEVEL_UP_MAX_HP_GAIN]
+		p["hp"] = p.get("max_hp", 10)
+		level_msg = "Level up! Now level %d (fully healed)." % p["level"]
 	GameState.player = p
 	refresh_stats()
 
