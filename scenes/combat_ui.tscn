@@ -44,34 +44,38 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 offset_bottom = -160.0
 grow_horizontal = 2
-grow_vertical = 2
+grow_vertical = 1
 
 [node name="StatsSection" type="VBoxContainer" parent="MarginContainer/ContentArea/VBox" unique_id=200000003]
 layout_mode = 2
 size_flags_vertical = 0
 
-[node name="LevelLabel" type="Label" parent="MarginContainer/ContentArea/VBox/StatsSection" unique_id=200000004]
+[node name="LevelRow" type="HBoxContainer" parent="MarginContainer/ContentArea/VBox/StatsSection" unique_id=200000050]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="LevelLabel" type="Label" parent="MarginContainer/ContentArea/VBox/StatsSection/LevelRow" unique_id=200000004]
 layout_mode = 2
 text = "Level 1"
 
-[node name="HeartsGrid" type="GridContainer" parent="MarginContainer/ContentArea/VBox/StatsSection" unique_id=1283081124]
-layout_mode = 2
-columns = 12
-
-[node name="EffectBadge" type="HBoxContainer" parent="MarginContainer/ContentArea/VBox/StatsSection" unique_id=200000030]
+[node name="EffectBadge" type="HBoxContainer" parent="MarginContainer/ContentArea/VBox/StatsSection/LevelRow" unique_id=200000030]
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="Icon" type="TextureRect" parent="MarginContainer/ContentArea/VBox/StatsSection/EffectBadge" unique_id=200000031]
+[node name="Icon" type="TextureRect" parent="MarginContainer/ContentArea/VBox/StatsSection/LevelRow/EffectBadge" unique_id=200000031]
 custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
 texture = ExtResource("2_34x8n")
 stretch_mode = 5
 
-[node name="Label" type="Label" parent="MarginContainer/ContentArea/VBox/StatsSection/EffectBadge" unique_id=200000032]
+[node name="Label" type="Label" parent="MarginContainer/ContentArea/VBox/StatsSection/LevelRow/EffectBadge" unique_id=200000032]
 layout_mode = 2
 text = "PSN"
+
+[node name="HeartsGrid" type="GridContainer" parent="MarginContainer/ContentArea/VBox/StatsSection" unique_id=1283081124]
+layout_mode = 2
+columns = 12
 
 [node name="EnergyGrid" type="GridContainer" parent="MarginContainer/ContentArea/VBox/StatsSection" unique_id=1040683733]
 layout_mode = 2

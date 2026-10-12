@@ -41,7 +41,7 @@ const SELF_DESTRUCT_ATTACKS: Dictionary = {
 ##   "other"  — everything else (spells, shields); never breaks armor.
 const BOW_SOUND_PATH := "res://assets/sounds/items/bow.mp3"
 
-@onready var level_label:      Label           = $MarginContainer/ContentArea/VBox/StatsSection/LevelLabel
+@onready var level_label:      Label           = $MarginContainer/ContentArea/VBox/StatsSection/LevelRow/LevelLabel
 @onready var hearts_grid:      GridContainer   = $MarginContainer/ContentArea/VBox/StatsSection/HeartsGrid
 @onready var energy_grid:      GridContainer   = $MarginContainer/ContentArea/VBox/StatsSection/EnergyGrid
 @onready var exp_row:          HBoxContainer   = $MarginContainer/ContentArea/VBox/StatsSection/ExpRow
@@ -51,9 +51,9 @@ const BOW_SOUND_PATH := "res://assets/sounds/items/bow.mp3"
 @onready var combat_section:   Control         = $MarginContainer/ContentArea/VBox/CombatSection
 @onready var log_label:        Label           = $MarginContainer/ContentArea/VBox/LogLabel
 @onready var inv_ui:           Control         = $MarginContainer/ContentArea/InventoryUI
-@onready var effect_badge:     Control         = $MarginContainer/ContentArea/VBox/StatsSection/EffectBadge
-@onready var effect_icon:      TextureRect     = $MarginContainer/ContentArea/VBox/StatsSection/EffectBadge/Icon
-@onready var effect_label:     Label           = $MarginContainer/ContentArea/VBox/StatsSection/EffectBadge/Label
+@onready var effect_badge:     Control         = $MarginContainer/ContentArea/VBox/StatsSection/LevelRow/EffectBadge
+@onready var effect_icon:      TextureRect     = $MarginContainer/ContentArea/VBox/StatsSection/LevelRow/EffectBadge/Icon
+@onready var effect_label:     Label           = $MarginContainer/ContentArea/VBox/StatsSection/LevelRow/EffectBadge/Label
 @onready var pass_turn_button: Button          = $MarginContainer/ContentArea/VBox/CombatSection/PassTurnButton
 @onready var turn_label:       Label           = $MarginContainer/ContentArea/VBox/TurnLabel
 
@@ -1319,4 +1319,3 @@ func _on_shield_pressed() -> void:
 	_shielded_this_turn = true
 	_log("Shield raised — the next telegraphed attack will be partially blocked.")
 	_on_pass_turn_pressed(true)
-
