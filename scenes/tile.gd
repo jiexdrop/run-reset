@@ -17,21 +17,42 @@ func set_mob(mob_key: String, mob_dead: bool) -> void:
 	_refresh_mob_indicator()
 
 
+func _ready() -> void:
+	# Revealed tiles are walkable: clicking one steps the marker onto it.
+	input_pickable = true
+	input_event.connect(_on_tile_clicked)
+
+
+func _on_tile_clicked(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if not visible:
+			return
+		var game = get_tree().get_first_node_in_group("game")
+		if game and game.has_method("on_tile_clicked"):
+			game.on_tile_clicked("%d,%d" % [grid_x, grid_y])
+
+
 func reveal() -> void:
 	visible = true
 	var key = "%d,%d" % [grid_x, grid_y]
 	GameState.tiles[key]["visible"] = true
-	GameState.player_tile = key
 	GameState.mark_dirty()
 	SaveManager.save()
 	_play_discover_sound()
+
+	# A tile with a live mob is approached, not entered: the marker stays put
+	# and combat starts as usual. Free tiles (empty or mob already dead) are
+	# stepped onto.
+	var live_mob := _mob_key != "" and not _mob_dead
 	var game = get_tree().get_first_node_in_group("game")
+	if game and not live_mob:
+		game.set_player_tile(key)
 	if game:
 		game.center_camera_on_revealed()   # camera, player marker, edge dots
 	_refresh_mob_indicator()  # show indicator now that tile is visible
 
 	# If this tile has a live mob, add it to combat automatically.
-	if _mob_key != "" and not _mob_dead:
+	if live_mob:
 		_trigger_combat()
 
 	# Moving/discovering a tile gives every currently active enemy a chance

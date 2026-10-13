@@ -612,6 +612,33 @@ func _spawn_ground_item(tile_key: String, gx: int, gy: int, tile_visible: bool,
 # tile art 0 < player marker 1 < mob indicator 2 < bushes/items 5, so loot
 # and monsters always stay readable above it.
 
+
+## Clicking an already-revealed tile steps the player onto it — unless a live
+## mob holds that tile, in which case the marker stays where it is.
+func on_tile_clicked(key: String) -> void:
+	if not _can_player_act():
+		_deny_action()
+		return
+	var tdata: Dictionary = GameState.tiles.get(key, {})
+	if not tdata.get("visible", false):
+		return
+	var mob_key: String = tdata.get("mob", "")
+	if mob_key != "" and not tdata.get("mob_dead", false):
+		return   # occupied — you never stand on a live mob
+	set_player_tile(key)
+
+
+## Moves the marker onto a tile the player is allowed to stand on and
+## persists the position.
+func set_player_tile(key: String) -> void:
+	if key == "door_spawned" or not GameState.tiles.has(key):
+		return
+	GameState.player_tile = key
+	GameState.mark_dirty()
+	SaveManager.save()
+	_update_player_marker()
+
+
 func _ensure_player_marker() -> void:
 	if is_instance_valid(_player_marker):
 		return
@@ -662,8 +689,14 @@ func _update_player_marker() -> void:
 		_player_marker.visible = false
 		return
 
+	var tdata: Dictionary = GameState.tiles[key]
 	_player_marker.position = Vector2(parts[0].to_int(), parts[1].to_int()) * TILE_SIZE
-	_player_marker.visible  = GameState.tiles[key].get("visible", false)
+
+	# Never drawn on a tile a live mob holds (also covers older saves that
+	# still recorded the marker on an occupied tile).
+	var mob_key: String = tdata.get("mob", "")
+	var occupied: bool = mob_key != "" and not tdata.get("mob_dead", false)
+	_player_marker.visible = tdata.get("visible", false) and not occupied
 
 
 # ── Camera ────────────────────────────────────────────────────────────────────
