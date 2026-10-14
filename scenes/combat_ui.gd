@@ -1166,7 +1166,7 @@ func _setup_log_label() -> void:
 	log_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_WORD_ELLIPSIS
 	log_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	# Reserve 2 full lines so the VBox doesn't resize/reflow when messages change.
-	log_label.custom_minimum_size = Vector2(0, 60)
+	log_label.custom_minimum_size = Vector2(0, 46)
 
 
 func _clear_children(node: Node) -> void:

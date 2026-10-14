@@ -34,17 +34,14 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 
-[node name="ContentArea" type="Control" parent="MarginContainer" unique_id=200000040]
+[node name="ContentArea" type="VBoxContainer" parent="MarginContainer" unique_id=200000040]
 layout_mode = 2
 
 [node name="VBox" type="VBoxContainer" parent="MarginContainer/ContentArea" unique_id=200000002]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_bottom = -160.0
-grow_horizontal = 2
-grow_vertical = 1
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_horizontal = 3
+clip_contents = true
 
 [node name="StatsSection" type="VBoxContainer" parent="MarginContainer/ContentArea/VBox" unique_id=200000003]
 layout_mode = 2
@@ -145,13 +142,9 @@ layout_mode = 2
 size_flags_vertical = 0
 
 [node name="InventoryUI" parent="MarginContainer/ContentArea" unique_id=1195445285 instance=ExtResource("2_invui")]
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -160.0
-grow_horizontal = 2
-grow_vertical = 0
+layout_mode = 2
+custom_minimum_size = Vector2(0, 160)
+size_flags_vertical = 0
+size_flags_horizontal = 3
 
 [connection signal="pressed" from="MarginContainer/ContentArea/VBox/CombatSection/PassTurnButton" to="." method="_on_pass_turn_pressed"]
