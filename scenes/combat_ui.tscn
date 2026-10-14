@@ -4,6 +4,13 @@
 [ext_resource type="Texture2D" uid="uid://7gfohimiyr26" path="res://assets/ui/poison.png" id="2_34x8n"]
 [ext_resource type="PackedScene" uid="uid://bpu8ms8fk3kf1" path="res://scenes/inventory_ui.tscn" id="2_invui"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_logbg"]
+bg_color = Color(0, 0, 0, 0.45)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
 [node name="CombatUi" type="Control" unique_id=1815585971]
 layout_mode = 3
 anchors_preset = 15
@@ -38,10 +45,10 @@ theme_override_constants/margin_bottom = 8
 layout_mode = 2
 
 [node name="VBox" type="VBoxContainer" parent="MarginContainer/ContentArea" unique_id=200000002]
-layout_mode = 2
-size_flags_vertical = 3
-size_flags_horizontal = 3
 clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 
 [node name="StatsSection" type="VBoxContainer" parent="MarginContainer/ContentArea/VBox" unique_id=200000003]
 layout_mode = 2
@@ -133,25 +140,20 @@ layout_mode = 2
 size_flags_vertical = 0
 
 [node name="LogLabel" type="RichTextLabel" parent="MarginContainer/ContentArea/VBox" unique_id=200000014]
-layout_mode = 2
 custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 0
-bbcode_enabled = false
-scroll_active = true
+theme_override_styles/normal = SubResource("StyleBoxFlat_logbg")
 scroll_following = true
-fit_content = false
-autowrap_mode = 3
-mouse_filter = 0
 
 [node name="Separator3" type="HSeparator" parent="MarginContainer/ContentArea/VBox" unique_id=200000015]
 layout_mode = 2
 size_flags_vertical = 0
 
 [node name="InventoryUI" parent="MarginContainer/ContentArea" unique_id=1195445285 instance=ExtResource("2_invui")]
-layout_mode = 2
 custom_minimum_size = Vector2(0, 160)
+layout_mode = 2
 size_flags_vertical = 0
-size_flags_horizontal = 3
 
 [connection signal="pressed" from="MarginContainer/ContentArea/VBox/CombatSection/PassTurnButton" to="." method="_on_pass_turn_pressed"]
