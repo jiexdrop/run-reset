@@ -50,7 +50,7 @@ const BOW_SOUND_PATH := "res://assets/sounds/items/bow.mp3"
 @onready var mob_row:          HBoxContainer   = $MarginContainer/ContentArea/VBox/CombatSection/MobCarousel/MobScroll/MobRow
 @onready var attack_bar:       HFlowContainer  = $MarginContainer/ContentArea/VBox/AttackBar
 @onready var combat_section:   Control         = $MarginContainer/ContentArea/VBox/CombatSection
-@onready var log_label:        Label           = $MarginContainer/ContentArea/VBox/LogLabel
+@onready var log_label:        RichTextLabel   = $MarginContainer/ContentArea/VBox/LogLabel
 @onready var inv_ui:           Control         = $MarginContainer/ContentArea/InventoryUI
 @onready var effect_badge:     Control         = $MarginContainer/ContentArea/VBox/StatsSection/LevelRow/EffectBadge
 @onready var effect_icon:      TextureRect     = $MarginContainer/ContentArea/VBox/StatsSection/LevelRow/EffectBadge/Icon
@@ -64,9 +64,6 @@ var _attack_in_progress: bool = false
 
 var _scroll_index: int = 0
 const CARD_WIDTH = 130
-
-const LOG_PREVIEW_CHARS = 110
-const LOG_TOOLTIP_LINE_WIDTH = 45
 
 var _bag_ui: Control = null
 const ICONS_PER_ROW = 12
@@ -1121,52 +1118,18 @@ func _get_card_for_mob(mob_id: int) -> Node:
 func _log(msg: String, tooltip_msg: String = "") -> void:
 	if log_label == null:
 		return
-	# Compact display + full text on hover so long messages can't push the
-	# layout into the inventory area.
-	var full := tooltip_msg if tooltip_msg != "" else msg
-	var preview := msg
-	if preview.length() > LOG_PREVIEW_CHARS:
-		preview = preview.substr(0, LOG_PREVIEW_CHARS).strip_edges(false, true) + "…"
-	log_label.text = preview
-	# Only keep a tooltip when there's more to show; empty tooltip disables hover popup.
-	# Default tooltips never wrap, so pre-break lines to avoid a huge horizontal popup.
-	if full.length() > preview.length():
-		log_label.tooltip_text = _wrap_tooltip(full)
-	else:
-		log_label.tooltip_text = ""
-
-
-## Default engine tooltips don't autowrap — a long single line runs
-## off-screen horizontally. Pre-insert newlines at word boundaries.
-func _wrap_tooltip(text: String, line_width: int = LOG_TOOLTIP_LINE_WIDTH) -> String:
-	var words := text.split(" ", false)
-	var lines: Array[String] = []
-	var current := ""
-	for w in words:
-		var candidate := w if current == "" else current + " " + w
-		if candidate.length() > line_width and current != "":
-			lines.append(current)
-			current = w
-		else:
-			current = candidate
-	if current != "":
-		lines.append(current)
-	return "\n".join(lines)
-
-
-## Locks the combat log to a fixed 2-line height: wraps short messages,
-## ellipsizes anything longer, and reserves space so growing text never
-## overlaps the inventory below. Full text stays available via tooltip.
-func _setup_log_label() -> void:
-	if log_label == null:
+	if msg == "":
 		return
-	log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	log_label.max_lines_visible = 2
-	log_label.clip_text = true
-	log_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_WORD_ELLIPSIS
-	log_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	# Reserve 2 full lines so the VBox doesn't resize/reflow when messages change.
-	log_label.custom_minimum_size = Vector2(0, 46)
+	log_label.append_text(msg + "\n")
+	if log_label.get_paragraph_count() > 100:
+		log_label.remove_paragraph(0)
+
+
+## Locks the combat log to its scrollable history box: clears any editor
+## text and keeps the view pinned to the newest line.
+func _setup_log_label() -> void:
+	log_label.clear()
+	log_label.scroll_following = true
 
 
 func _clear_children(node: Node) -> void:
