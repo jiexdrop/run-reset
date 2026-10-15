@@ -42,6 +42,11 @@ const SELF_DESTRUCT_ATTACKS: Dictionary = {
 ##   "other"  — everything else (spells, shields); never breaks armor.
 const BOW_SOUND_PATH := "res://assets/sounds/items/bow.mp3"
 
+## Seconds from the start of the bow sound until the string is released
+## (end of the "charge" part). TUNE THIS BY EAR so the arrow leaves the bow
+## exactly when you hear it fire.
+const BOW_RELEASE_DELAY := 1.25
+
 @onready var level_label:      Label           = $MarginContainer/ContentArea/VBox/StatsSection/LevelRow/LevelLabel
 @onready var hearts_grid:      GridContainer   = $MarginContainer/ContentArea/VBox/StatsSection/HeartsGrid
 @onready var energy_grid:      GridContainer   = $MarginContainer/ContentArea/VBox/StatsSection/EnergyGrid
@@ -460,6 +465,20 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 		var mob = GameState.monsters[mob_id]
 		if mob.get("hp", 0) <= 0:
 			break
+
+		# Bow: sound starts now, the arrow is released when the string snaps,
+		# and damage lands only when the arrow arrives.
+		if is_bow_shot:
+			_play_bow_sound()
+			await get_tree().create_timer(BOW_RELEASE_DELAY).timeout
+			if not is_inside_tree():
+				return
+			_spawn_attack_effect(mob_id, type_data)
+			await get_tree().create_timer(ArrowEffect.FLIGHT_TIME).timeout
+			if not is_inside_tree():
+				return
+			mob = GameState.monsters[mob_id]
+
 		var hp_after = max(0, mob.get("hp", 0) - dmg_per_hit)
 		var guarded = _guard_cistronia_lethal(hp_after)
 		if guarded != hp_after:
@@ -467,14 +486,15 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 		mob["hp"] = guarded
 		GameState.monsters[mob_id] = mob
 
-		if is_sword:
-			_play_sword_sound()
-		elif is_bow_shot:
-			_play_bow_sound()
-		_spawn_attack_effect(mob_id, type_data)
+
+		if not is_bow_shot:
+			if is_sword:
+				_play_sword_sound()
+			_spawn_attack_effect(mob_id, type_data)
 		var card = _get_card_for_mob(mob_id)
 		if card:
 			card.refresh_from_state()
+
 
 		if hits > 1 and i < hits - 1:
 			await get_tree().create_timer(HIT_DELAY).timeout
@@ -700,16 +720,38 @@ func _detonate_bomb(mob_id: int, dmg: int) -> void:
 	# Surviving target: the throw uses the turn, like any other attack.
 	on_player_moved()
 
-func _spawn_attack_effect(mob_id: int, type_data: Dictionary) -> void:
+func _spawn_attack_effect(mob_id: int, type_data: Dictionary) -> Node2D:
 	var scene: PackedScene = type_data.get("effect_scene", null)
 	if scene == null:
-		return
+		return null
 	var card = _get_card_for_mob(mob_id)
 	if card == null:
-		return
+		return null
 	var fx: Node2D = scene.instantiate()
-	fx.position = Vector2(60, 40)  # roughly centered over MobCard's sprite
+	fx.position = _effect_anchor(card)
 	card.add_child(fx)
+	return fx
+
+
+## Center of the mob's sprite in card-local coordinates, so effects land on
+## the enemy art instead of a hard-coded guess. Replicates TextureRect's
+## STRETCH_KEEP_ASPECT placement (fit + top-left anchored) because the
+## sprite's rect carries a 40px gutter the art doesn't fill.
+func _effect_anchor(card: Node) -> Vector2:
+	var card_ctrl := card as Control
+	if card_ctrl == null:
+		return Vector2(60, 40)
+	var sprite := card_ctrl.get_node_or_null("SpriteRow/Sprite") as TextureRect
+	if sprite == null or sprite.texture == null:
+		return Vector2(60, 40)   # fallback: old hard-coded offset
+	var rect := sprite.get_global_rect()
+	var tex_size := sprite.texture.get_size()
+	if tex_size.x <= 0.0 or tex_size.y <= 0.0:
+		return Vector2(60, 40)
+	var drawn := Vector2(tex_size.x * rect.size.y / tex_size.y, rect.size.y)
+	if drawn.x > rect.size.x:
+		drawn = Vector2(rect.size.x, tex_size.y * rect.size.x / tex_size.x)
+	return rect.position + drawn / 2.0 - card_ctrl.global_position
 
 
 func _play_sound(stream: AudioStream) -> void:
