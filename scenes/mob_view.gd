@@ -44,6 +44,9 @@ const RAPTOR_EXPOSED_PATH := "res://assets/mobs/cistronia/raptor-skeleton-expose
 var mob_id:   int        = -1
 var mob_data: Dictionary = {}
 var _mob_attacks: Array = []
+var _resist_signature := ""
+var _dbg_last_gpos := Vector2.INF
+var _dbg_last_rect := Rect2()
 
 @onready var name_label:   Label         = $NameLabel
 @onready var resist_row:   HBoxContainer = $ResistRow
@@ -178,10 +181,12 @@ func _refresh_name_label() -> void:
 	name_label.text = base_name
 
 
-func _add_armor_phase_badge() -> void:
+## Adds the armor-phase hint badge when the mob is a phased boss.
+## Returns true when a badge was added.
+func _add_armor_phase_badge() -> bool:
 	var split := int(mob_data.get("phase_split_hp", -1))
 	if split < 0 or String(mob_data.get("sprite", "")) != "raptor_skeleton":
-		return
+		return false
 	var hp := int(mob_data.get("hp", 1))
 	var badge := PanelContainer.new()
 	var style := StyleBoxFlat.new()
@@ -201,6 +206,7 @@ func _add_armor_phase_badge() -> void:
 	lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.5))
 	badge.add_child(lbl)
 	resist_row.add_child(badge)
+	return true
 
 
 ## Phase sprite for the Raptor Skeleton, or null to keep the base sprite.
@@ -233,13 +239,19 @@ func _on_sprite_gui_input(event: InputEvent) -> void:
 			attack_requested.emit(mob_id)
 
 func _refresh_resist_label() -> void:
+	var phase := 0
+	if String(mob_data.get("sprite", "")) == "raptor_skeleton" and int(mob_data.get("phase_split_hp", -1)) >= 0:
+		phase = 1 if int(mob_data.get("hp", 1)) > int(mob_data.get("phase_split_hp", -1)) else 2
+	var sig := "%s|%d" % [str(mob_data.get("resistances", {})), phase]
+	if sig == _resist_signature:
+		return
+	_resist_signature = sig
 	for child in resist_row.get_children():
+		resist_row.remove_child(child)
 		child.queue_free()
 
 	var resistances: Dictionary = mob_data.get("resistances", {})
-	var has_any := false
-
-	_add_armor_phase_badge()
+	var has_any := _add_armor_phase_badge()
 
 	for element in resistances:
 		var mult: float = resistances[element]
@@ -279,3 +291,14 @@ func _refresh_resist_label() -> void:
 		resist_row.add_child(badge)
 
 	resist_row.visible = has_any
+
+
+func _process(_d: float) -> void:
+	var r := sprite.get_global_rect()
+	if _dbg_last_gpos != Vector2.INF and (global_position != _dbg_last_gpos or r != _dbg_last_rect):
+		print("[FXDBG] mob %d moved: card %s -> %s | sprite_rect %s -> %s | frame %d" % [
+			mob_id, _dbg_last_gpos, global_position, _dbg_last_rect, r,
+			Engine.get_process_frames()])
+		print_stack()
+	_dbg_last_gpos = global_position
+	_dbg_last_rect = r

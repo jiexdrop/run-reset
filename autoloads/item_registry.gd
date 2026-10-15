@@ -55,7 +55,7 @@ var _items: Dictionary = {
 	"berries": {
 		"name": "Berries",
 		"icon": preload("res://assets/items/berries.png"),
-		"desc": "A handful of wild berries. Restores 3 HP — half as much while poisoned.",
+		"desc": "A handful of wild berries. Restores 3 HP.",
 		"max_stack": 16,
 		"type": "consumable",
 	},
@@ -64,7 +64,7 @@ var _items: Dictionary = {
 	"health_potion": {
 		"name": "Health Potion",
 		"icon": preload("res://assets/items/health_potion.png"),
-		"desc": "A vial of restorative brew. Restores 6 HP — half as much while poisoned.",
+		"desc": "A vial of restorative brew. Restores 6 HP.",
 		"max_stack": 8,
 		"type": "consumable",
 		"heal_amount": 6,

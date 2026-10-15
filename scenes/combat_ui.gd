@@ -71,6 +71,7 @@ const CARD_WIDTH = 130
 
 var _bag_ui: Control = null
 var _chat: Node = null
+var _fx_layer: Node2D = null
 const ICONS_PER_ROW = 12
 
 const DEATH_VFX_DURATION = 1.5
@@ -172,7 +173,8 @@ func _update_effect_badge(p: Dictionary) -> void:
 func add_mob_to_combat(mob_idx: int) -> void:
 	if _active_mob_ids.has(mob_idx):
 		return
-	if _active_mob_ids.is_empty():
+	var first_mob := _active_mob_ids.is_empty()
+	if first_mob:
 		_active_mob_ids  = [mob_idx]
 		_player_stunned  = false
 		_log("")
@@ -180,7 +182,10 @@ func add_mob_to_combat(mob_idx: int) -> void:
 		_active_mob_ids.append(mob_idx)
 		_log("A new enemy joins the fight!")
 	pass_turn_button.disabled = false
-	_rebuild_mob_cards()
+	if first_mob:
+		_rebuild_mob_cards()
+	else:
+		_add_mob_card(mob_idx)
 
 
 func end_combat() -> void:
@@ -225,14 +230,27 @@ func _rebuild_mob_cards() -> void:
 		return
 	_clear_children(mob_row)
 	for mob_id in _active_mob_ids:
-		if mob_id >= GameState.monsters.size():
-			continue
-		var mob_view = MobViewScene.instantiate()
-		mob_row.add_child(mob_view)
-		mob_view.setup(mob_id, GameState.monsters[mob_id])
-		mob_view.set_telegraphed(_telegraphed.has(mob_id), _telegraphed.get(mob_id, {}))
-		mob_view.attack_requested.connect(_on_attack_requested)
-		mob_view.mob_died.connect(_on_mob_died)
+		_add_mob_card(mob_id)
+
+
+func _add_mob_card(mob_id: int) -> void:
+	if mob_row == null:
+		return
+	if mob_id >= GameState.monsters.size():
+		return
+	var mob_view = MobViewScene.instantiate()
+	mob_row.add_child(mob_view)
+	mob_view.setup(mob_id, GameState.monsters[mob_id])
+	mob_view.set_telegraphed(_telegraphed.has(mob_id), _telegraphed.get(mob_id, {}))
+	mob_view.attack_requested.connect(_on_attack_requested)
+	mob_view.mob_died.connect(_on_mob_died)
+
+
+func _remove_mob_card(mob_id: int) -> void:
+	var card := _get_card_for_mob(mob_id)
+	if card:
+		mob_row.remove_child(card)
+		card.queue_free()
 
 
 ## Reads the currently equipped hotbar item and returns a normalized attack
@@ -469,14 +487,18 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 		# Bow: sound starts now, the arrow is released when the string snaps,
 		# and damage lands only when the arrow arrives.
 		if is_bow_shot:
+			_fxdbg("bow:start", mob_id)
 			_play_bow_sound()
 			await get_tree().create_timer(BOW_RELEASE_DELAY).timeout
 			if not is_inside_tree():
 				return
+			_fxdbg("bow:released", mob_id)
 			_spawn_attack_effect(mob_id, type_data)
+			_fxdbg("fx:spawned", mob_id)
 			await get_tree().create_timer(ArrowEffect.FLIGHT_TIME).timeout
 			if not is_inside_tree():
 				return
+			_fxdbg("bow:landed", mob_id)
 			mob = GameState.monsters[mob_id]
 
 		var hp_after = max(0, mob.get("hp", 0) - dmg_per_hit)
@@ -491,9 +513,11 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 			if is_sword:
 				_play_sword_sound()
 			_spawn_attack_effect(mob_id, type_data)
+			_fxdbg("sword:fx:spawned", mob_id)
 		var card = _get_card_for_mob(mob_id)
 		if card:
 			card.refresh_from_state()
+			_fxdbg("refreshed" if is_bow_shot else "sword:refreshed", mob_id)
 
 
 		if hits > 1 and i < hits - 1:
@@ -727,31 +751,45 @@ func _spawn_attack_effect(mob_id: int, type_data: Dictionary) -> Node2D:
 	var card = _get_card_for_mob(mob_id)
 	if card == null:
 		return null
+	var layer := _ensure_fx_layer()
 	var fx: Node2D = scene.instantiate()
-	fx.position = _effect_anchor(card)
-	card.add_child(fx)
+	fx.position = _effect_anchor_global(card) - layer.global_position   # BEFORE add_child (ArrowEffect tweens from its spawn position in _ready)
+	layer.add_child(fx)
 	return fx
 
 
-## Center of the mob's sprite in card-local coordinates, so effects land on
-## the enemy art instead of a hard-coded guess. Replicates TextureRect's
+## VFX live outside every container-managed card so a spawned effect can
+## never disturb (or be disturbed by) the mob row's layout.
+func _ensure_fx_layer() -> Node2D:
+	if is_instance_valid(_fx_layer):
+		return _fx_layer
+	_fx_layer = Node2D.new()
+	_fx_layer.name = "FxLayer"
+	_fx_layer.z_index = 50
+	add_child(_fx_layer)
+	return _fx_layer
+
+
+## Global (canvas) center of the mob's sprite, so effects land on the enemy
+## art instead of a hard-coded guess. Replicates TextureRect's
 ## STRETCH_KEEP_ASPECT placement (fit + top-left anchored) because the
 ## sprite's rect carries a 40px gutter the art doesn't fill.
-func _effect_anchor(card: Node) -> Vector2:
+func _effect_anchor_global(card: Node) -> Vector2:
 	var card_ctrl := card as Control
 	if card_ctrl == null:
-		return Vector2(60, 40)
+		return Vector2.ZERO
+	var fallback := card_ctrl.global_position + Vector2(60, 40)
 	var sprite := card_ctrl.get_node_or_null("SpriteRow/Sprite") as TextureRect
 	if sprite == null or sprite.texture == null:
-		return Vector2(60, 40)   # fallback: old hard-coded offset
+		return fallback
 	var rect := sprite.get_global_rect()
 	var tex_size := sprite.texture.get_size()
 	if tex_size.x <= 0.0 or tex_size.y <= 0.0:
-		return Vector2(60, 40)
+		return fallback
 	var drawn := Vector2(tex_size.x * rect.size.y / tex_size.y, rect.size.y)
 	if drawn.x > rect.size.x:
 		drawn = Vector2(rect.size.x, tex_size.y * rect.size.x / tex_size.x)
-	return rect.position + drawn / 2.0 - card_ctrl.global_position
+	return rect.position + drawn / 2.0
 
 
 func _play_sound(stream: AudioStream) -> void:
@@ -827,7 +865,7 @@ func _on_mob_died(mob_id: int) -> void:
 	_active_mob_ids.erase(mob_id)
 	_skip_next_turn.erase(mob_id)
 	_telegraphed.erase(mob_id)
-	_rebuild_mob_cards()
+	_remove_mob_card(mob_id)
 
 	if _active_mob_ids.is_empty():
 		end_combat()
@@ -869,7 +907,7 @@ func _do_mob_turn(mob_id: int) -> void:
 	card.set_telegraphed(false)
 	if _shielded_this_turn:
 		_shielded_this_turn = false  # v1: blocks only the first resolving mob
-		await _play_attack_lunge(card)
+		await _play_attack_lunge(card, mob_id)
 		if not is_inside_tree():
 			return
 		_spawn_mob_attack_effect(mob_id, atk.get("attack_name", ""))
@@ -940,7 +978,7 @@ func _do_mob_turn(mob_id: int) -> void:
 			await _self_destruct_mob(mob_id)
 		return
 
-	await _play_attack_lunge(card)
+	await _play_attack_lunge(card, mob_id)
 	if not is_inside_tree():
 		return
 
@@ -1156,6 +1194,20 @@ func _get_card_for_mob(mob_id: int) -> Node:
 	return null
 
 
+## TEMPORARY [FXDBG] layout probe — remove once the mob-position bug is pinned.
+func _fxdbg(tag: String, mob_id: int) -> void:
+	var c := _get_card_for_mob(mob_id) as MobView
+	if c == null:
+		print("[FXDBG] %s: no card" % tag)
+		return
+	var s := c.get_node_or_null("SpriteRow/Sprite") as TextureRect
+	var rect := s.get_global_rect() if s else Rect2()
+	print("[FXDBG] %s | card.pos=%s gpos=%s | sprite_rect=%s | mob_row.size=%s | resist_children=%d | hearts_children=%d | frame=%d" % [
+		tag, c.position, c.global_position, rect, mob_row.size,
+		c.resist_row.get_child_count(), hearts_grid.get_child_count(),
+		Engine.get_process_frames()])
+
+
 func _log(msg: String, tooltip_msg: String = "") -> void:
 	if msg == "":
 		return
@@ -1170,6 +1222,7 @@ func _clear_children(node: Node) -> void:
 	if node == null:
 		return
 	for child in node.get_children():
+		node.remove_child(child)
 		child.queue_free()
 
 func _scroll_mobs(direction: int) -> void:
@@ -1178,6 +1231,8 @@ func _scroll_mobs(direction: int) -> void:
 	mob_scroll.scroll_horizontal = _scroll_index * CARD_WIDTH
 
 func _on_inventory_slot_clicked(index: int) -> void:
+	if _attack_in_progress or _mob_turns_running:
+		return
 	if _turn_phase != "player":
 		return
 	var slot = InventoryState.hotbar[index]
@@ -1253,8 +1308,7 @@ func _on_inventory_slot_clicked(index: int) -> void:
 		return
 
 
-## Shared heal path for berries and potions: never consumed at full HP, and
-## poisoned bodies recover only half (min 1) of the usual amount.
+## Shared heal path for berries and potions: never consumed at full HP.
 func _try_heal(slot_idx: int, base_amount: int, verb: String) -> void:
 	var p = GameState.player
 	if int(p.get("hp", 0)) >= int(p.get("max_hp", 10)):
@@ -1262,10 +1316,7 @@ func _try_heal(slot_idx: int, base_amount: int, verb: String) -> void:
 		return
 
 	var hp_before: int = p.get("hp", 0)
-	var amount: int = base_amount
-	if int(p.get("poison_turns", 0)) > 0:
-		amount = max(1, base_amount / 2)
-	p["hp"] = mini(hp_before + amount, int(p.get("max_hp", 10)))
+	p["hp"] = mini(hp_before + base_amount, int(p.get("max_hp", 10)))
 	var restored: int = int(p["hp"]) - hp_before
 	GameState.player = p
 	InventoryState.consume_hotbar_item(slot_idx)
@@ -1273,10 +1324,7 @@ func _try_heal(slot_idx: int, base_amount: int, verb: String) -> void:
 	SaveManager.save()
 	refresh_stats()
 
-	var msg := verb % restored
-	if int(GameState.player.get("poison_turns", 0)) > 0:
-		msg += " The poison saps some of the recovery."
-	_log(msg)
+	_log(verb % restored)
 
 func _on_bag_opened() -> void:
 	if is_instance_valid(_bag_ui):
@@ -1334,9 +1382,10 @@ func _spawn_mob_attack_effect(mob_id: int, attack_name: String) -> void:
 	var card = _get_card_for_mob(mob_id)
 	if card == null:
 		return
+	var layer := _ensure_fx_layer()
 	var fx: Node2D = scene.instantiate()
-	fx.position = Vector2(60, 40)  # roughly centered over MobCard's sprite
-	card.add_child(fx)
+	fx.position = _effect_anchor_global(card) - layer.global_position   # BEFORE add_child
+	layer.add_child(fx)
 
 
 ## Shows the outcome where the action happened, rather than leaving the
@@ -1436,9 +1485,10 @@ func set_combat_input_enabled(enabled: bool) -> void:
 
 ## Quick back-and-forth "lunge" on the mob's card to sell an attack —
 ## moves toward the player, then springs back to its original spot.
-func _play_attack_lunge(card: Control) -> void:
+func _play_attack_lunge(card: Control, mob_id: int = -1) -> void:
 	if card == null or not is_instance_valid(card):
 		return
+	_fxdbg("lunge:start", mob_id)
 	var start_y = card.position.y
 	var tween = create_tween()
 	tween.tween_property(card, "position:y", start_y - LUNGE_OUT_DIST, 0.12)\
@@ -1446,6 +1496,9 @@ func _play_attack_lunge(card: Control) -> void:
 	tween.tween_property(card, "position:y", start_y, 0.18)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	await tween.finished
+	_fxdbg("lunge:end", mob_id)
+	if is_instance_valid(mob_row):
+		mob_row.queue_sort()
 	if not is_instance_valid(card):
 		return
 
