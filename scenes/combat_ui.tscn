@@ -4,13 +4,6 @@
 [ext_resource type="Texture2D" uid="uid://7gfohimiyr26" path="res://assets/ui/poison.png" id="2_34x8n"]
 [ext_resource type="PackedScene" uid="uid://bpu8ms8fk3kf1" path="res://scenes/inventory_ui.tscn" id="2_invui"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_logbg"]
-bg_color = Color(0, 0, 0, 0.45)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
 [node name="CombatUi" type="Control" unique_id=1815585971]
 layout_mode = 3
 anchors_preset = 15
@@ -138,14 +131,6 @@ size_flags_vertical = 0
 [node name="AttackBar" type="HFlowContainer" parent="MarginContainer/ContentArea/VBox" unique_id=200000013]
 layout_mode = 2
 size_flags_vertical = 0
-
-[node name="LogLabel" type="RichTextLabel" parent="MarginContainer/ContentArea/VBox" unique_id=200000014]
-custom_minimum_size = Vector2(0, 64)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 0
-theme_override_styles/normal = SubResource("StyleBoxFlat_logbg")
-scroll_following = true
 
 [node name="Separator3" type="HSeparator" parent="MarginContainer/ContentArea/VBox" unique_id=200000015]
 layout_mode = 2

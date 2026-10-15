@@ -3,7 +3,7 @@ extends Control
 const DebugItemBrowser = preload("res://scenes/debug_item_browser.gd")
 const DebugZoneBrowser = preload("res://scenes/debug_zone_browser.gd")
 
-@onready var game: Node2D = $HBoxContainer/SubViewportContainer/SubViewport/Game
+@onready var game: Node2D = $HBoxContainer/LeftColumn/SubViewportContainer/SubViewport/Game
 @onready var combat_ui: Control = $HBoxContainer/CombatUi
 
 func _ready() -> void:

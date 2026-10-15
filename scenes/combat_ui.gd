@@ -50,7 +50,6 @@ const BOW_SOUND_PATH := "res://assets/sounds/items/bow.mp3"
 @onready var mob_row:          HBoxContainer   = $MarginContainer/ContentArea/VBox/CombatSection/MobCarousel/MobScroll/MobRow
 @onready var attack_bar:       HFlowContainer  = $MarginContainer/ContentArea/VBox/AttackBar
 @onready var combat_section:   Control         = $MarginContainer/ContentArea/VBox/CombatSection
-@onready var log_label:        RichTextLabel   = $MarginContainer/ContentArea/VBox/LogLabel
 @onready var inv_ui:           Control         = $MarginContainer/ContentArea/InventoryUI
 @onready var effect_badge:     Control         = $MarginContainer/ContentArea/VBox/StatsSection/LevelRow/EffectBadge
 @onready var effect_icon:      TextureRect     = $MarginContainer/ContentArea/VBox/StatsSection/LevelRow/EffectBadge/Icon
@@ -66,6 +65,7 @@ var _scroll_index: int = 0
 const CARD_WIDTH = 130
 
 var _bag_ui: Control = null
+var _chat: Node = null
 const ICONS_PER_ROW = 12
 
 const DEATH_VFX_DURATION = 1.5
@@ -84,7 +84,6 @@ var _shielded_this_turn: bool = false
 
 func _ready() -> void:
 	add_to_group("combat_ui")
-	_setup_log_label()
 	_setup_floor_label()
 	refresh_stats()
 	pass_turn_button.disabled = true
@@ -1116,20 +1115,13 @@ func _get_card_for_mob(mob_id: int) -> Node:
 
 
 func _log(msg: String, tooltip_msg: String = "") -> void:
-	if log_label == null:
-		return
 	if msg == "":
 		return
-	log_label.append_text(msg + "\n")
-	if log_label.get_paragraph_count() > 100:
-		log_label.remove_paragraph(0)
-
-
-## Locks the combat log to its scrollable history box: clears any editor
-## text and keeps the view pinned to the newest line.
-func _setup_log_label() -> void:
-	log_label.clear()
-	log_label.scroll_following = true
+	# Looked up lazily: ChatLog lives in main.tscn, outside this scene.
+	if _chat == null or not is_instance_valid(_chat):
+		_chat = get_tree().get_first_node_in_group("chat_log")
+	if _chat:
+		_chat.add_message(msg)
 
 
 func _clear_children(node: Node) -> void:
