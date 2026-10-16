@@ -1195,17 +1195,12 @@ func _get_card_for_mob(mob_id: int) -> Node:
 
 
 ## TEMPORARY [FXDBG] layout probe — remove once the mob-position bug is pinned.
-func _fxdbg(tag: String, mob_id: int) -> void:
+func _fxdbg(_tag: String, mob_id: int) -> void:
 	var c := _get_card_for_mob(mob_id) as MobView
 	if c == null:
-		print("[FXDBG] %s: no card" % tag)
 		return
 	var s := c.get_node_or_null("SpriteRow/Sprite") as TextureRect
-	var rect := s.get_global_rect() if s else Rect2()
-	print("[FXDBG] %s | card.pos=%s gpos=%s | sprite_rect=%s | mob_row.size=%s | resist_children=%d | hearts_children=%d | frame=%d" % [
-		tag, c.position, c.global_position, rect, mob_row.size,
-		c.resist_row.get_child_count(), hearts_grid.get_child_count(),
-		Engine.get_process_frames()])
+	var _rect := s.get_global_rect() if s else Rect2()
 
 
 func _log(msg: String, tooltip_msg: String = "") -> void:

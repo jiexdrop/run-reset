@@ -294,11 +294,5 @@ func _refresh_resist_label() -> void:
 
 
 func _process(_d: float) -> void:
-	var r := sprite.get_global_rect()
-	if _dbg_last_gpos != Vector2.INF and (global_position != _dbg_last_gpos or r != _dbg_last_rect):
-		print("[FXDBG] mob %d moved: card %s -> %s | sprite_rect %s -> %s | frame %d" % [
-			mob_id, _dbg_last_gpos, global_position, _dbg_last_rect, r,
-			Engine.get_process_frames()])
-		print_stack()
 	_dbg_last_gpos = global_position
-	_dbg_last_rect = r
+	_dbg_last_rect = sprite.get_global_rect()
