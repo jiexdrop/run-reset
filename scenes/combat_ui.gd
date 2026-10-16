@@ -838,8 +838,7 @@ func _on_mob_died(mob_id: int) -> void:
 		p["xp"]         -= p["xp_to_next"]
 		p["level"]       = p.get("level", 1) + 1
 		p["xp_to_next"]  = _xp_needed_for_level(p["level"])
-		p["hp"] = p.get("max_hp", 10)
-		level_msg = "Level up! Now level %d (fully healed)." % p["level"]
+		level_msg = "Level up! Now level %d." % p["level"]
 	GameState.player = p
 	refresh_stats()
 
