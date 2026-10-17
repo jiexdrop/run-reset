@@ -254,7 +254,7 @@ func _build_registry() -> void:
 	skeleton.attacks    = [bone_slash, splinter] as Array[MobAttackData]
 	skeleton.loot_table = [
 		{ "item_key": "lemon", "chance": 0.25, "min": 1, "max": 1 },
-		{ "item_key": "arrow", "chance": 0.40, "min": 1, "max": 2 },
+		{ "item_key": "arrow", "chance": 0.40, "min": 3, "max": 5 },
 		{ "item_key": "health_potion", "chance": 0.35, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.15, "min": 1, "max": 1 },
 	] as Array[Dictionary]
@@ -289,7 +289,7 @@ func _build_registry() -> void:
 	raptor_skeleton.phase2_deny_message = "Loose fragments scatter harmlessly — finish its exposed bones with a sword!"
 	raptor_skeleton.loot_table  = [
 		{ "item_key": "lemon", "chance": 0.70, "min": 1, "max": 1 },
-		{ "item_key": "arrow", "chance": 0.80, "min": 3, "max": 5 },
+		{ "item_key": "arrow", "chance": 0.80, "min": 5, "max": 8 },
 		{ "item_key": "bomb", "chance": 0.4, "min": 1, "max": 1 },
 		{ "item_key": "health_potion", "chance": 0.80, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.30, "min": 1, "max": 1 },

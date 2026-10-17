@@ -174,7 +174,7 @@ var _items: Dictionary = {
 		"desc": "Ammunition for the Hunting Bow — every shot consumes 1 Arrow. Ground caches hold a bundle of 16. Throwable: cracks the Raptor Skeleton's armored plates.",
 		"max_stack": 64,
 		"type": "ammo",
-		"ground_amount": 16,
+		"ground_amount": 8,
 	},
 
 	# ── Shields ───────────────────────────────────────────────────────────────
