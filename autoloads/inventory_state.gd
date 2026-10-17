@@ -71,6 +71,21 @@ func add_item(item_key: String, amount: int = 1) -> int:
 	return amount
 
 
+## Total amount of item_key that add_item() could currently place.
+func get_free_space(item_key: String) -> int:
+	var max_stack: int = ItemRegistry.get_max_stack(item_key)
+	var space := 0
+	for arr in [hotbar, bag]:
+		for slot in arr:
+			if slot.get("frozen", false):
+				continue
+			if slot["item_key"] == item_key:
+				space += max_stack - slot.get("count", 0)
+			elif slot["item_key"] == "":
+				space += max_stack
+	return space
+
+
 ## True when the hotbar or bag holds at least one of item_key.
 func has_item(item_key: String) -> bool:
 	for arr in [hotbar, bag]:

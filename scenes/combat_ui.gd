@@ -1413,8 +1413,14 @@ func _roll_loot(mob_id: int) -> String:
 	for entry in loot_table:
 		if randf() < entry.get("chance", 0.0):
 			var amount = randi_range(entry.get("min", 1), entry.get("max", 1))
-			InventoryState.add_item(entry.get("item_key", ""), amount)
-			drops.append("%s x%d" % [ItemRegistry.get_item_name(entry.get("item_key", "")), amount])
+			var item_key: String = entry.get("item_key", "")
+			var leftover: int = InventoryState.add_item(item_key, amount)
+			print("[LOOT] key=%s rolled=%d leftover=%d" % [item_key, amount, leftover])
+			var added: int = amount - leftover
+			if added > 0:
+				drops.append("%s x%d" % [ItemRegistry.get_item_name(item_key), added])
+			if leftover > 0:
+				drops.append("%s x%d lost (pack full)" % [ItemRegistry.get_item_name(item_key), leftover])
 
 	if drops.is_empty():
 		return ""

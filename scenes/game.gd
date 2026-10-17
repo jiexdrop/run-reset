@@ -11,9 +11,6 @@ const MAX_GROUND_ITEMS_PER_FLOOR = 4
 # so its spread is richer than other zones but no longer lemon-dominated.
 const CISTRONIA_GROUND_ITEM_SPAWN_CHANCE = 0.4
 const CISTRONIA_MAX_GROUND_ITEMS_PER_FLOOR = 7
-const BOW_REPLACEMENT_ARROW_COUNT = 16
-const ARROW_GROUND_COUNT_MIN = 2
-const ARROW_GROUND_COUNT_MAX = 4
 
 @onready var camera_2d: Camera2D = $Camera2D
 
@@ -309,9 +306,10 @@ func generate_tiles() -> void:
 			if picked_item_key == "bow" and InventoryState.has_item("bow"):
 				# The player already owns a bow: spawn arrows instead.
 				picked_item_key = "arrow"
-				picked_item_count = BOW_REPLACEMENT_ARROW_COUNT
-			elif picked_item_key == "arrow":
-				picked_item_count = rng.randi_range(ARROW_GROUND_COUNT_MIN, ARROW_GROUND_COUNT_MAX)
+			# Ground quantity comes from the item's registry range (1 unless
+			# the item declares a bundle range, e.g. arrows). Rolled once here
+			# so tile dict, badge and pickup all share the same number.
+			picked_item_count = ItemRegistry.get_ground_amount(picked_item_key)
 
 		GameState.tiles[key] = {
 			"visible":        key == "0,0",

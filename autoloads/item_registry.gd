@@ -171,10 +171,11 @@ var _items: Dictionary = {
 	"arrow": {
 		"name": "Arrow",
 		"icon": load("res://assets/items/arrow.png"),
-		"desc": "Ammunition for the Hunting Bow — every shot consumes 1 Arrow. Ground caches hold a bundle of 16. Throwable: cracks the Raptor Skeleton's armored plates.",
+		"desc": "Ammunition for the Hunting Bow — every shot consumes 1 Arrow. Ground caches hold a bundle of 5–8. Throwable: cracks the Raptor Skeleton's armored plates.",
 		"max_stack": 64,
 		"type": "ammo",
-		"ground_amount": 8,
+		"ground_amount_min": 5,
+		"ground_amount_max": 8,
 	},
 
 	# ── Shields ───────────────────────────────────────────────────────────────
@@ -215,11 +216,15 @@ func get_max_stack(item_key: String) -> int:
 		return _items[item_key].get("max_stack", 1)
 	return 1
 
-## How many of this item a ground cache hands over when picked up (1 unless
-## the item declares a bundle size, e.g. arrows).
+## How many of this item a ground cache holds when it is generated (1 unless
+## the item declares a bundle range, e.g. arrows). Rolled once per cache, the
+## same way mob loot tables roll min..max.
 func get_ground_amount(item_key: String) -> int:
 	if _items.has(item_key):
-		return maxi(1, int(_items[item_key].get("ground_amount", 1)))
+		var entry: Dictionary = _items[item_key]
+		var amount_min: int = int(entry.get("ground_amount_min", 1))
+		var amount_max: int = int(entry.get("ground_amount_max", 1))
+		return maxi(1, randi_range(amount_min, amount_max))
 	return 1
 
 func get_type(item_key: String) -> String:
