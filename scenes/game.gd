@@ -3,13 +3,17 @@ extends Node2D
 const TILE = preload("uid://ceosbosrytods")
 const BUSH = preload("res://scenes/bush.tscn")
 const GROUND_ITEM = preload("res://scenes/ground_item.tscn")
-const DEFAULT_GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield", "health_potion", "energy_potion", "arrow", "bow"]
+const DEFAULT_GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield", "health_potion", "energy_potion", "arrow", "arrow", "bow"]
 const GROUND_ITEM_SPAWN_CHANCE = 0.25
 const MAX_GROUND_ITEMS_PER_FLOOR = 4
-# Cistronia runs on lemons (Electrified is required to finish foes there),
-# so it gets a much richer ground-item spread than other zones.
-const CISTRONIA_GROUND_ITEM_SPAWN_CHANCE = 0.5
-const CISTRONIA_MAX_GROUND_ITEMS_PER_FLOOR = 10
+# Cistronia's ground items lean on potions and arrows — lemons are one entry
+# among many (Electrified is a shortcut for finishing foes, not a requirement),
+# so its spread is richer than other zones but no longer lemon-dominated.
+const CISTRONIA_GROUND_ITEM_SPAWN_CHANCE = 0.4
+const CISTRONIA_MAX_GROUND_ITEMS_PER_FLOOR = 7
+const BOW_REPLACEMENT_ARROW_COUNT = 16
+const ARROW_GROUND_COUNT_MIN = 2
+const ARROW_GROUND_COUNT_MAX = 4
 
 @onready var camera_2d: Camera2D = $Camera2D
 
@@ -298,6 +302,17 @@ func generate_tiles() -> void:
 			if has_ground_item:
 				ground_items_placed += 1
 
+		var picked_item_key := ""
+		var picked_item_count := 1
+		if has_ground_item:
+			picked_item_key = str(ground_item_pool[rng.randi_range(0, ground_item_pool.size() - 1)])
+			if picked_item_key == "bow" and InventoryState.has_item("bow"):
+				# The player already owns a bow: spawn arrows instead.
+				picked_item_key = "arrow"
+				picked_item_count = BOW_REPLACEMENT_ARROW_COUNT
+			elif picked_item_key == "arrow":
+				picked_item_count = rng.randi_range(ARROW_GROUND_COUNT_MIN, ARROW_GROUND_COUNT_MAX)
+
 		GameState.tiles[key] = {
 			"visible":        key == "0,0",
 			"type":           tile_type,
@@ -306,7 +321,8 @@ func generate_tiles() -> void:
 			"has_bush":       has_bush,
 			"bush_harvested": false,
 			"has_ground_item":   has_ground_item,
-			"item_key":          str(ground_item_pool[rng.randi_range(0, ground_item_pool.size() - 1)]) if has_ground_item else "",
+			"item_key":          picked_item_key,
+			"item_count":        picked_item_count,
 			"item_collected":    false,
 		}
 
@@ -556,7 +572,8 @@ func _spawn_tiles() -> void:
 			_spawn_ground_item(key, gx, gy,
 				GameState.tiles[key].get("visible", false),
 				GameState.tiles[key].get("item_key", ""),
-				GameState.tiles[key].get("item_collected", false))
+				GameState.tiles[key].get("item_collected", false),
+				int(GameState.tiles[key].get("item_count", 1)))
 
 	update_edge_dots()
 	_ensure_player_marker()
@@ -584,7 +601,7 @@ func _spawn_bush(tile_key: String, gx: int, gy: int, tile_visible: bool, harvest
 
 
 func _spawn_ground_item(tile_key: String, gx: int, gy: int, tile_visible: bool,
-						 item_key: String, collected: bool) -> void:
+					 item_key: String, collected: bool, count: int = 1) -> void:
 	if collected or item_key == "":
 		return
 	var tile_node: Node2D = null
@@ -600,7 +617,7 @@ func _spawn_ground_item(tile_key: String, gx: int, gy: int, tile_visible: bool,
 	item.position = Vector2(0, 0)
 	item.visible  = tile_visible
 	tile_node.add_child(item)
-	item.setup(tile_key, item_key)
+	item.setup(tile_key, item_key, count)
 
 	tile_node.visibility_changed.connect(func():
 		item.visible = tile_node.visible

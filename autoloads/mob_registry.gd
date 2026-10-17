@@ -253,9 +253,9 @@ func _build_registry() -> void:
 	skeleton.xp_reward  = 2
 	skeleton.attacks    = [bone_slash, splinter] as Array[MobAttackData]
 	skeleton.loot_table = [
-		{ "item_key": "lemon", "chance": 0.45, "min": 1, "max": 1 },
-		{ "item_key": "arrow", "chance": 0.35, "min": 1, "max": 2 },
-		{ "item_key": "health_potion", "chance": 0.15, "min": 1, "max": 1 },
+		{ "item_key": "lemon", "chance": 0.25, "min": 1, "max": 1 },
+		{ "item_key": "arrow", "chance": 0.40, "min": 1, "max": 2 },
+		{ "item_key": "health_potion", "chance": 0.35, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.15, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["skeleton"] = skeleton
@@ -288,11 +288,11 @@ func _build_registry() -> void:
 	raptor_skeleton.phase1_deny_message = "Thick fossil plates deflect the blow — crack its armor with bombs, bows and arrows!"
 	raptor_skeleton.phase2_deny_message = "Loose fragments scatter harmlessly — finish its exposed bones with a sword!"
 	raptor_skeleton.loot_table  = [
-		{ "item_key": "lemon", "chance": 1.0, "min": 1, "max": 2 },
-		{ "item_key": "arrow", "chance": 0.6, "min": 2, "max": 4 },
+		{ "item_key": "lemon", "chance": 0.70, "min": 1, "max": 1 },
+		{ "item_key": "arrow", "chance": 0.80, "min": 3, "max": 5 },
 		{ "item_key": "bomb", "chance": 0.4, "min": 1, "max": 1 },
-		{ "item_key": "health_potion", "chance": 0.3, "min": 1, "max": 1 },
-		{ "item_key": "energy_potion", "chance": 0.3, "min": 1, "max": 1 },
+		{ "item_key": "health_potion", "chance": 0.80, "min": 1, "max": 1 },
+		{ "item_key": "energy_potion", "chance": 0.30, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["raptor_skeleton"] = raptor_skeleton
 

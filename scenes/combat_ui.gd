@@ -47,6 +47,10 @@ const BOW_SOUND_PATH := "res://assets/sounds/items/bow.mp3"
 ## exactly when you hear it fire.
 const BOW_RELEASE_DELAY := 1.25
 
+## Extra energy a finishing blow costs in Cistronia while the player is not
+## Electrified (lemons waive it).
+const UNLIFE_FINISHER_SURCHARGE := 2
+
 @onready var level_label:      Label           = $MarginContainer/ContentArea/VBox/StatsSection/LevelRow/LevelLabel
 @onready var hearts_grid:      GridContainer   = $MarginContainer/ContentArea/VBox/StatsSection/HeartsGrid
 @onready var energy_grid:      GridContainer   = $MarginContainer/ContentArea/VBox/StatsSection/EnergyGrid
@@ -373,10 +377,35 @@ func _is_electrified() -> bool:
 	return int(GameState.player.get("electrified_turns", 0)) > 0
 
 
-func _guard_cistronia_lethal(hp_after_hit: int) -> int:
-	if hp_after_hit <= 0 and GameState.zone == "cistronia" and not _is_electrified():
-		return 1
-	return hp_after_hit
+func _guard_cistronia_lethal(mob: Dictionary, hp_after_hit: int, was_cracked: bool) -> int:
+	if hp_after_hit > 0 or GameState.zone != "cistronia" or _is_electrified():
+		return hp_after_hit
+	if was_cracked:
+		return hp_after_hit   # second finishing blow lands
+	mob["unlife_cracked"] = true
+	return 1
+
+
+## True when this single-target attack would kill `mob` and the player lacks
+## Electrified, i.e. a finishing blow that pays the unlife surcharge.
+func _needs_unlife_surcharge(mob: Dictionary, atk: Dictionary, type_data: Dictionary) -> bool:
+	if GameState.zone != "cistronia" or _is_electrified():
+		return false
+	var t := String(atk.get("attack_type", ""))
+	if t == "fire_spell" or t == "ice_spell":
+		return false
+	var resistances: Dictionary = mob.get("resistances", {})
+	var element: String = ItemRegistry.get_element(String(atk.get("item_key", ""))) if String(atk.get("item_key", "")) != "" else "physical"
+	var resist_mult: float = resistances.get(element, 1.0)
+	var total: int
+	if t == "bomb_throw":
+		total = max(1, int(round(atk.damage * resist_mult)))
+	else:
+		var hits: int = max(1, type_data.get("hits", 1))
+		var per_hit: int = max(1, int(round(atk.damage * type_data.get("damage_mult", 1.0) / hits)))
+		per_hit = max(1, int(round(per_hit * resist_mult)))
+		total = per_hit * hits
+	return total >= int(mob.get("hp", 0))
 
 
 ## ── Two-phase armor ─────────────────────────────────────────────────────────
@@ -452,8 +481,13 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 		return
 
 	var energy_needed = int(ceil(atk.energy_cost * type_data.get("energy_mult", 1.0)))
+	var surcharge := UNLIFE_FINISHER_SURCHARGE if _needs_unlife_surcharge(target_mob, atk, type_data) else 0
+	energy_needed += surcharge
 	if energy_needed > 0 and p.get("energy", 0) < energy_needed:
-		_log("Not enough energy!")
+		if surcharge > 0:
+			_log("Not enough energy to finish it — unlife costs %d extra energy (or eat a lemon)." % surcharge)
+		else:
+			_log("Not enough energy!")
 		return
 
 	p["energy"] = max(0, p.get("energy", 0) - energy_needed)
@@ -479,7 +513,8 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 	var atk_element     = ItemRegistry.get_element(atk.item_key) if atk.item_key != "" else "physical"
 	var resist_mult     = resistances.get(atk_element, 1.0)
 	dmg_per_hit = max(1, int(round(dmg_per_hit * resist_mult)))
-	
+
+	var was_cracked: bool = bool(target_mob.get("unlife_cracked", false))
 	_attack_in_progress = true
 	var is_sword := String(atk.get("item_key", "")).ends_with("sword")
 	var is_bow_shot := String(atk.get("attack_type", "")) == "bow_shot"
@@ -507,7 +542,7 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 			mob = GameState.monsters[mob_id]
 
 		var hp_after = max(0, mob.get("hp", 0) - dmg_per_hit)
-		var guarded = _guard_cistronia_lethal(hp_after)
+		var guarded = _guard_cistronia_lethal(mob, hp_after, was_cracked)
 		if guarded != hp_after:
 			cistronia_guard_hit = true
 		mob["hp"] = guarded
@@ -576,12 +611,12 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 		if trans_card:
 			trans_card.refresh_from_state()
 		if cistronia_guard_hit:
-			_log("The fossil armor cracks apart! %s clings to unlife at 1 HP — eat a lemon to become Electrified and finish its exposed bones with a sword!" % mob.get("name", "Mob"))
+			_log("The fossil armor cracks apart! %s clings to unlife at 1 HP — strike again (costs extra energy) or eat a lemon to become Electrified for a clean kill!" % mob.get("name", "Mob"))
 		else:
 			_log("The fossil armor cracks apart! Its bones lie exposed — finish it with a sword!")
 		on_player_moved()
 	elif cistronia_guard_hit:
-		_log("%s clings to unlife at 1 HP — eat a lemon to become Electrified and finish it!" % mob.get("name", "Mob"))
+		_log("%s clings to unlife at 1 HP — strike again (costs extra energy) or eat a lemon to become Electrified!" % mob.get("name", "Mob"))
 		on_player_moved()
 	elif mob.get("burrowed", false):
 		pass   # underground — sits out this attack; _run_mob_turn_sequence
@@ -631,7 +666,8 @@ func _cast_aoe_spell(atk: Dictionary, type_data: Dictionary) -> void:
 		var mult: float = mob.get("resistances", {}).get(element, 1.0)
 		var dmg: int = max(1, int(round(base_dmg * mult)))
 		var hp_after: int = max(0, int(mob.get("hp", 0)) - dmg)
-		mob["hp"] = _guard_cistronia_lethal(hp_after)
+		var was_cracked: bool = bool(mob.get("unlife_cracked", false))
+		mob["hp"] = _guard_cistronia_lethal(mob, hp_after, was_cracked)
 		GameState.monsters[mob_id] = mob
 
 		_spawn_attack_effect(mob_id, type_data)
@@ -723,8 +759,9 @@ func _detonate_bomb(mob_id: int, dmg: int) -> void:
 		return
 
 
+	var was_cracked: bool = bool(mob.get("unlife_cracked", false))
 	var raw_hp: int = max(0, mob.get("hp", 0) - dmg)
-	var new_hp: int = _guard_cistronia_lethal(raw_hp)
+	var new_hp: int = _guard_cistronia_lethal(mob, raw_hp, was_cracked)
 	var cistronia_guarded: bool = new_hp != raw_hp
 	mob["hp"] = new_hp
 	GameState.monsters[mob_id] = mob
@@ -739,7 +776,7 @@ func _detonate_bomb(mob_id: int, dmg: int) -> void:
 
 
 	if cistronia_guarded:
-		_log("The bomb goes off — %s clings to unlife at 1 HP! Eat a lemon to become Electrified." % mob_name)
+		_log("The bomb goes off — %s clings to unlife at 1 HP! Strike again (costs extra energy) or eat a lemon to become Electrified." % mob_name)
 	elif phase_before == 1 and _get_mob_phase(mob) == 2:
 		_log("The bomb goes off — %s takes %d damage! The fossil armor cracks apart — finish its exposed bones with a sword!" % [mob_name, dmg])
 	else:
@@ -1312,7 +1349,7 @@ func _on_inventory_slot_clicked(index: int) -> void:
 		refresh_stats()
 		_log(
 			"Lemon bite! Electrified %d turns\n(+%d energy)." % [zap_turns, energy_restored],
-			"You bite a lemon — sour current courses through you! Restored %d energy, Electrified for %d turns. You can now finish foes in Cistronia." % [energy_restored, zap_turns]
+			"You bite a lemon — sour current courses through you! Restored %d energy, Electrified for %d turns. Electrified strikes finish foes in Cistronia without the extra energy cost." % [energy_restored, zap_turns]
 		)
 		return
 

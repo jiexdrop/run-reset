@@ -178,6 +178,8 @@ func _capped_sprite_size(tex: Texture2D) -> Vector2:
 ## knows which weapon type the current phase demands.
 func _refresh_name_label() -> void:
 	var base_name := String(mob_data.get("name", "???"))
+	if bool(mob_data.get("unlife_cracked", false)) and int(mob_data.get("hp", 1)) > 0:
+		base_name += " (Cracked)"
 	name_label.text = base_name
 
 

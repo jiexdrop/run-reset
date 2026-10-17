@@ -4,13 +4,15 @@ class_name GroundItem
 var _tile_key: String = ""
 var _item_key: String = ""
 var _amount: int = 1
+var _count: int = 1
 
 @onready var _sprite: Sprite2D = $Sprite2D
 
-func setup(tile_key: String, item_key: String) -> void:
+func setup(tile_key: String, item_key: String, count: int = 1) -> void:
 	_tile_key = tile_key
 	_item_key = item_key
 	_amount = ItemRegistry.get_ground_amount(item_key)
+	_count = max(1, count)
 	_sprite.texture = ItemRegistry.get_icon(item_key)
 	if _amount > 1:
 		_add_count_label()
@@ -42,16 +44,27 @@ func _add_count_label() -> void:
 func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var item_name := ItemRegistry.get_item_name(_item_key)
-		# Nothing to add means nothing is consumed — a full pack never eats loot.
-		if InventoryState.add_item(_item_key, _amount) > 0:
+		var leftover: int = InventoryState.add_item(_item_key, _count)
+		if leftover >= _count:
+			# Nothing fit — a full pack never eats loot.
 			_log_message("Your pack is full — leave the %s for later." % item_name)
+			return
+		if leftover > 0:
+			# Partial pickup: keep the remainder on the ground.
+			var taken := _count - leftover
+			_count = leftover
+			if GameState.tiles.has(_tile_key):
+				GameState.tiles[_tile_key]["item_count"] = leftover
+			GameState.mark_dirty()
+			SaveManager.save()
+			_log_message("Picked up %s x%d — your pack is full, %d left." % [item_name, taken, leftover])
 			return
 		if GameState.tiles.has(_tile_key):
 			GameState.tiles[_tile_key]["item_collected"] = true
 		GameState.mark_dirty()
 		SaveManager.save()
-		if _amount > 1:
-			_log_message("Picked up %s x%d." % [item_name, _amount])
+		if _count > 1:
+			_log_message("Picked up %s x%d." % [item_name, _count])
 		else:
 			_log_message("Picked up %s." % item_name)
 		queue_free()

@@ -71,6 +71,15 @@ func add_item(item_key: String, amount: int = 1) -> int:
 	return amount
 
 
+## True when the hotbar or bag holds at least one of item_key.
+func has_item(item_key: String) -> bool:
+	for arr in [hotbar, bag]:
+		for slot in arr:
+			if slot.get("item_key", "") == item_key and int(slot.get("count", 0)) > 0:
+				return true
+	return false
+
+
 func consume_hotbar_item(slot_idx: int) -> void:
 	if slot_idx < 0 or slot_idx >= HOTBAR_SIZE:
 		return
