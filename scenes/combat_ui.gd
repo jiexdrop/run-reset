@@ -173,6 +173,11 @@ func _update_effect_badge(p: Dictionary) -> void:
 func add_mob_to_combat(mob_idx: int) -> void:
 	if _active_mob_ids.has(mob_idx):
 		return
+	# _skip_next_turn isn't saved. A mob restored while burrowed would stay
+	# underground (unclickable) forever, so re-arm its resurface here.
+	if mob_idx >= 0 and mob_idx < GameState.monsters.size() \
+			and GameState.monsters[mob_idx].get("burrowed", false):
+		_skip_next_turn[mob_idx] = true
 	var first_mob := _active_mob_ids.is_empty()
 	if first_mob:
 		_active_mob_ids  = [mob_idx]
@@ -278,14 +283,6 @@ func _get_equipped_attack() -> Dictionary:
 	}
 
 
-## True when a bow is the equipped weapon. Arrows are only usable with one.
-func _has_bow_equipped() -> bool:
-	var idx = InventoryState.equipped_index
-	if idx < 0 or idx >= InventoryState.hotbar.size():
-		return false
-	return InventoryState.hotbar[idx].get("item_key", "") == "bow"
-
-
 func _rebuild_attack_bar() -> void:
 	if attack_bar == null:
 		return
@@ -296,6 +293,8 @@ func _rebuild_attack_bar() -> void:
 	var lbl = Label.new()
 	var energy_txt = "  |  %d energy" % int(ceil(atk.energy_cost * type_data.get("energy_mult", 1.0))) if atk.energy_cost > 0 else ""
 	lbl.text = "Equipped: %s%s  (DMG %d%s)" % [atk.name, type_data.get("label", ""), atk.damage, energy_txt]
+	if atk.get("item_key", "") == "bow":
+		lbl.text += "  |  Arrows %d" % InventoryState.count_item("arrow")
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lbl.custom_minimum_size.x = 0
@@ -333,11 +332,6 @@ func _cast_spell_from_hotbar(slot_idx: int) -> void:
 	if slot.get("frozen", false) or item_key == "":
 		return
 	if ItemRegistry.get_type(item_key) != "spell":
-		return
-
-	# Loose arrows need a bow in hand — the hotbar alone isn't enough.
-	if item_key == "arrow" and not _has_bow_equipped():
-		_log("You need a Hunting Bow equipped to loose an arrow.")
 		return
 
 	var target_id := _get_first_spell_target()
@@ -450,6 +444,13 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 		_log(String(phase_check["deny_message"]))
 		return
 
+	# A bow only fires while it still has arrows. Checked before any cost is
+	# paid, so an empty quiver never eats energy or the turn.
+	var is_bow_attack: bool = atk.attack_type == "bow_shot" and not bool(atk.get("is_spell", false))
+	if is_bow_attack and InventoryState.count_item("arrow") <= 0:
+		_log("You're out of arrows — the Hunting Bow needs ammunition.")
+		return
+
 	var energy_needed = int(ceil(atk.energy_cost * type_data.get("energy_mult", 1.0)))
 	if energy_needed > 0 and p.get("energy", 0) < energy_needed:
 		_log("Not enough energy!")
@@ -458,7 +459,11 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 	p["energy"] = max(0, p.get("energy", 0) - energy_needed)
 	GameState.player = p
 	refresh_stats()
-	
+
+	# The shot is committed: loose one arrow from the pack.
+	if is_bow_attack:
+		InventoryState.consume_item("arrow")
+
 	if atk.attack_type == "bomb_throw":
 		_throw_bomb(mob_id, atk)
 		return
@@ -529,12 +534,17 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 	var mob = GameState.monsters[mob_id]
 	if mob.get("hp", 0) > 0:
 		var def = MobRegistry.get_def(mob.get("mob_key", ""))
-		if def and def.burrows:
+		# burrow_locked: a mob can't re-burrow until it has resolved an attack,
+		# otherwise it can be hit-burrow-hit-burrow forever and never act.
+		if def and def.burrows and not mob.get("burrow_locked", false):
 			mob["burrowed"] = true
+			mob["burrow_locked"] = true
 			_skip_next_turn[mob_id] = true
+			_telegraphed.erase(mob_id)   # hiding mobs don't hold a readied attack
 			GameState.monsters[mob_id] = mob
 			var burrow_card = _get_card_for_mob(mob_id)
 			if burrow_card:
+				burrow_card.set_telegraphed(false)
 				burrow_card.refresh_from_state()
 
 	if atk.is_spell and atk.hotbar_index >= 0:
@@ -904,6 +914,7 @@ func _do_mob_turn(mob_id: int) -> void:
 	var atk: Dictionary = _telegraphed[mob_id]
 	_telegraphed.erase(mob_id)
 	card.set_telegraphed(false)
+	GameState.monsters[mob_id]["burrow_locked"] = false   # it acted; may burrow again
 	if _shielded_this_turn:
 		_shielded_this_turn = false  # v1: blocks only the first resolving mob
 		await _play_attack_lunge(card, mob_id)
@@ -1250,6 +1261,10 @@ func _on_inventory_slot_clicked(index: int) -> void:
 		InventoryState.equip_shield(index)
 		var equipped_shield = InventoryState.equipped_shield_index == index
 		_log("Shield %s." % ["equipped" if equipped_shield else "unequipped"])
+		return
+
+	if item_type == "ammo":
+		_log("%s is ammunition — equip a Hunting Bow to use it." % ItemRegistry.get_item_name(item_key))
 		return
 
 	if item_key == "berries":

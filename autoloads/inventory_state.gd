@@ -83,6 +83,42 @@ func consume_hotbar_item(slot_idx: int) -> void:
 	emit_signal("inventory_changed")
 
 
+## Total of `item_key` held across hotbar and bag — the quiver size for
+## ammunition such as arrows.
+func count_item(item_key: String) -> int:
+	var total := 0
+	for slots in [hotbar, bag]:
+		for slot in slots:
+			if slot.get("item_key", "") == item_key:
+				total += int(slot.get("count", 0))
+	return total
+
+
+## Removes one of `item_key` from wherever it is held, preferring a stack
+## that isn't frozen. Returns false when nothing was there to remove.
+func consume_item(item_key: String) -> bool:
+	for prefer_frozen in [false, true]:
+		for container in ["hotbar", "bag"]:
+			var slots: Array = hotbar if container == "hotbar" else bag
+			for index in range(slots.size()):
+				var slot: Dictionary = slots[index]
+				if slot.get("item_key", "") != item_key:
+					continue
+				if bool(slot.get("frozen", false)) != prefer_frozen:
+					continue
+				if int(slot.get("count", 0)) <= 0:
+					continue
+				slot["count"] = int(slot["count"]) - 1
+				if int(slot["count"]) <= 0:
+					slot["item_key"] = ""
+					slot["count"]    = 0
+					if container == "hotbar":
+						_unequip_if_empty(index)
+				emit_signal("inventory_changed")
+				return true
+	return false
+
+
 func set_hotbar_item(slot_idx: int, item_key: String, count: int = 1) -> void:
 	if slot_idx < 0 or slot_idx >= HOTBAR_SIZE:
 		return

@@ -144,7 +144,7 @@ var _items: Dictionary = {
 		"name": "Bomb",
 		"icon": preload("res://assets/items/bomb.png"),
 		"desc": "Lob it at an enemy — it detonates on impact. Ranged: cracks the Raptor Skeleton's armored plates, and sets off a Kaze Shroom from a safe distance.",
-		"max_stack": 4,
+		"max_stack": 8,
 		"type": "spell",
 		"damage": 5,
 		"energy_cost": 0,
@@ -152,31 +152,29 @@ var _items: Dictionary = {
 		"element": "physical",
 	},
 
-	# ── Bows & Arrows (throwable damage) ────────────────────────────────────
-	# Both classify as ranged (bow_shot) for phased bosses (see ATTACK_TYPES
-	# `range` classification).
+	# ── Bows & Arrows (ranged damage) ─────────────────────────────────────────
+	# The bow is the weapon; arrows are its ammunition — every shot eats one
+	# arrow (see combat_ui). Both classify as ranged (bow_shot) for phased
+	# bosses (see ATTACK_TYPES `range` classification).
 	# Icons use load() instead of preload() so the game still runs (with a
 	# placeholder icon) before the art files below have been added.
 	"bow": {
 		"name": "Hunting Bow",
 		"icon": load("res://assets/items/bow.png"),
-		"desc": "A short hunting bow. Equip it and click an enemy to loose an arrow. Throwable: cracks the Raptor Skeleton's armored plates.",
+		"desc": "A short hunting bow. Equip it and click an enemy to loose an arrow — each shot consumes 1 Arrow. Throwable: cracks the Raptor Skeleton's armored plates.",
 		"max_stack": 1,
 		"type": "weapon",
-		"damage": 2,
+		"damage": 3,
 		"energy_cost": 1,
 		"attack_type": "bow_shot",
 	},
 	"arrow": {
 		"name": "Arrow",
 		"icon": load("res://assets/items/arrow.png"),
-		"desc": "A flint-tipped arrow, loosed straight from the hotbar — but only while a Hunting Bow is equipped. Throwable: cracks the Raptor Skeleton's armored plates.",
-		"max_stack": 8,
-		"type": "spell",
-		"damage": 3,
-		"energy_cost": 0,
-		"attack_type": "bow_shot",
-		"element": "physical",
+		"desc": "Ammunition for the Hunting Bow — every shot consumes 1 Arrow. Ground caches hold a bundle of 16. Throwable: cracks the Raptor Skeleton's armored plates.",
+		"max_stack": 64,
+		"type": "ammo",
+		"ground_amount": 16,
 	},
 
 	# ── Shields ───────────────────────────────────────────────────────────────
@@ -215,6 +213,13 @@ func get_desc(item_key: String) -> String:
 func get_max_stack(item_key: String) -> int:
 	if _items.has(item_key):
 		return _items[item_key].get("max_stack", 1)
+	return 1
+
+## How many of this item a ground cache hands over when picked up (1 unless
+## the item declares a bundle size, e.g. arrows).
+func get_ground_amount(item_key: String) -> int:
+	if _items.has(item_key):
+		return maxi(1, int(_items[item_key].get("ground_amount", 1)))
 	return 1
 
 func get_type(item_key: String) -> String:
