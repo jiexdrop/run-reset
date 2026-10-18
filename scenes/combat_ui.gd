@@ -17,6 +17,7 @@ const HIT_DELAY = 0.15   # pause between hits of a multi-hit attack
 
 const MobViewScene = preload("res://scenes/mob_view.tscn")
 const BagUIScene   = preload("res://scenes/bag_ui.tscn")
+const PauseMenu = preload("res://scenes/pause_menu.gd")
 
 const MOB_ATTACK_EFFECTS: Dictionary = {
 	"Explode": preload("res://scenes/effects/explosion_effect.tscn"),
@@ -74,6 +75,7 @@ var _scroll_index: int = 0
 const CARD_WIDTH = 130
 
 var _bag_ui: Control = null
+var _pause_menu: Node = null
 var _chat: Node = null
 var _fx_layer: Node2D = null
 const ICONS_PER_ROW = 12
@@ -114,6 +116,25 @@ func can_player_act() -> bool:
 	return _turn_phase == "player" and not _attack_in_progress and not _mob_turns_running
 
 
+func _open_pause_menu() -> void:
+	if is_instance_valid(_pause_menu):
+		return
+	# Only pause between turns, so no enemy-turn timers/tweens get frozen mid-sequence.
+	if not can_player_act():
+		_log("Wait for your turn to finish.")
+		return
+	ItemSlot.cancel_drag()   # drop any in-flight inventory drag
+	_pause_menu = PauseMenu.new()
+	get_tree().current_scene.add_child(_pause_menu)
+	get_tree().paused = true
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		_open_pause_menu()
+
+
 ## Public write access to the combat log for world nodes (bushes, pickups…)
 ## that have no direct handle on this UI.
 func log_message(msg: String) -> void:
@@ -141,6 +162,12 @@ func _setup_floor_label() -> void:
 	lbl.add_theme_font_size_override("font_size", 14)
 	lbl.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 	row.add_child(lbl)
+	var pause_btn := Button.new()
+	pause_btn.name = "PauseButton"
+	pause_btn.text = "Pause"
+	pause_btn.focus_mode = Control.FOCUS_NONE
+	pause_btn.pressed.connect(_open_pause_menu)
+	row.add_child(pause_btn)
 
 
 func refresh_stats() -> void:
