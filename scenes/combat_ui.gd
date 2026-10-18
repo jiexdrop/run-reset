@@ -53,6 +53,13 @@ const BOW_RELEASE_DELAY := 1.25
 ## Electrified (lemons waive it).
 const UNLIFE_FINISHER_SURCHARGE := 2
 
+## Cistronia "Unlife" finish — clicking a clinging mob kills it outright.
+## Costs 2 energy; when energy is short the heavy finish costs 3 HP instead
+## and is never blocked (it may even kill you).
+const UNLIFE_FINISH_ENERGY_COST := 2
+const UNLIFE_FINISH_HP_COST := 3
+const UNLIFE_FINISH_TOOLTIP := "Unlife costs 2 energy (or eat a lemon)."
+
 @onready var level_label:      Label           = $MarginContainer/ContentArea/VBox/StatsSection/LevelRow/LevelLabel
 @onready var hearts_grid:      GridContainer   = $MarginContainer/ContentArea/VBox/StatsSection/HeartsGrid
 @onready var energy_grid:      GridContainer   = $MarginContainer/ContentArea/VBox/StatsSection/EnergyGrid
@@ -79,6 +86,14 @@ var _bag_ui: Control = null
 var _pause_menu: Node = null
 var _chat: Node = null
 var _fx_layer: Node2D = null
+
+## One floating "Finish -2 / -3" hint over a hovering clinging mob, reused.
+var _finish_hint: Control = null
+var _finish_hint_icon: TextureRect = null
+var _finish_hint_label: Label = null
+var _finish_hint_mob_id: int = -1   # mob the hint shows for (-1 = hidden)
+var _hovered_mob_id: int = -1       # mob whose sprite the cursor rests on
+
 const ICONS_PER_ROW = 12
 
 const DEATH_VFX_DURATION = 1.5
@@ -225,6 +240,7 @@ func refresh_stats() -> void:
 	_build_icon_row(exp_row,    p.get("xp", 0),       p.get("xp_to_next", 10), EXP_FULL,    EXP_EMPTY)
 
 	_update_effect_badge(p)
+	_refresh_mob_tooltips()
 
 
 func _update_effect_badge(p: Dictionary) -> void:
@@ -275,6 +291,8 @@ func end_combat() -> void:
 	_turn_phase = "player"
 	set_combat_input_enabled(true)
 	turn_label.text = "Your Turn"
+	_hide_finish_hint()
+	_hovered_mob_id = -1
 	_clear_children(mob_row)
 	# The log is left untouched: the level-up / loot line from the killing
 	# blow is worth keeping on screen instead of being wiped here.
@@ -322,6 +340,7 @@ func _add_mob_card(mob_id: int) -> void:
 	mob_view.set_telegraphed(_telegraphed.has(mob_id), _telegraphed.get(mob_id, {}))
 	mob_view.attack_requested.connect(_on_attack_requested)
 	mob_view.mob_died.connect(_on_mob_died)
+	mob_view.hover_changed.connect(_on_mob_hover_changed)
 
 
 func _remove_mob_card(mob_id: int) -> void:
@@ -389,7 +408,196 @@ func _rebuild_attack_bar() -> void:
 func _on_attack_requested(mob_id: int) -> void:
 	if _attack_in_progress or _turn_phase != "player":
 		return
+	if _is_mob_finishable(mob_id):
+		_finish_clinging_mob(mob_id)
+		return
 	_do_player_attack(mob_id)
+
+
+## A mob is finishable in Cistronia while the player is not Electrified and
+## it clings to unlife at exactly 1 HP — on the player's turn only, with no
+## attack or mob-turn sequence in progress. Armor-category gating is ignored
+## on purpose: a finish is a finish.
+func _is_mob_finishable(mob_id: int) -> bool:
+	if GameState.zone != "cistronia":
+		return false
+	if _is_electrified():
+		return false
+	if _attack_in_progress or _mob_turns_running or _turn_phase != "player":
+		return false
+	if mob_id < 0 or mob_id >= GameState.monsters.size():
+		return false
+	var mob: Dictionary = GameState.monsters[mob_id]
+	if int(mob.get("hp", 0)) != 1:
+		return false
+	if mob.get("burrowed", false):
+		return false
+	return true
+
+
+## Click-to-finish for a clinging mob: pays the unlife cost (2 energy, or
+## 3 HP when energy runs short — never blocked) and kills the mob outright,
+## then resolves the death flow and passes the turn like any other attack.
+func _finish_clinging_mob(mob_id: int) -> void:
+	if _attack_in_progress or _turn_phase != "player":
+		return
+	if not _is_mob_finishable(mob_id):
+		return
+	_attack_in_progress = true
+	_hide_finish_hint()
+
+	var p = GameState.player
+	var spent_energy := int(p.get("energy", 0)) >= UNLIFE_FINISH_ENERGY_COST
+	var mob_name: String = GameState.monsters[mob_id].get("name", "Mob")
+	var msg: String
+	if spent_energy:
+		p["energy"] = int(p.get("energy", 0)) - UNLIFE_FINISH_ENERGY_COST
+		msg = "You spend %d energy to finish %s." % [UNLIFE_FINISH_ENERGY_COST, mob_name]
+	else:
+		p["hp"] = max(0, int(p.get("hp", 0)) - UNLIFE_FINISH_HP_COST)
+		msg = "You force the finish on %s and lose %d HP." % [mob_name, UNLIFE_FINISH_HP_COST]
+	GameState.player = p
+	refresh_stats()
+	if not spent_energy:
+		_play_hurt_sound()
+
+	if int(p.get("hp", 0)) <= 0:
+		_log(msg)
+		_on_player_died()
+		return   # _attack_in_progress stays true — nothing acts while dying
+
+	var mob: Dictionary = GameState.monsters[mob_id]
+	mob["hp"] = 0
+	GameState.monsters[mob_id] = mob
+	var card = _get_card_for_mob(mob_id)
+	if card:
+		card.refresh_from_state()
+	_spawn_attack_effect(mob_id, ItemRegistry.get_attack_type_data("single_swing"))
+	GameState.mark_dirty()
+	SaveManager.save()
+	_attack_in_progress = false
+	_log(msg)
+
+	await _on_mob_died(mob_id)
+	if not is_inside_tree():
+		return
+	if _active_mob_ids.is_empty():
+		return   # the death flow already closed the fight
+	on_player_moved()
+
+
+## Floating finish hint follows the mouse over a clinging mob's sprite.
+func _on_mob_hover_changed(mob_id: int, hovering: bool) -> void:
+	if hovering:
+		_hovered_mob_id = mob_id
+		_update_mob_tooltip(mob_id)
+		if _is_mob_finishable(mob_id):
+			_show_finish_hint(mob_id)
+	else:
+		if _hovered_mob_id == mob_id:
+			_hovered_mob_id = -1
+		if _finish_hint_mob_id == mob_id:
+			_hide_finish_hint()
+
+
+func _show_finish_hint(mob_id: int) -> void:
+	var card = _get_card_for_mob(mob_id)
+	if card == null or not is_instance_valid(card):
+		return
+	var card_ctrl := card as Control
+	if card_ctrl == null:
+		return
+	if _finish_hint == null or not is_instance_valid(_finish_hint):
+		_finish_hint = _build_finish_hint()
+	var heavy := int(GameState.player.get("energy", 0)) < UNLIFE_FINISH_ENERGY_COST
+	_finish_hint_label.text = "Finish -3" if heavy else "Finish -2"
+	_finish_hint_icon.texture = HEART_FULL if heavy else ENERGY_FULL
+	_finish_hint_label.add_theme_color_override("font_color",
+		Color(1.0, 0.45, 0.45) if heavy else Color(0.9, 0.9, 0.9))
+	_finish_hint_mob_id = mob_id
+	_finish_hint.visible = true
+	_finish_hint.size = _finish_hint.get_combined_minimum_size()
+	# Floats above the card, centered — same free-floating child-of-combat_ui
+	# approach as _show_block_feedback: no container, no layout shift.
+	var card_rect := card_ctrl.get_global_rect()
+	_finish_hint.position = Vector2(
+		card_rect.get_center().x - global_position.x - _finish_hint.size.x / 2.0,
+		card_rect.position.y - global_position.y - _finish_hint.size.y - 4.0)
+
+
+## Small Panel + icon + label, built once and reused for every hover.
+func _build_finish_hint() -> Control:
+	var panel := PanelContainer.new()
+	panel.name = "FinishHint"
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.z_index = 20
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.18, 0.33, 0.94)
+	style.border_color = Color(0.42, 0.79, 1.0, 1.0)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 6
+	style.content_margin_right = 6
+	style.content_margin_top = 3
+	style.content_margin_bottom = 3
+	panel.add_theme_stylebox_override("panel", style)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(row)
+
+	var icon := TextureRect.new()
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.custom_minimum_size = Vector2(16, 16)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	row.add_child(icon)
+
+	var lbl := Label.new()
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lbl.add_theme_font_size_override("font_size", 13)
+	row.add_child(lbl)
+
+	add_child(panel)
+	panel.visible = false
+	_finish_hint_icon  = icon
+	_finish_hint_label = lbl
+	return panel
+
+
+func _hide_finish_hint() -> void:
+	_finish_hint_mob_id = -1
+	if _finish_hint != null and is_instance_valid(_finish_hint):
+		_finish_hint.visible = false
+
+
+## Sprite tooltip: set only while the mob can be finished, cleared otherwise
+## so the lemon stays the nudged option.
+func _update_mob_tooltip(mob_id: int) -> void:
+	var card = _get_card_for_mob(mob_id)
+	if card == null:
+		return
+	var card_ctrl := card as Control
+	if card_ctrl == null:
+		return
+	var spr := card_ctrl.get_node_or_null("SpriteRow/Sprite") as TextureRect
+	if spr == null:
+		return
+	spr.tooltip_text = UNLIFE_FINISH_TOOLTIP if _is_mob_finishable(mob_id) else ""
+
+
+func _refresh_mob_tooltips() -> void:
+	for mob_id in _active_mob_ids:
+		_update_mob_tooltip(mob_id)
+	if _hovered_mob_id >= 0 and not _active_mob_ids.has(_hovered_mob_id):
+		_hovered_mob_id = -1
+	if _finish_hint_mob_id >= 0 and not _is_mob_finishable(_finish_hint_mob_id):
+		_hide_finish_hint()
+	# The cursor may already rest on the card when the mob becomes finishable
+	# (no new mouse_entered fires) — show or refresh the hint right there.
+	if _hovered_mob_id >= 0 and _is_mob_finishable(_hovered_mob_id):
+		_show_finish_hint(_hovered_mob_id)
 
 
 ## Spells are never equipped — clicking one casts it immediately at the
@@ -680,12 +888,12 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 		if trans_card:
 			trans_card.refresh_from_state()
 		if cistronia_guard_hit:
-			_log("The fossil armor cracks apart! %s clings to unlife at 1 HP — strike again (costs extra energy) or eat a lemon to become Electrified for a clean kill!" % mob.get("name", "Mob"))
+			_log("The fossil armor cracks apart! %s clings to unlife at 1 HP — click it to finish (Unlife costs 2 energy), or eat a lemon to become Electrified for a clean kill!" % mob.get("name", "Mob"))
 		else:
 			_log("The fossil armor cracks apart! Its bones lie exposed — finish it with a sword!")
 		on_player_moved()
 	elif cistronia_guard_hit:
-		_log("%s clings to unlife at 1 HP — strike again (costs extra energy) or eat a lemon to become Electrified!" % mob.get("name", "Mob"))
+		_log("%s clings to unlife at 1 HP — click it to finish (Unlife costs 2 energy), or eat a lemon to become Electrified!" % mob.get("name", "Mob"))
 		on_player_moved()
 	elif mob.get("burrowed", false):
 		pass   # underground — sits out this attack; _run_mob_turn_sequence
@@ -845,7 +1053,7 @@ func _detonate_bomb(mob_id: int, dmg: int) -> void:
 
 
 	if cistronia_guarded:
-		_log("The bomb goes off — %s clings to unlife at 1 HP! Strike again (costs extra energy) or eat a lemon to become Electrified." % mob_name)
+		_log("The bomb goes off — %s clings to unlife at 1 HP! Click it to finish (Unlife costs 2 energy), or eat a lemon to become Electrified." % mob_name)
 	elif phase_before == 1 and _get_mob_phase(mob) == 2:
 		_log("The bomb goes off — %s takes %d damage! The fossil armor cracks apart — finish its exposed bones with a sword!" % [mob_name, dmg])
 	else:
@@ -946,6 +1154,8 @@ func _xp_needed_for_level(level: int) -> int:
 
 
 func _on_mob_died(mob_id: int) -> void:
+	if _finish_hint_mob_id == mob_id:
+		_hide_finish_hint()
 	var xp_gain = GameState.monsters[mob_id].get("xp_reward", 1)
 	var p       = GameState.player
 	p["xp"]     = p.get("xp", 0) + xp_gain
@@ -1554,6 +1764,8 @@ func on_player_moved(shielded: bool = false) -> void:
 		return
 	_turn_phase = "enemy"
 	turn_label.text = "Enemy Turn"
+	_hide_finish_hint()
+	_refresh_mob_tooltips()
 	set_combat_input_enabled(false)
 	_run_mob_turn_sequence(shielded)
 
@@ -1594,6 +1806,7 @@ func _run_mob_turn_sequence(shielded: bool = false) -> void:
 	_turn_phase = "player"
 	turn_label.text = "Your Turn"
 	set_combat_input_enabled(true)
+	_refresh_mob_tooltips()
 
 
 func set_combat_input_enabled(enabled: bool) -> void:

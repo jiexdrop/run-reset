@@ -8,6 +8,7 @@ extends VBoxContainer
 
 signal attack_requested(mob_id: int)
 signal mob_died(mob_id: int)
+signal hover_changed(mob_id: int, hovering: bool)
 
 const MOB_SPRITES: Dictionary = {
 	"spider":          preload("res://assets/mobs/spider.png"),
@@ -81,6 +82,8 @@ func _ready() -> void:
 
 	sprite.mouse_filter = Control.MOUSE_FILTER_STOP
 	sprite.gui_input.connect(_on_sprite_gui_input)
+	sprite.mouse_entered.connect(_on_sprite_hover_entered)
+	sprite.mouse_exited.connect(_on_sprite_hover_exited)
 
 
 func setup(id: int, data: Dictionary) -> void:
@@ -239,6 +242,12 @@ func _on_sprite_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if mob_data.get("hp", 0) > 0 and not mob_data.get("burrowed", false):
 			attack_requested.emit(mob_id)
+
+func _on_sprite_hover_entered() -> void:
+	hover_changed.emit(mob_id, true)
+
+func _on_sprite_hover_exited() -> void:
+	hover_changed.emit(mob_id, false)
 
 func _refresh_resist_label() -> void:
 	var phase := 0
