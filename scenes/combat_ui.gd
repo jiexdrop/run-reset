@@ -6,6 +6,7 @@ const ENERGY_FULL  = preload("res://assets/ui/energy_full.png")
 const ENERGY_EMPTY = preload("res://assets/ui/energy_empty.png")
 const EXP_FULL     = preload("res://assets/ui/exp_full.png")
 const EXP_EMPTY    = preload("res://assets/ui/exp_empty.png")
+const PAUSE_ICON   = preload("res://assets/ui/pause.png")
 const POISON_ICON        = preload("res://assets/ui/poison.png")
 const FROZEN_ICON        = preload("res://assets/ui/frozen.png")
 const ELECTRIFIED_ICON   = preload("res://assets/ui/energy_full.png")
@@ -154,6 +155,37 @@ func _setup_floor_label() -> void:
 	var row := level_label.get_parent()
 	if row == null:
 		return
+	# Second line under the level row: effect badge + floor/zone label, so
+	# the row can't overflow and clip the pause button.
+	var stats: Node = row.get_parent()
+	if stats == null:
+		return
+	var floor_row := HBoxContainer.new()
+	floor_row.name = "FloorRow"
+	floor_row.add_theme_constant_override("separation", 8)
+	stats.add_child(floor_row)
+	stats.move_child(floor_row, row.get_index() + 1)
+
+	# Line 1: LevelLabel ... PauseButton
+	var pause_btn := Button.new()
+	pause_btn.name = "PauseButton"
+	pause_btn.icon = PAUSE_ICON
+	pause_btn.tooltip_text = "Pause"
+	pause_btn.focus_mode = Control.FOCUS_NONE
+	pause_btn.custom_minimum_size = Vector2(30, 24)
+	pause_btn.add_theme_stylebox_override("normal", _make_pause_btn_style(Color(0.13, 0.13, 0.15, 0.95)))
+	pause_btn.add_theme_stylebox_override("hover", _make_pause_btn_style(Color(0.24, 0.24, 0.28, 0.98)))
+	pause_btn.add_theme_stylebox_override("pressed", _make_pause_btn_style(Color(0.07, 0.07, 0.09, 0.98)))
+	pause_btn.pressed.connect(_open_pause_menu)
+	row.add_child(pause_btn)
+
+	# Line 2: EffectBadge (moved out of the level row) ... FloorLabel
+	if effect_badge != null and is_instance_valid(effect_badge):
+		var badge_parent := effect_badge.get_parent()
+		if badge_parent != null:
+			badge_parent.remove_child(effect_badge)
+		floor_row.add_child(effect_badge)
+
 	var lbl := Label.new()
 	lbl.name = "FloorLabel"
 	lbl.text = _floor_display()
@@ -161,13 +193,22 @@ func _setup_floor_label() -> void:
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	lbl.add_theme_font_size_override("font_size", 14)
 	lbl.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
-	row.add_child(lbl)
-	var pause_btn := Button.new()
-	pause_btn.name = "PauseButton"
-	pause_btn.text = "Pause"
-	pause_btn.focus_mode = Control.FOCUS_NONE
-	pause_btn.pressed.connect(_open_pause_menu)
-	row.add_child(pause_btn)
+	floor_row.add_child(lbl)
+
+
+## Dark rounded backing for the pause icon button (the bars themselves are
+## light, so they read against it).
+func _make_pause_btn_style(bg: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = Color(0.35, 0.35, 0.42, 1.0)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(4)
+	sb.content_margin_left = 7
+	sb.content_margin_right = 7
+	sb.content_margin_top = 5
+	sb.content_margin_bottom = 5
+	return sb
 
 
 func refresh_stats() -> void:
