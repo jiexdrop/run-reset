@@ -166,7 +166,8 @@ func _setup_floor_label() -> void:
 	stats.add_child(floor_row)
 	stats.move_child(floor_row, row.get_index() + 1)
 
-	# Line 1: LevelLabel ... PauseButton
+	# Line 1: LevelLabel (expands to fill) ... PauseButton (pinned right)
+	level_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var pause_btn := Button.new()
 	pause_btn.name = "PauseButton"
 	pause_btn.icon = PAUSE_ICON
