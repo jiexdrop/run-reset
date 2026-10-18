@@ -1671,7 +1671,7 @@ func _on_bag_closed() -> void:
 func _steal_random_item() -> String:
 	var candidates: Array = []
 	for i in range(InventoryState.HOTBAR_SIZE):
-		if i == InventoryState.equipped_index:
+		if i == InventoryState.equipped_index or i == InventoryState.equipped_shield_index:
 			continue
 		var slot = InventoryState.hotbar[i]
 		if slot.get("item_key", "") != "" and not slot.get("frozen", false):
