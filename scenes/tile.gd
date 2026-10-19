@@ -49,6 +49,8 @@ func reveal() -> void:
 		game.set_player_tile(key)
 	if game:
 		game.center_camera_on_revealed()   # camera, player marker, edge dots
+	if game and game.has_method("on_tile_revealed"):
+		game.on_tile_revealed(key)
 	_refresh_mob_indicator()  # show indicator now that tile is visible
 
 	# If this tile has a live mob, add it to combat automatically.

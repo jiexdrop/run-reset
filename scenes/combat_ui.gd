@@ -74,6 +74,7 @@ const UNLIFE_FINISH_TOOLTIP := "Unlife costs 2 energy (or eat a lemon)."
 @onready var effect_label:     Label           = $MarginContainer/ContentArea/VBox/StatsSection/LevelRow/EffectBadge/Label
 @onready var pass_turn_button: Button          = $MarginContainer/ContentArea/VBox/CombatSection/PassTurnButton
 @onready var turn_label:       Label           = $MarginContainer/ContentArea/VBox/TurnLabel
+@onready var combat_label: Label = $MarginContainer/ContentArea/VBox/CombatSection/CombatLabel
 
 var _active_mob_ids: Array = []
 var _player_stunned: bool  = false
@@ -115,7 +116,9 @@ func _ready() -> void:
 	_setup_floor_label()
 	refresh_stats()
 	pass_turn_button.disabled = true
-	turn_label.text = "Your Turn"
+	turn_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	turn_label.tooltip_text = "In combat, attacking, using items and passing all end your turn. Out of combat, items are free."
+	_update_turn_label()
 	if inv_ui:
 		inv_ui.slot_clicked.connect(_on_inventory_slot_clicked)
 		inv_ui.bag_opened.connect(_on_bag_opened)
@@ -130,6 +133,27 @@ func can_player_act() -> bool:
 	if int(GameState.player.get("hp", 0)) <= 0:
 		return false   # nothing to click while the death screen is up
 	return _turn_phase == "player" and not _attack_in_progress and not _mob_turns_running
+
+
+func is_in_combat() -> bool:
+	return not _active_mob_ids.is_empty()
+
+
+## The ONLY place that writes turn_label.text (and its combat-state hint).
+func _update_turn_label() -> void:
+	var in_combat := not _active_mob_ids.is_empty()
+	if not in_combat:
+		turn_label.text = "Exploring"
+		turn_label.add_theme_color_override("font_color", Color(0.75, 0.92, 0.75))
+		combat_label.text = "— No enemies —"
+	elif _turn_phase == "enemy":
+		turn_label.text = "Enemy Turn"
+		turn_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.55))
+		combat_label.text = "— Enemies —"
+	else:
+		turn_label.text = "Your Turn — In Combat"
+		turn_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
+		combat_label.text = "— Enemies —"
 
 
 func _open_pause_menu() -> void:
@@ -276,6 +300,7 @@ func add_mob_to_combat(mob_idx: int) -> void:
 		_active_mob_ids.append(mob_idx)
 		_log("A new enemy joins the fight!")
 	pass_turn_button.disabled = false
+	_update_turn_label()
 	if first_mob:
 		_rebuild_mob_cards()
 	else:
@@ -290,7 +315,7 @@ func end_combat() -> void:
 	_shielded_this_turn = false
 	_turn_phase = "player"
 	set_combat_input_enabled(true)
-	turn_label.text = "Your Turn"
+	_update_turn_label()
 	_hide_finish_hint()
 	_hovered_mob_id = -1
 	_clear_children(mob_row)
@@ -1607,6 +1632,7 @@ func _on_inventory_slot_clicked(index: int) -> void:
 		SaveManager.save()
 		refresh_stats()
 		_log("You drink the Energy Potion and restore %d energy." % energy_restored)
+		_spend_turn_if_in_combat()
 		return
 
 	if item_key == "lemon":
@@ -1630,6 +1656,7 @@ func _on_inventory_slot_clicked(index: int) -> void:
 			"Lemon bite! Electrified %d turns\n(+%d energy)." % [zap_turns, energy_restored],
 			"You bite a lemon — sour current courses through you! Restored %d energy, Electrified for %d turns. Electrified strikes finish foes in Cistronia without the extra energy cost." % [energy_restored, zap_turns]
 		)
+		_spend_turn_if_in_combat()
 		return
 
 
@@ -1650,6 +1677,16 @@ func _try_heal(slot_idx: int, base_amount: int, verb: String) -> void:
 	refresh_stats()
 
 	_log(verb % restored)
+	_spend_turn_if_in_combat()
+
+
+## A successful consumable in combat ends the player's turn, exactly like
+## Pass Turn. Out of combat it costs nothing. Rejected uses (full HP/energy)
+## return before ever reaching this.
+func _spend_turn_if_in_combat() -> void:
+	if _active_mob_ids.is_empty():
+		return
+	on_player_moved()
 
 func _on_bag_opened() -> void:
 	if is_instance_valid(_bag_ui):
@@ -1763,7 +1800,7 @@ func on_player_moved(shielded: bool = false) -> void:
 	if _active_mob_ids.is_empty():
 		return
 	_turn_phase = "enemy"
-	turn_label.text = "Enemy Turn"
+	_update_turn_label()
 	_hide_finish_hint()
 	_refresh_mob_tooltips()
 	set_combat_input_enabled(false)
@@ -1804,7 +1841,7 @@ func _run_mob_turn_sequence(shielded: bool = false) -> void:
 	_mob_turns_running = false
 	_shielded_this_turn = false
 	_turn_phase = "player"
-	turn_label.text = "Your Turn"
+	_update_turn_label()
 	set_combat_input_enabled(true)
 	_refresh_mob_tooltips()
 

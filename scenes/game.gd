@@ -253,10 +253,22 @@ func generate_tiles() -> void:
 	var boss_key: String = ZoneRegistry.get_boss(GameState.zone)
 	var place_boss: bool = (GameState.zone_stage == ZONE_CYCLE_LENGTH) and boss_key != ""
 
+	# Exit tile: the room farthest from the start (never "0,0").
+	var exit_key: String = ""
+	var best_exit_dist := -1.0
+	for key in _gen_floor:
+		if key == "0,0" or _gen_floor[key] != "room":
+			continue
+		var p = key.split(",")
+		var d := Vector2(p[0].to_int(), p[1].to_int()).length()
+		if d > best_exit_dist:
+			best_exit_dist = d
+			exit_key = key
+
 	# Candidate rooms for the boss: any room tile except the entry room "0,0".
 	var boss_candidates: Array = []
 	for key in _gen_floor:
-		if key != "0,0" and _gen_floor[key] == "room":
+		if key != "0,0" and key != exit_key and _gen_floor[key] == "room":
 			boss_candidates.append(key)
 
 	var boss_room_key: String = ""
@@ -281,18 +293,18 @@ func generate_tiles() -> void:
 
 		if key == boss_room_key:
 			mob_key = boss_key
-		elif tile_type == "room" and key != "0,0" and not pool.is_empty():
+		elif tile_type == "room" and key != "0,0" and key != exit_key and not pool.is_empty():
 			if randf() < mob_spawn_chance:
 				mob_key = pool[randi() % pool.size()]
 
 		var has_bush: bool = false
 		var has_ground_item: bool = false
-		if tile_type == "room" and key != "0,0" and mob_key == "":
+		if tile_type == "room" and key != "0,0" and key != exit_key and mob_key == "":
 			has_bush = rng.randf() < BUSH_SPAWN_CHANCE
 
 		# In Cistronia, lemons also sprout along corridors so the floor is
 		# never starved of them (corridors never hold mobs or bushes).
-		var ground_item_eligible: bool = key != "0,0" and mob_key == "" and not has_bush \
+		var ground_item_eligible: bool = key != "0,0" and key != exit_key and mob_key == "" and not has_bush \
 				and (tile_type == "room" or (is_cistronia and tile_type == "corridor"))
 		if ground_item_eligible and ground_items_placed < max_ground_items:
 			has_ground_item = rng.randf() < ground_item_chance
@@ -322,6 +334,7 @@ func generate_tiles() -> void:
 			"item_key":          picked_item_key,
 			"item_count":        picked_item_count,
 			"item_collected":    false,
+			"is_exit":           key == exit_key,
 		}
 
 	_spawn_tiles()
@@ -360,7 +373,48 @@ func restore_combat(combat_ui: Control) -> void:
 
 # ── Door ──────────────────────────────────────────────────────────────────────
 
+## New-style floors mark one fixed exit tile at generation. Legacy saves have
+## no such tile and keep using the "all mobs dead" door instead.
+func _has_exit_tile() -> bool:
+	for key in GameState.tiles:
+		if key != "door_spawned" and GameState.tiles[key].get("is_exit", false):
+			return true
+	return false
+
+
+## Called by tile.reveal(): the exit door appears the moment its tile is
+## revealed, whether or not any mob still lives on the floor.
+func on_tile_revealed(key: String) -> void:
+	if GameState.tiles.get(key, {}).get("is_exit", false):
+		_spawn_exit_at(key)
+
+
+func _spawn_exit_at(key: String) -> void:
+	if is_instance_valid(_door_node):
+		return
+	var parts = key.split(",")
+	var pos = Vector2(parts[0].to_int(), parts[1].to_int()) * TILE_SIZE
+	_door_node = _build_door_node(pos)
+	add_child(_door_node)
+
+
+## True when the zone boss is generated, on its spawn floor, and still alive.
+func _boss_alive() -> bool:
+	var boss_key: String = ZoneRegistry.get_boss(GameState.zone)
+	if boss_key == "" or GameState.zone_stage != ZONE_CYCLE_LENGTH:
+		return false
+	for key in GameState.tiles:
+		if key == "door_spawned":
+			continue
+		var t = GameState.tiles[key]
+		if t.get("mob", "") == boss_key and not t.get("mob_dead", false):
+			return true
+	return false
+
+
 func spawn_exit_door(force: bool = false) -> void:
+	if not force and _has_exit_tile():
+		return    # new-style floors spawn their door via the exit tile instead
 	if _door_node != null:
 		return
 
@@ -442,6 +496,9 @@ func open_debug_portal(zone: String, zone_stage: int) -> void:
 	if zone not in ZoneRegistry.get_zone_ids() or zone_stage < 1 or zone_stage > ZONE_CYCLE_LENGTH:
 		return
 	_debug_portal_destination = {"zone": zone, "zone_stage": zone_stage}
+	if is_instance_valid(_door_node):
+		_door_node.queue_free()
+		_door_node = null
 	spawn_exit_door(true)
 
 
@@ -492,6 +549,14 @@ func _on_door_clicked(_viewport: Node, event: InputEvent, _shape_idx: int) -> vo
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			if not _can_player_act():
 				_deny_action()
+				return
+			var cui = get_tree().get_first_node_in_group("combat_ui")
+			if cui and cui.has_method("is_in_combat") and cui.is_in_combat():
+				cui.log_message("You can't leave while enemies are engaged.")
+				return
+			if _boss_alive():
+				if cui:
+					cui.log_message("The boss still guards the way down.")
 				return
 			call_deferred("_enter_next_level")
 
@@ -572,6 +637,13 @@ func _spawn_tiles() -> void:
 				GameState.tiles[key].get("item_key", ""),
 				GameState.tiles[key].get("item_collected", false),
 				int(GameState.tiles[key].get("item_count", 1)))
+
+	# Restore the exit door on load: a new-style floor whose exit tile is
+	# already visible gets its door back immediately.
+	for key in GameState.tiles:
+		if key != "door_spawned" and GameState.tiles[key].get("is_exit", false) \
+				and GameState.tiles[key].get("visible", false):
+			_spawn_exit_at(key)
 
 	update_edge_dots()
 	_ensure_player_marker()
