@@ -9,7 +9,8 @@ func _ready() -> void:
 	# Same beige the default zone uses, so the menu matches floor 1.
 	RenderingServer.set_default_clear_color(ZoneRegistry.get_bg_color(ZoneRegistry.DEFAULT_ZONE))
 	OptionsMenu.apply_saved()
-	$VBoxContainer/ContinueButton.disabled = not FileAccess.file_exists(SaveManager.SAVE_PATH)
+	# No save to continue: hide the button entirely rather than showing it greyed out.
+	$VBoxContainer/ContinueButton.visible = FileAccess.file_exists(SaveManager.SAVE_PATH)
 	# Quit does nothing in web exports, so don't show it there.
 	$VBoxContainer/QuitButton.visible = not OS.has_feature("web")
 
