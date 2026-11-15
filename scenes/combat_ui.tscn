@@ -35,6 +35,7 @@ theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 
 [node name="ContentArea" type="VBoxContainer" parent="MarginContainer" unique_id=200000040]
+clip_contents = true
 layout_mode = 2
 
 [node name="VBox" type="VBoxContainer" parent="MarginContainer/ContentArea" unique_id=200000002]

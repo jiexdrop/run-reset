@@ -16,6 +16,18 @@ const HEART_EMPTY_POISON = preload("res://assets/ui/heart_empty_poison.png")
 const ICON_SIZE = Vector2(20, 20)
 const HIT_DELAY = 0.15   # pause between hits of a multi-hit attack
 
+## Fixed height of the attack bar so a long "Equipped" line (or the Shield
+## button) can never change the height of the layout below it.
+## 44 px is two lines of the attack-bar font (ATTACK_BAR_FONT_SIZE) plus slack;
+## the bar is pinned to it in _ready() and on every rebuilt row.
+const ATTACK_BAR_HEIGHT := 44.0
+## The attack bar is the densest text in the panel; one step below the default
+## 16 px keeps "Equipped: Stone Sword (Heavy)" on a single line beside the
+## Shield button at the panel's 320 px width.
+const ATTACK_BAR_FONT_SIZE := 14
+const SHIELD_BUTTON_MIN_WIDTH := 80.0
+const SHIELD_ICON_MAX_WIDTH := 16
+
 const MobViewScene = preload("res://scenes/mob_view.tscn")
 const BagUIScene   = preload("res://scenes/bag_ui.tscn")
 const PauseMenu = preload("res://scenes/pause_menu.gd")
@@ -95,6 +107,13 @@ var _finish_hint_label: Label = null
 var _finish_hint_mob_id: int = -1   # mob the hint shows for (-1 = hidden)
 var _hovered_mob_id: int = -1       # mob whose sprite the cursor rests on
 
+## The Shield button lives inside the attack bar's row (not directly under
+## AttackBar), so it is kept in a member for enabling/disabling.
+var _shield_button: Button = null
+
+## Columns of the heart/energy icon grids. The stats section's height budget
+## assumes at most this many icons per row: a larger max_hp / max_energy would
+## add a whole row (~20 px) and push the sections below it down.
 const ICONS_PER_ROW = 12
 
 const DEATH_VFX_DURATION = 1.5
@@ -113,6 +132,7 @@ var _shielded_this_turn: bool = false
 
 func _ready() -> void:
 	add_to_group("combat_ui")
+	attack_bar.custom_minimum_size.y = ATTACK_BAR_HEIGHT
 	_setup_floor_label()
 	refresh_stats()
 	pass_turn_button.disabled = true
@@ -400,22 +420,46 @@ func _get_equipped_attack() -> Dictionary:
 	}
 
 
+## Builds the attack bar as one fixed-height row: a two-line text column plus
+## the optional Shield button. Nothing in here may change the row height — the
+## bar sits above the inventory, and any growth there pushes the inventory off
+## the 320 px panel. That is why the labels never wrap and never get trimmed:
+## the full text is always drawn, so the row's height is known in advance
+## (ATTACK_BAR_HEIGHT) whatever weapon is equipped.
 func _rebuild_attack_bar() -> void:
 	if attack_bar == null:
 		return
 	_clear_children(attack_bar)
+	_shield_button = null
 	var atk = _get_equipped_attack()
 	var type_data = ItemRegistry.get_attack_type_data(atk.attack_type)
 
-	var lbl = Label.new()
-	var energy_txt = "  |  %d energy" % int(ceil(atk.energy_cost * type_data.get("energy_mult", 1.0))) if atk.energy_cost > 0 else ""
-	lbl.text = "Equipped: %s%s  (DMG %d%s)" % [atk.name, type_data.get("label", ""), atk.damage, energy_txt]
+	var row := HBoxContainer.new()
+	row.custom_minimum_size = Vector2(0, ATTACK_BAR_HEIGHT)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 4)
+	attack_bar.add_child(row)
+
+	var text_col := VBoxContainer.new()
+	text_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_col.add_theme_constant_override("separation", 0)
+	row.add_child(text_col)
+
+	var equipped_line := _make_attack_bar_label()
+	equipped_line.text = "Equipped: %s%s" % [atk.name, type_data.get("label", "")]
+	text_col.add_child(equipped_line)
+
+	# The DMG line always exists, even without an energy cost, so the text
+	# column is always exactly two lines tall.
+	var stats_line := _make_attack_bar_label()
+	var energy_cost := int(ceil(atk.energy_cost * type_data.get("energy_mult", 1.0)))
+	if energy_cost > 0:
+		stats_line.text = "DMG %d | %d energy" % [atk.damage, energy_cost]
+	else:
+		stats_line.text = "DMG %d" % atk.damage
 	if atk.get("item_key", "") == "bow":
-		lbl.text += "  |  Arrows %d" % InventoryState.count_item("arrow")
-	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lbl.custom_minimum_size.x = 0
-	attack_bar.add_child(lbl)
+		stats_line.text += " | Arrows %d" % InventoryState.count_item("arrow")
+	text_col.add_child(stats_line)
 
 	var shield_idx := InventoryState.equipped_shield_index
 	if shield_idx >= 0 and shield_idx < InventoryState.hotbar.size():
@@ -424,10 +468,31 @@ func _rebuild_attack_bar() -> void:
 			var shield_button := Button.new()
 			shield_button.text = "Shield"
 			shield_button.icon = ItemRegistry.get_icon(shield_key)
+			shield_button.custom_minimum_size = Vector2(SHIELD_BUTTON_MIN_WIDTH, ATTACK_BAR_HEIGHT)
+			shield_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			shield_button.autowrap_mode = TextServer.AUTOWRAP_OFF
+			shield_button.expand_icon = true
+			# Cap the icon so the button stays close to SHIELD_BUTTON_MIN_WIDTH
+			# and leaves the text column enough room for its longest line.
+			shield_button.add_theme_constant_override("icon_max_width", SHIELD_ICON_MAX_WIDTH)
 			shield_button.tooltip_text = "Blocks the next enemy attack that resolves this turn. Uses your whole turn."
 			shield_button.pressed.connect(_on_shield_pressed)
 			shield_button.disabled = _turn_phase != "player"
-			attack_bar.add_child(shield_button)
+			row.add_child(shield_button)
+			_shield_button = shield_button
+
+
+## One line of the attack bar: single-line, full text, no ellipsis, no clip.
+## The font is one step below the default so the longest line
+## ("Equipped: Stone Sword (Heavy)") still fits next to the Shield button.
+func _make_attack_bar_label() -> Label:
+	var lbl := Label.new()
+	lbl.autowrap_mode = TextServer.AUTOWRAP_OFF
+	lbl.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lbl.add_theme_font_size_override("font_size", ATTACK_BAR_FONT_SIZE)
+	return lbl
 
 
 func _on_attack_requested(mob_id: int) -> void:
@@ -1847,9 +1912,9 @@ func _run_mob_turn_sequence(shielded: bool = false) -> void:
 
 
 func set_combat_input_enabled(enabled: bool) -> void:
-	for child in attack_bar.get_children():
-		if child is Button:
-			child.disabled = not enabled
+	# The Shield button is inside the attack bar's row, hence the member ref.
+	if is_instance_valid(_shield_button):
+		_shield_button.disabled = not enabled
 	pass_turn_button.disabled = not enabled or _active_mob_ids.is_empty()
 	if inv_ui:
 		inv_ui.mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE

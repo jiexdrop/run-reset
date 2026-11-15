@@ -13,6 +13,7 @@ text = "Mob"
 horizontal_alignment = 1
 
 [node name="ResistRow" type="HBoxContainer" parent="." unique_id=840887572]
+custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/separation = 2

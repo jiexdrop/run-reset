@@ -301,7 +301,10 @@ func _refresh_resist_label() -> void:
 
 		resist_row.add_child(badge)
 
-	resist_row.visible = has_any
+	# ResistRow keeps a fixed 20 px height and is never hidden: hiding it (or
+	# letting it collapse when empty) changes the mob card's height, which makes
+	# the cards in the row jump as resistances come and go. Fade it instead.
+	resist_row.modulate.a = 1.0 if has_any else 0.0
 
 
 func _process(_d: float) -> void:
