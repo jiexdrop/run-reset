@@ -139,6 +139,17 @@ var _items: Dictionary = {
 		"attack_type": "fire_spell",
 		"element": "fire",
 	},
+	"spell_find_mobs": {
+		"name": "Seer's Glimpse",
+		"icon": preload("res://assets/items/spell_find_mobs.png"),
+		"desc": "Reveals which unexplored tiles hide enemies. Costs 1 energy.",
+		"max_stack": 8,
+		"type": "spell",
+		"damage": 0,
+		"energy_cost": 1,
+		"attack_type": "single_swing",
+		"element": "physical",
+	},
 	
 	"bomb": {
 		"name": "Bomb",

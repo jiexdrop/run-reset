@@ -54,6 +54,7 @@ func _build_registry() -> void:
 		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "stone_sword", "chance": 0.22, "min": 1, "max": 1 },
+		{ "item_key": "spell_find_mobs", "chance": 0.15, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["spider"] = spider
 
@@ -72,6 +73,7 @@ func _build_registry() -> void:
 	rat.loot_table = [
 		{ "item_key": "health_potion", "chance": 0.22, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.22, "min": 1, "max": 1 },
+		{ "item_key": "spell_find_mobs", "chance": 0.15, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["rat"] = rat
 	
@@ -90,6 +92,7 @@ func _build_registry() -> void:
 	cactus.loot_table = [
 		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
+		{ "item_key": "spell_find_mobs", "chance": 0.15, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["cactus"] = cactus
 
@@ -108,6 +111,7 @@ func _build_registry() -> void:
 	sandipper.burrows    = true
 	sandipper.loot_table = [
 		{ "item_key": "health_potion", "chance": 0.22, "min": 1, "max": 1 },
+		{ "item_key": "spell_find_mobs", "chance": 0.15, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["sandipper"] = sandipper
 
@@ -151,6 +155,7 @@ func _build_registry() -> void:
 		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "spell_ice", "chance": 0.32, "min": 1, "max": 1 },
+		{ "item_key": "spell_find_mobs", "chance": 0.15, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["frozelin"] = frozelin
 
@@ -190,6 +195,7 @@ func _build_registry() -> void:
 		{ "item_key": "health_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "spell_fire", "chance": 0.32, "min": 1, "max": 1 },
+		{ "item_key": "spell_find_mobs", "chance": 0.15, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["pikonaut"] = pikonaut
 	
@@ -210,6 +216,7 @@ func _build_registry() -> void:
 		{ "item_key": "health_potion", "chance": 0.42, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "bomb", "chance": 0.22, "min": 1, "max": 1 },
+		{ "item_key": "spell_find_mobs", "chance": 0.15, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["kaze_shroom"] = kaze_shroom
 
@@ -232,6 +239,7 @@ func _build_registry() -> void:
 		{ "item_key": "iron_sword", "chance": 0.52, "min": 1, "max": 1 },
 		{ "item_key": "bow", "chance": 0.5, "min": 1, "max": 1 },
 		{ "item_key": "bomb", "chance": 0.25, "min": 1, "max": 1 },
+		{ "item_key": "spell_find_mobs", "chance": 0.15, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["sapguard"] = sapguard
 
@@ -257,6 +265,7 @@ func _build_registry() -> void:
 		{ "item_key": "arrow", "chance": 0.40, "min": 3, "max": 5 },
 		{ "item_key": "health_potion", "chance": 0.35, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.15, "min": 1, "max": 1 },
+		{ "item_key": "spell_find_mobs", "chance": 0.15, "min": 1, "max": 1 },
 	] as Array[Dictionary]
 	_registry["skeleton"] = skeleton
 

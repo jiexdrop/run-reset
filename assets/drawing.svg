@@ -29,9 +29,9 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="px"
-     inkscape:zoom="4.0000002"
-     inkscape:cx="675.99997"
-     inkscape:cy="329.37498"
+     inkscape:zoom="11.313709"
+     inkscape:cx="738.66139"
+     inkscape:cy="279.26297"
      inkscape:window-width="1920"
      inkscape:window-height="1017"
      inkscape:window-x="-8"
@@ -1968,7 +1968,10 @@
        transform="translate(83.696695,0.85355335)"><path
          style="fill:#8a916f;fill-opacity:1;stroke:#454837;stroke-width:1.35147"
          d="m 610.83725,385.84823 -0.39574,-63.12009 8.90409,6.52966 7.91475,-6.13393 9.10196,5.73819 6.52966,-6.9254 8.50836,6.72753 6.33179,-8.11261 7.32114,7.91475 7.51901,-8.11262 0.19787,66.87961 -7.32114,-4.35312 -7.32114,4.74885 -6.92541,-5.93606 -8.11261,5.93606 -8.70622,-5.54032 -7.51901,4.94672 -7.91474,-6.3318 z"
-         id="path273" /><path
+         id="path273"
+         inkscape:export-filename="items\spell_find_mobs.png"
+         inkscape:export-xdpi="73.948349"
+         inkscape:export-ydpi="73.948349" /><path
          style="fill:#e6e6e6;stroke:#1a1a1a;stroke-width:0.595;stroke-linecap:round"
          d="m 704.99997,356.74998 c 16.14628,-22.85295 28.52172,-12.08265 40.74999,0 -11.5922,10.35385 -22.70136,23.21956 -40.74999,0 z"
          id="path278"
@@ -1998,7 +2001,11 @@
          style="fill:#3771c8;stroke:#1a1a1a;stroke-width:2.59500022;stroke-linecap:round;stroke-dasharray:none"
          d="m 735.99996,344.12498 6.125,-9.5"
          id="path283"
-         transform="translate(-83.696695,-0.85355335)" /></g></g><g
+         transform="translate(-83.696695,-0.85355335)" /><path
+         d="m 643.30331,267.23824 c -6.43876,-2.6e-4 -11.65847,5.21945 -11.65821,11.65821 -1.4e-4,2.66026 0.90958,5.24056 2.57813,7.3125 l 0.61133,0.6875 c 7.2808,6.71869 6.08072,11.98028 8.03125,17.9375 1.78425,-5.566 2.38147,-11.5379 7.60546,-16.74414 0.42366,-0.42222 0.87762,-0.83848 1.36524,-1.25 0.1891,-0.20372 0.37086,-0.41414 0.54492,-0.63086 1.66925,-2.07168 2.57967,-4.652 2.58008,-7.3125 2.6e-4,-6.43875 -5.21945,-11.65846 -11.6582,-11.65821 z"
+         style="fill:#00112b;stroke:#1a1a1a;stroke-width:1.195;stroke-linecap:round"
+         id="path293"
+         sodipodi:nodetypes="cccccscccc" /></g></g><g
      inkscape:groupmode="layer"
      id="layer2"
      inkscape:label="Layer 2"><rect

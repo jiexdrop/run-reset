@@ -705,6 +705,33 @@ func _cast_spell_from_hotbar(slot_idx: int) -> void:
 	if ItemRegistry.get_type(item_key) != "spell":
 		return
 
+	if item_key == "spell_find_mobs":
+		var cost: int = ItemRegistry.get_energy_cost(item_key)
+		var p = GameState.player
+		if int(p.get("energy", 0)) < cost:
+			_log("Not enough energy!")
+			return
+		var game = get_tree().get_first_node_in_group("game")
+		if game == null or not game.has_method("show_mob_hints"):
+			return
+		var count: int = game.show_mob_hints()
+		if count == 0:
+			_log("The glimpse shows no hidden enemies.")
+			return
+		p["energy"] = max(0, int(p.get("energy", 0)) - cost)
+		GameState.player = p
+		refresh_stats()
+		InventoryState.consume_hotbar_item(slot_idx)
+		GameState.mark_dirty()
+		SaveManager.save()
+		if count == 1:
+			_log("Seer's Glimpse reveals 1 hidden enemy!")
+		else:
+			_log("Seer's Glimpse reveals %d hidden enemies!" % count)
+		if not _active_mob_ids.is_empty():
+			on_player_moved()
+		return
+
 	var target_id := _get_first_spell_target()
 	if target_id < 0:
 		_log("No enemy to cast on.")

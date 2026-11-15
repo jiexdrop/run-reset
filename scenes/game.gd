@@ -3,7 +3,8 @@ extends Node2D
 const TILE = preload("uid://ceosbosrytods")
 const BUSH = preload("res://scenes/bush.tscn")
 const GROUND_ITEM = preload("res://scenes/ground_item.tscn")
-const DEFAULT_GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield", "health_potion", "energy_potion", "arrow", "arrow", "bow"]
+const MOB_HINT_TEX = preload("res://assets/ui/mob_indicator.png")
+const DEFAULT_GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield", "health_potion", "energy_potion", "arrow", "arrow", "bow", "spell_find_mobs"]
 const GROUND_ITEM_SPAWN_CHANCE = 0.25
 const MAX_GROUND_ITEMS_PER_FLOOR = 4
 # Cistronia's ground items lean on potions and arrows — lemons are one entry
@@ -46,6 +47,7 @@ var _debug_portal_destination: Dictionary = {}
 # Scratch dungeon-generation state (only valid while generate_tiles() runs).
 var _gen_floor: Dictionary = {}
 var _edge_dots: Dictionary = {} 
+var _mob_hints: Dictionary = {}   # tile key -> Sprite2D
 
 func _ready() -> void:
 	add_to_group("game")
@@ -792,6 +794,7 @@ func center_camera_on_revealed() -> void:
 	_update_camera_target()
 	_update_player_marker()
 	update_edge_dots()
+	_prune_mob_hints()
 
 func _update_camera_target() -> void:
 	var revealed: Array = []
@@ -904,3 +907,61 @@ func _on_edge_dot_clicked(_viewport: Node, event: InputEvent, _shape_idx: int, k
 				if "%d,%d" % [tile.grid_x, tile.grid_y] == key:
 					tile.reveal()
 					return
+
+
+# ── Seer's Glimpse hints (unrevealed tiles holding a live mob) ────────────────
+# Temporary markers, never saved: a floor change rebuilds the scene, and each
+# tile reveal prunes the hint it just made obsolete.
+
+## Marks every still-unrevealed tile that holds a live mob with a hint sprite.
+## Returns how many hints were created (0 = nothing hidden).
+func show_mob_hints() -> int:
+	for key in _mob_hints:
+		var old: Sprite2D = _mob_hints[key]
+		if is_instance_valid(old):
+			old.queue_free()
+	_mob_hints.clear()
+
+	var created := 0
+	for key in GameState.tiles:
+		if key == "door_spawned":
+			continue
+		var tdata: Dictionary = GameState.tiles[key]
+		if tdata.get("visible", false):
+			continue
+		if String(tdata.get("mob", "")) == "":
+			continue
+		if tdata.get("mob_dead", false):
+			continue
+
+		var parts = key.split(",")
+		if parts.size() < 2:
+			continue
+		var gx = parts[0].to_int()
+		var gy = parts[1].to_int()
+
+		var hint := Sprite2D.new()
+		hint.texture = MOB_HINT_TEX
+		hint.centered = true
+		hint.position = Vector2(gx, gy) * TILE_SIZE
+		hint.z_index = 7   # above edge dots (6)
+		if hint.texture:
+			var tex_size = hint.texture.get_size()
+			if tex_size.x > 0.0 and tex_size.y > 0.0:
+				hint.scale = Vector2.ONE * min(50.0 / tex_size.x, 50.0 / tex_size.y)
+		add_child(hint)
+		_mob_hints[key] = hint
+		created += 1
+
+	return created
+
+
+## Drops hints for tiles that are no longer hidden or no longer hold a live mob.
+func _prune_mob_hints() -> void:
+	for key in _mob_hints.keys().duplicate():
+		var tdata: Dictionary = GameState.tiles.get(key, {})
+		if tdata.is_empty() or tdata.get("visible", false) or tdata.get("mob_dead", false):
+			var hint: Sprite2D = _mob_hints[key]
+			if is_instance_valid(hint):
+				hint.queue_free()
+			_mob_hints.erase(key)
