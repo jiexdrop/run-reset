@@ -49,6 +49,11 @@ const ATTACK_TYPES: Dictionary = {
 		"range": "ranged",
 		"effect_scene": preload("res://scenes/effects/arrow_effect.tscn"),
 	},
+	"shuriken_throw": {
+		"hits": 1, "damage_mult": 1.0, "energy_mult": 1.0, "label": "",
+		"range": "ranged",
+		"effect_scene": preload("res://scenes/effects/shuriken_effect.tscn"),
+	},
 }
 
 var _items: Dictionary = {
@@ -188,6 +193,16 @@ var _items: Dictionary = {
 		"type": "ammo",
 		"ground_amount_min": 5,
 		"ground_amount_max": 8,
+	},
+	"shuriken": {
+		"name": "Shuriken",
+		"icon": preload("res://assets/items/shuriken.png"),
+		"desc": "A razor-edged throwing star.\nEquip it and click an enemy to throw.\nRicochet: after hitting, it bounces to another enemy for 1 damage.\nRanged: cracks the Raptor Skeleton's armored plates.",
+		"max_stack": 1,
+		"type": "weapon",
+		"damage": 2,
+		"energy_cost": 1,
+		"attack_type": "shuriken_throw",
 	},
 
 	# ── Shields ───────────────────────────────────────────────────────────────

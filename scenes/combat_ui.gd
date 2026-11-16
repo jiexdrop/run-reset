@@ -912,6 +912,7 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 	_attack_in_progress = true
 	var is_sword := String(atk.get("item_key", "")).ends_with("sword")
 	var is_bow_shot := String(atk.get("attack_type", "")) == "bow_shot"
+	var is_shuriken := String(atk.get("attack_type", "")) == "shuriken_throw"
 	var cistronia_guard_hit := false
 	for i in range(hits):
 		var mob = GameState.monsters[mob_id]
@@ -935,6 +936,14 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 			_fxdbg("bow:landed", mob_id)
 			mob = GameState.monsters[mob_id]
 
+		if is_shuriken:
+			_play_sound(SWORD_SOUND)   # reuse swoosh; no new sound asset
+			_spawn_attack_effect(mob_id, type_data)
+			await get_tree().create_timer(ShurikenEffect.FLIGHT_TIME).timeout
+			if not is_inside_tree():
+				return
+			mob = GameState.monsters[mob_id]
+
 		var hp_after = max(0, mob.get("hp", 0) - dmg_per_hit)
 		var guarded = _guard_cistronia_lethal(mob, hp_after, was_cracked)
 		if guarded != hp_after:
@@ -943,7 +952,7 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 		GameState.monsters[mob_id] = mob
 
 
-		if not is_bow_shot:
+		if not is_bow_shot and not is_shuriken:
 			if is_sword:
 				_play_sword_sound()
 			_spawn_attack_effect(mob_id, type_data)
@@ -956,6 +965,10 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 
 		if hits > 1 and i < hits - 1:
 			await get_tree().create_timer(HIT_DELAY).timeout
+	if is_shuriken:
+		await _shuriken_ricochet(mob_id, atk, type_data)
+		if not is_inside_tree():
+			return
 	_attack_in_progress = false
 
 	# Burrow check — if the mob just hit can burrow, send it underground and
@@ -1018,6 +1031,48 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 			   # and resurface it there, exactly once
 	else:
 		on_player_moved()
+
+
+## Ricochet: after the primary hit, the shuriken bounces to one random OTHER
+## enemy in combat for 1 damage (resistances apply, min 1). Skips dead and
+## burrowed mobs and any mob whose armor phase rejects this attack. Respects
+## the Cistronia lethal guard. A ricochet kill goes through the normal death flow.
+func _shuriken_ricochet(origin_id: int, atk: Dictionary, type_data: Dictionary) -> void:
+	var candidates: Array = []
+	for other_id in _active_mob_ids:
+		if other_id == origin_id:
+			continue
+		if other_id < 0 or other_id >= GameState.monsters.size():
+			continue
+		var other: Dictionary = GameState.monsters[other_id]
+		if int(other.get("hp", 0)) <= 0 or other.get("burrowed", false):
+			continue
+		if not _get_phase_allowance(other, atk)["allowed"]:
+			continue
+		candidates.append(other_id)
+	if candidates.is_empty():
+		return
+
+	var target_id: int = candidates[randi() % candidates.size()]
+	_spawn_attack_effect(target_id, type_data)
+	await get_tree().create_timer(ShurikenEffect.FLIGHT_TIME).timeout
+	if not is_inside_tree():
+		return
+
+	var target: Dictionary = GameState.monsters[target_id]
+	if int(target.get("hp", 0)) <= 0:
+		return
+	var mult: float = target.get("resistances", {}).get("physical", 1.0)
+	var dmg: int = max(1, int(round(1.0 * mult)))
+	var hp_after: int = max(0, int(target.get("hp", 0)) - dmg)
+	target["hp"] = _guard_cistronia_lethal(target, hp_after, bool(target.get("unlife_cracked", false)))
+	GameState.monsters[target_id] = target
+	var card = _get_card_for_mob(target_id)
+	if card:
+		card.refresh_from_state()
+	_log("The shuriken ricochets into %s for %d!" % [target.get("name", "Mob"), dmg])
+	if int(target["hp"]) <= 0:
+		_on_mob_died(target_id)   # not awaited, same as other kill paths
 
 
 ## ── Area spells ──────────────────────────────────────────────────────────────
