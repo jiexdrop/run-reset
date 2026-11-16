@@ -197,12 +197,13 @@ var _items: Dictionary = {
 	"shuriken": {
 		"name": "Shuriken",
 		"icon": preload("res://assets/items/shuriken.png"),
-		"desc": "A razor-edged throwing star.\nEquip it and click an enemy to throw.\nRicochet: after hitting, it bounces to another enemy for 1 damage.\nRanged: cracks the Raptor Skeleton's armored plates.",
-		"max_stack": 1,
-		"type": "weapon",
+		"desc": "A razor-edged throwing star.\nUses up one per throw.\nRicochet: after hitting, it bounces to another enemy for 1 damage.\nRanged: cracks the Raptor Skeleton's armored plates.",
+		"max_stack": 8,
+		"type": "spell",
 		"damage": 2,
 		"energy_cost": 1,
 		"attack_type": "shuriken_throw",
+		"element": "physical",
 	},
 
 	# ── Shields ───────────────────────────────────────────────────────────────

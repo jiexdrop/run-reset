@@ -4,7 +4,7 @@ const TILE = preload("uid://ceosbosrytods")
 const BUSH = preload("res://scenes/bush.tscn")
 const GROUND_ITEM = preload("res://scenes/ground_item.tscn")
 const MOB_HINT_TEX = preload("res://assets/ui/mob_indicator.png")
-const DEFAULT_GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield", "health_potion", "energy_potion", "arrow", "arrow", "bow", "spell_find_mobs"]
+const DEFAULT_GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield", "health_potion", "energy_potion", "arrow", "arrow", "bow", "spell_find_mobs", "shuriken"]
 const GROUND_ITEM_SPAWN_CHANCE = 0.25
 const MAX_GROUND_ITEMS_PER_FLOOR = 4
 # Cistronia's ground items lean on potions and arrows — lemons are one entry
