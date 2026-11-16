@@ -204,6 +204,8 @@ var _items: Dictionary = {
 		"energy_cost": 1,
 		"attack_type": "shuriken_throw",
 		"element": "physical",
+		"ground_amount_min": 5,
+		"ground_amount_max": 8,
 	},
 
 	# ── Shields ───────────────────────────────────────────────────────────────

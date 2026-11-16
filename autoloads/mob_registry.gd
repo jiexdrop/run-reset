@@ -55,7 +55,7 @@ func _build_registry() -> void:
 		{ "item_key": "energy_potion", "chance": 0.32, "min": 1, "max": 1 },
 		{ "item_key": "stone_sword", "chance": 0.22, "min": 1, "max": 1 },
 		{ "item_key": "spell_find_mobs", "chance": 0.15, "min": 1, "max": 1 },
-		{ "item_key": "shuriken", "chance": 0.18, "min": 1, "max": 2 },
+		{ "item_key": "shuriken", "chance": 0.18, "min": 5, "max": 8 },
 	] as Array[Dictionary]
 	_registry["spider"] = spider
 
@@ -75,7 +75,7 @@ func _build_registry() -> void:
 		{ "item_key": "health_potion", "chance": 0.22, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.22, "min": 1, "max": 1 },
 		{ "item_key": "spell_find_mobs", "chance": 0.15, "min": 1, "max": 1 },
-		{ "item_key": "shuriken", "chance": 0.15, "min": 1, "max": 1 },
+		{ "item_key": "shuriken", "chance": 0.15, "min": 5, "max": 8 },
 	] as Array[Dictionary]
 	_registry["rat"] = rat
 	
@@ -242,7 +242,7 @@ func _build_registry() -> void:
 		{ "item_key": "bow", "chance": 0.5, "min": 1, "max": 1 },
 		{ "item_key": "bomb", "chance": 0.25, "min": 1, "max": 1 },
 		{ "item_key": "spell_find_mobs", "chance": 0.15, "min": 1, "max": 1 },
-		{ "item_key": "shuriken", "chance": 0.30, "min": 1, "max": 2 },
+		{ "item_key": "shuriken", "chance": 0.30, "min": 5, "max": 8 },
 	] as Array[Dictionary]
 	_registry["sapguard"] = sapguard
 
@@ -269,7 +269,7 @@ func _build_registry() -> void:
 		{ "item_key": "health_potion", "chance": 0.35, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.15, "min": 1, "max": 1 },
 		{ "item_key": "spell_find_mobs", "chance": 0.15, "min": 1, "max": 1 },
-		{ "item_key": "shuriken", "chance": 0.20, "min": 1, "max": 2 },
+		{ "item_key": "shuriken", "chance": 0.20, "min": 5, "max": 8 },
 	] as Array[Dictionary]
 	_registry["skeleton"] = skeleton
 
@@ -306,7 +306,7 @@ func _build_registry() -> void:
 		{ "item_key": "bomb", "chance": 0.4, "min": 1, "max": 1 },
 		{ "item_key": "health_potion", "chance": 0.80, "min": 1, "max": 1 },
 		{ "item_key": "energy_potion", "chance": 0.30, "min": 1, "max": 1 },
-		{ "item_key": "shuriken", "chance": 0.50, "min": 2, "max": 3 },
+		{ "item_key": "shuriken", "chance": 0.50, "min": 5, "max": 8 },
 	] as Array[Dictionary]
 	_registry["raptor_skeleton"] = raptor_skeleton
 
