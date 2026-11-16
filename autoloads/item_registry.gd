@@ -81,7 +81,7 @@ var _items: Dictionary = {
 	"lemon": {
 		"name": "Lemon",
 		"icon": preload("res://assets/items/lemon.png"),
-		"desc": "A sour cistronian lemon. Restores 3 energy and electrifies you for 5 turns. While Electrified, you finish foes in Cistronia at no extra cost.",
+		"desc": "A sour cistronian lemon. \nRestores 3 energy and electrifies you for 5 turns. \nWhile Electrified, you finish foes in Cistronia at no extra cost.",
 		"max_stack": 8,
 		"type": "consumable",
 		"energy_amount": 3,
