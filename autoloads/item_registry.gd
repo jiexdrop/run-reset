@@ -173,7 +173,7 @@ var _items: Dictionary = {
 	"bow": {
 		"name": "Hunting Bow",
 		"icon": load("res://assets/items/bow.png"),
-		"desc": "A short hunting bow. Equip it and click an enemy to loose an arrow — each shot consumes 1 Arrow. Throwable: cracks the Raptor Skeleton's armored plates.",
+		"desc": "A short hunting bow. Equip it and click an enemy to loose an arrow. Each shot consumes 1 Arrow.",
 		"max_stack": 1,
 		"type": "weapon",
 		"damage": 3,
@@ -183,7 +183,7 @@ var _items: Dictionary = {
 	"arrow": {
 		"name": "Arrow",
 		"icon": load("res://assets/items/arrow.png"),
-		"desc": "Ammunition for the Hunting Bow — every shot consumes 1 Arrow. Ground caches hold a bundle of 5–8. Throwable: cracks the Raptor Skeleton's armored plates.",
+		"desc": "Ammunition for the Hunting Bow.",
 		"max_stack": 64,
 		"type": "ammo",
 		"ground_amount_min": 5,
