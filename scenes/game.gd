@@ -953,7 +953,51 @@ func show_mob_hints() -> int:
 		_mob_hints[key] = hint
 		created += 1
 
+	if created > 0:
+		_focus_camera_on_mob_hints()
+
 	return created
+
+
+## Frames every mob hint the cast just created: centers on their bounding box
+## and zooms out far enough to show it all. Only the camera targets are set —
+## _process() lerps toward them, and the next tile reveal restores the usual
+## framing of the revealed tiles. Never zooms in past the normal 1.0 zoom.
+func _focus_camera_on_mob_hints() -> void:
+	if _mob_hints.is_empty():
+		return
+
+	var keys: Array = _mob_hints.keys()
+	var first_parts = String(keys[0]).split(",")
+	if first_parts.size() < 2:
+		return
+	var min_x = first_parts[0].to_int()
+	var max_x = min_x
+	var min_y = first_parts[1].to_int()
+	var max_y = min_y
+	for key in keys:
+		var parts = String(key).split(",")
+		if parts.size() < 2:
+			continue
+		var gx = parts[0].to_int()
+		var gy = parts[1].to_int()
+		min_x = min(min_x, gx);  max_x = max(max_x, gx)
+		min_y = min(min_y, gy);  max_y = max(max_y, gy)
+
+	var world_min = Vector2(min_x, min_y) * TILE_SIZE
+	var world_max = Vector2(max_x, max_y) * TILE_SIZE
+	_target_position = (world_min + world_max) / 2.0
+
+	var viewport_size = get_viewport().get_visible_rect().size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return
+
+	var content_width  = (max_x - min_x + 1 + CAMERA_PADDING * 2) * TILE_SIZE
+	var content_height = (max_y - min_y + 1 + CAMERA_PADDING * 2) * TILE_SIZE
+
+	var z = min(viewport_size.x / content_width, viewport_size.y / content_height)
+	z = min(z, 1.0)   # a single nearby hint must not zoom in absurdly
+	_target_zoom = Vector2(z, z)
 
 
 ## Drops hints for tiles that are no longer hidden or no longer hold a live mob.

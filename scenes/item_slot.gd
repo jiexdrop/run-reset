@@ -183,6 +183,14 @@ func receive_drop() -> void:
 		InventoryState.swap_slots(_drag_source["container"], _drag_source["index"], container, slot_index)
 
 
+## Hover tooltip. Empty slots fall back to tooltip_text (the trash slot's
+## explanatory text is assigned from code); filled slots show item info.
+func _get_tooltip(_at_position: Vector2) -> String:
+	if _item_key == "":
+		return tooltip_text
+	return ItemRegistry.get_tooltip_text(_item_key)
+
+
 # ── Private ────────────────────────────────────────────────────────────────────
 
 func _style_label() -> void:

@@ -58,6 +58,7 @@ var _items: Dictionary = {
 		"desc": "A handful of wild berries. Restores 3 HP.",
 		"max_stack": 16,
 		"type": "consumable",
+		"heal_amount": 3,
 	},
 
 	# ── Potions ────────────────────────────────────────────────────────────────
@@ -91,7 +92,7 @@ var _items: Dictionary = {
 	"iron_sword": {
 		"name": "Iron Sword",
 		"icon": preload("res://assets/items/iron_sword.png"),
-		"desc": "A sturdy iron blade. Swords finish the Raptor Skeleton once its armor is cracked.",
+		"desc": "A sturdy iron blade.",
 		"max_stack": 1,
 		"type": "weapon",
 		"damage": 3,
@@ -100,7 +101,7 @@ var _items: Dictionary = {
 	"steel_sword": {
 		"name": "Steel Sword",
 		"icon": preload("res://assets/items/steel_sword.png"),
-		"desc": "A sharpened steel blade. Strikes twice in quick succession. Swords finish the Raptor Skeleton once its armor is cracked.",
+		"desc": "A sharpened steel blade. Strikes twice in quick succession.",
 		"max_stack": 1,
 		"type": "weapon",
 		"damage": 4,
@@ -109,7 +110,7 @@ var _items: Dictionary = {
 	"stone_sword": {
 		"name": "Stone Sword",
 		"icon": preload("res://assets/items/stone_sword.png"),
-		"desc": "A crude, heavy blade chipped from stone. Swords finish the Raptor Skeleton once its armor is cracked.",
+		"desc": "A crude, heavy blade chipped from stone.",
 		"max_stack": 1,
 		"type": "weapon",
 		"damage": 2,
@@ -305,6 +306,48 @@ func get_attack_type_data(attack_type: String) -> Dictionary:
 func get_attack_range(attack_type: String) -> String:
 	var data: Dictionary = ATTACK_TYPES.get(attack_type, ATTACK_TYPES["single_swing"])
 	return String(data.get("range", "other"))
+
+## Builds the hover tooltip for an item. Only stats that apply to the item's
+## type are listed (e.g. no heal line on a sword, no damage line on a potion).
+func get_tooltip_text(item_key: String) -> String:
+	if not _items.has(item_key):
+		return ""
+	var type: String = get_type(item_key)
+	var lines: Array[String] = ["%s (%s)" % [get_item_name(item_key), type.capitalize()]]
+
+	match type:
+		"weapon", "spell":
+			var type_data: Dictionary = get_attack_type_data(get_attack_type(item_key))
+			var hits: int = max(1, int(type_data.get("hits", 1)))
+			var dmg: int = max(1, int(round(get_damage(item_key) * float(type_data.get("damage_mult", 1.0)) / hits)))
+			if hits > 1:
+				lines.append("Damage: %d x%d" % [dmg, hits])
+			else:
+				lines.append("Damage: %d" % dmg)
+			var energy: int = int(ceil(get_energy_cost(item_key) * float(type_data.get("energy_mult", 1.0))))
+			if energy > 0:
+				lines.append("Energy cost: %d" % energy)
+			var element: String = get_element(item_key)
+			if type == "spell" and element != "physical":
+				lines.append("Element: %s" % element.capitalize())
+		"shield":
+			lines.append("Blocks: %d damage" % get_block_amount(item_key))
+			var shield_energy: int = get_energy_cost(item_key)
+			if shield_energy > 0:
+				lines.append("Energy cost: %d" % shield_energy)
+		"consumable":
+			if get_heal_amount(item_key) > 0:
+				lines.append("Restores: %d HP" % get_heal_amount(item_key))
+			if get_energy_amount(item_key) > 0:
+				lines.append("Restores: %d energy" % get_energy_amount(item_key))
+			if get_electrified_turns(item_key) > 0:
+				lines.append("Electrified: %d turns" % get_electrified_turns(item_key))
+
+	var desc: String = get_desc(item_key)
+	if desc != "":
+		lines.append("")
+		lines.append(desc)
+	return "\n".join(lines)
 
 func register(item_key: String, data: Dictionary) -> void:
 	_items[item_key] = data
