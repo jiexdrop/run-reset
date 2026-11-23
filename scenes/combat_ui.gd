@@ -554,7 +554,9 @@ func _finish_clinging_mob(mob_id: int) -> void:
 	if int(p.get("hp", 0)) <= 0:
 		_log(msg)
 		_on_player_died()
-		return   # _attack_in_progress stays true — nothing acts while dying
+		if int(GameState.player.get("hp", 0)) <= 0:
+			return   # _attack_in_progress stays true — nothing acts while dying
+		# Talisman saved the player — the HP cost was paid, so the finish still lands.
 
 	var mob: Dictionary = GameState.monsters[mob_id]
 	mob["hp"] = 0
@@ -1589,7 +1591,9 @@ func _apply_retaliatory_explosion(mob_id: int, retaliation: Dictionary) -> void:
 
 	if p.get("hp", 0) <= 0:
 		_on_player_died()
-		return
+		if int(GameState.player.get("hp", 0)) <= 0:
+			return
+		# Talisman saved the player — the explosion still kills the mob.
 
 	mob = GameState.monsters[mob_id]
 	if mob.get("hp", 0) > 0:
@@ -1652,7 +1656,58 @@ func _apply_freeze_status(p: Dictionary) -> String:
 
 	return msg
 	
+## ── Auto-heal talisman ──────────────────────────────────────────────────────
+## The "Talisman of Last Resort" is a passive item: while it sits anywhere in
+## the player's inventory (hotbar or bag), a lethal hit automatically consumes
+## the best available healing item to prevent death. Only healing consumables
+## (items with heal_amount > 0) are eligible. The talisman itself is never
+## consumed.
+##
+## Priority: the item with the HIGHEST heal_amount is used first so the player
+## gets the most value out of a panic save.
+
+## Healing item keys the talisman may auto-consume, ordered by descending
+## heal_amount so the strongest potion is preferred. Extend this list when new
+## healing consumables are added to ItemRegistry.
+const _AUTO_HEAL_ITEMS: Array[String] = ["health_potion", "berries"]
+
+
+## Attempts to prevent a fatal blow by auto-consuming a healing item. Returns
+## true when the player was saved (HP is now > 0), false when no suitable item
+## was available. Called right before _on_player_died() at every death site.
+func _try_auto_heal() -> bool:
+	if not InventoryState.has_item("talisman_auto_heal"):
+		return false
+
+	var p: Dictionary = GameState.player
+	if int(p.get("hp", 0)) > 0:
+		return false   # not actually lethal — nothing to do
+
+	for item_key in _AUTO_HEAL_ITEMS:
+		if not InventoryState.has_item(item_key):
+			continue
+		var heal: int = ItemRegistry.get_heal_amount(item_key)
+		if heal <= 0:
+			continue
+		# Consume one unit from wherever it is stored (hotbar or bag).
+		if not InventoryState.consume_item(item_key):
+			continue
+		# Restore HP (clamped to max_hp).
+		p["hp"] = mini(int(p.get("hp", 0)) + heal, int(p.get("max_hp", 10)))
+		GameState.player = p
+		GameState.mark_dirty()
+		SaveManager.save()
+		refresh_stats()
+		_log("Your Talisman of Last Resort glows! It consumes a %s — %d HP restored!" % [
+			ItemRegistry.get_item_name(item_key), heal])
+		return true
+
+	return false
+
+
 func _on_player_died() -> void:
+	if _try_auto_heal():
+		return
 	set_combat_input_enabled(false)
 	_log("You died on %s! Resetting..." % _floor_display())
 	await get_tree().create_timer(1.5).timeout
@@ -1753,6 +1808,10 @@ func _on_inventory_slot_clicked(index: int) -> void:
 
 	if item_type == "ammo":
 		_log("%s is ammunition — equip a Hunting Bow to use it." % ItemRegistry.get_item_name(item_key))
+		return
+
+	if item_type == "talisman":
+		_log("%s is a passive talisman — keep it in your inventory." % ItemRegistry.get_item_name(item_key))
 		return
 
 	if item_key == "berries":

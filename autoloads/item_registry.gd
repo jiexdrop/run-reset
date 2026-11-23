@@ -208,6 +208,15 @@ var _items: Dictionary = {
 		"ground_amount_max": 8,
 	},
 
+	# ── Talismans ─────────────────────────────────────────────────────────────
+	"talisman_auto_heal": {
+		"name": "Talisman of Last Resort",
+		"icon": load("res://assets/items/talisman_auto_heal.png"),
+		"desc": "A glowing charm that pulses when danger is near.\nWhile in your inventory, it automatically uses a healing item (berries, health potion) when a hit would kill you.\nPassive — does not need to be equipped.",
+		"max_stack": 1,
+		"type": "talisman",
+	},
+
 	# ── Shields ───────────────────────────────────────────────────────────────
 	"wood_shield": {
 		"name": "Wood Shield",
@@ -360,6 +369,8 @@ func get_tooltip_text(item_key: String) -> String:
 				lines.append("Restores: %d energy" % get_energy_amount(item_key))
 			if get_electrified_turns(item_key) > 0:
 				lines.append("Electrified: %d turns" % get_electrified_turns(item_key))
+		"talisman":
+			lines.append("Passive — keep in inventory")
 
 	var desc: String = get_desc(item_key)
 	if desc != "":
