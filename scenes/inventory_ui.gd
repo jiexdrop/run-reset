@@ -24,6 +24,7 @@ var _columns_dirty: bool = false   # debounce flag
 
 
 func _ready() -> void:
+	add_to_group("inventory_ui")
 	resized.connect(_queue_update_columns)
 	_build_slots()
 	InventoryState.inventory_changed.connect(_on_inventory_changed)

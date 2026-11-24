@@ -25,6 +25,8 @@ func load_save() -> void:
 		GameState.tiles      = parsed.get("tiles",    {})
 		GameState.monsters   = parsed.get("monsters", [])
 		GameState.player     = parsed.get("player",   GameState.player)
+		if not GameState.player.has("gold"):
+			GameState.player["gold"] = 0
 		if parsed.has("inventory"):
 			InventoryState.from_dict(parsed["inventory"])
 		GameState.zone       = parsed.get("zone", "default")
@@ -70,6 +72,7 @@ func reset() -> void:
 		"poison_turns": 0,
 		"frozen_turns": 0,
 		"electrified_turns": 0,
+		"gold":        0,
 	}
 	GameState.zone       = "default"
 	GameState.zone_stage = 1

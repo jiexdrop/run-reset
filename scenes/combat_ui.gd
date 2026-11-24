@@ -99,6 +99,7 @@ var _bag_ui: Control = null
 var _pause_menu: Node = null
 var _chat: Node = null
 var _fx_layer: Node2D = null
+var _gold_label: Label = null
 
 ## One floating "Finish -2 / -3" hint over a hovering clinging mob, reused.
 var _finish_hint: Control = null
@@ -143,6 +144,7 @@ func _ready() -> void:
 		inv_ui.slot_clicked.connect(_on_inventory_slot_clicked)
 		inv_ui.bag_opened.connect(_on_bag_opened)
 	InventoryState.inventory_changed.connect(_rebuild_attack_bar)
+	GameState.gold_changed.connect(func(_amt): refresh_stats())
 	_rebuild_attack_bar()
 
 
@@ -246,6 +248,13 @@ func _setup_floor_label() -> void:
 			badge_parent.remove_child(effect_badge)
 		floor_row.add_child(effect_badge)
 
+	_gold_label = Label.new()
+	_gold_label.name = "GoldLabel"
+	_gold_label.text = "🪙 0 Gold"
+	_gold_label.add_theme_font_size_override("font_size", 13)
+	_gold_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
+	floor_row.add_child(_gold_label)
+
 	var lbl := Label.new()
 	lbl.name = "FloorLabel"
 	lbl.text = _floor_display()
@@ -282,6 +291,9 @@ func refresh_stats() -> void:
 	_build_icon_grid(hearts_grid, p.get("hp", 0),      p.get("max_hp", 10),     heart_full,  heart_empty)
 	_build_icon_grid(energy_grid, p.get("energy", 10),  p.get("max_energy", 10), ENERGY_FULL, ENERGY_EMPTY)
 	_build_icon_row(exp_row,    p.get("xp", 0),       p.get("xp_to_next", 10), EXP_FULL,    EXP_EMPTY)
+
+	if is_instance_valid(_gold_label):
+		_gold_label.text = "🪙 %d Gold" % GameState.get_gold()
 
 	_update_effect_badge(p)
 	_refresh_mob_tooltips()

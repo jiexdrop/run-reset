@@ -204,39 +204,39 @@ func _generate_merchant_stock() -> Array:
 	var stock: Array = []
 	# 1. Consumable (Health or Energy)
 	if randf() < 0.5:
-		stock.append({"item_key": "health_potion", "count": 1, "cost": 2, "sold": false})
+		var key := "health_potion"
+		stock.append({"item_key": key, "count": 1, "cost": ItemRegistry.get_buy_price(key), "sold": false})
 	else:
-		stock.append({"item_key": "energy_potion", "count": 1, "cost": 2, "sold": false})
+		var key := "energy_potion"
+		stock.append({"item_key": key, "count": 1, "cost": ItemRegistry.get_buy_price(key), "sold": false})
 
 	# 2. Key item or protective talisman
 	if not InventoryState.has_item("gomelin_ring"):
-		stock.append({"item_key": "gomelin_ring", "count": 1, "cost": 3, "sold": false})
+		var key := "gomelin_ring"
+		stock.append({"item_key": key, "count": 1, "cost": ItemRegistry.get_buy_price(key), "sold": false})
 	elif not InventoryState.has_item("wood_shield"):
-		stock.append({"item_key": "wood_shield", "count": 1, "cost": 3, "sold": false})
+		var key := "wood_shield"
+		stock.append({"item_key": key, "count": 1, "cost": ItemRegistry.get_buy_price(key), "sold": false})
 	else:
-		stock.append({"item_key": "talisman_auto_heal", "count": 1, "cost": 5, "sold": false})
+		var key := "talisman_auto_heal"
+		stock.append({"item_key": key, "count": 1, "cost": ItemRegistry.get_buy_price(key), "sold": false})
 
 	# 3. Combat gear or spell
 	var pool := ["bomb", "steel_sword", "shuriken", "spell_ice", "spell_fire"]
 	var chosen: String = pool[randi() % pool.size()]
 	var count := 1
-	var cost := 3
 	match chosen:
 		"bomb":
 			count = 2
-			cost = 3
-		"steel_sword":
-			count = 1
-			cost = 4
 		"shuriken":
 			count = 6
-			cost = 2
-		"spell_ice":
+		_:
 			count = 1
-			cost = 3
-		"spell_fire":
-			count = 1
-			cost = 3
+	var cost := ItemRegistry.get_buy_price(chosen) * (1 if chosen in ["shuriken", "bomb"] else count)
+	if chosen == "bomb":
+		cost = 8
+	elif chosen == "shuriken":
+		cost = 6
 	stock.append({"item_key": chosen, "count": count, "cost": cost, "sold": false})
 	return stock
 

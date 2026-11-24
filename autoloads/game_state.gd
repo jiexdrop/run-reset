@@ -1,5 +1,7 @@
 extends Node
 
+signal gold_changed(new_amount: int)
+
 var tiles: Dictionary = {}
 var monsters: Array = []
 var level: int = 1
@@ -15,6 +17,7 @@ var player: Dictionary = {
 	"poison_turns": 0,
 	"frozen_turns": 0,
 	"electrified_turns": 0,
+	"gold":         0,
 }
 var zone: String = "default"
 var zone_stage: int = 1
@@ -25,3 +28,22 @@ var dirty: bool = false
 
 func mark_dirty() -> void:
 	dirty = true
+
+
+func get_gold() -> int:
+	return int(player.get("gold", 0))
+
+
+func add_gold(amount: int) -> void:
+	player["gold"] = max(0, get_gold() + amount)
+	mark_dirty()
+	emit_signal("gold_changed", player["gold"])
+
+
+func spend_gold(amount: int) -> bool:
+	if get_gold() < amount:
+		return false
+	player["gold"] -= amount
+	mark_dirty()
+	emit_signal("gold_changed", player["gold"])
+	return true

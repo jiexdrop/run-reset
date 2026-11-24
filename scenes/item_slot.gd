@@ -151,8 +151,14 @@ func _try_end_drag() -> void:
 	# the cursor — so we can't just check self's rect here. Ask the viewport
 	# for the control actually being hovered instead.
 	var hovered: Control = get_viewport().gui_get_hovered_control()
-	if hovered is ItemSlot:
-		hovered.receive_drop()
+	var target: Node = hovered
+	while target != null and not (target is ItemSlot) and not target.has_method("receive_inventory_drop"):
+		target = target.get_parent()
+
+	if target is ItemSlot:
+		target.receive_drop()
+	elif target != null and target.has_method("receive_inventory_drop"):
+		target.receive_inventory_drop(_drag_source["container"], _drag_source["index"])
 
 	_cleanup_drag()
 

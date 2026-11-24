@@ -258,6 +258,23 @@ func move_to_trash(source_container: String, source_index: int) -> void:
 	emit_signal("inventory_changed")
 
 
+func get_slot_data(container: String, index: int) -> Dictionary:
+	return _get_slot(container, index).duplicate()
+
+
+## Takes the item out of the specified slot and returns its dict.
+func take_slot_item(container: String, index: int) -> Dictionary:
+	var source := _get_slot(container, index)
+	if source.is_empty() or source.get("item_key", "") == "" or source.get("frozen", false):
+		return {}
+	var taken: Dictionary = source.duplicate()
+	_set_slot(container, index, _empty_slot())
+	if container == "hotbar":
+		_unequip_if_empty(index)
+	emit_signal("inventory_changed")
+	return taken
+
+
 func _get_slot(container: String, index: int) -> Dictionary:
 	if container == "trash":
 		return trash if index == 0 else {}

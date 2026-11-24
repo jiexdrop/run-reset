@@ -379,11 +379,54 @@ func get_tooltip_text(item_key: String) -> String:
 		"talisman":
 			lines.append("Passive — keep in inventory")
 
+	var val := get_sell_value(item_key)
+	lines.append("Sell value: %d Gold" % val)
+
 	var desc: String = get_desc(item_key)
 	if desc != "":
 		lines.append("")
 		lines.append(desc)
 	return "\n".join(lines)
+
+
+const ITEM_VALUES: Dictionary = {
+	"berries":           1,
+	"lemon":             2,
+	"health_potion":     3,
+	"energy_potion":     3,
+	"spell_find_mobs":   3,
+	"bomb":              4,
+	"arrow":             1,
+	"shuriken":          1,
+	"stone_sword":       3,
+	"iron_sword":        6,
+	"steel_sword":       10,
+	"wood_shield":       4,
+	"bow":               8,
+	"spell_ice":         6,
+	"spell_fire":        7,
+	"gomelin_ring":      12,
+	"talisman_auto_heal": 15,
+}
+
+func get_sell_value(item_key: String) -> int:
+	if _items.has(item_key) and _items[item_key].has("sell_value"):
+		return int(_items[item_key]["sell_value"])
+	if ITEM_VALUES.has(item_key):
+		return ITEM_VALUES[item_key]
+	var type: String = get_type(item_key)
+	match type:
+		"talisman": return 10
+		"weapon": return 5
+		"shield": return 4
+		"spell": return 4
+		"consumable": return 2
+		_: return 1
+
+func get_buy_price(item_key: String) -> int:
+	if _items.has(item_key) and _items[item_key].has("buy_price"):
+		return int(_items[item_key]["buy_price"])
+	return max(2, get_sell_value(item_key) * 2)
 
 func register(item_key: String, data: Dictionary) -> void:
 	_items[item_key] = data
