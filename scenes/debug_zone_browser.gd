@@ -73,7 +73,7 @@ func _build_panel() -> void:
 	m_name.custom_minimum_size = Vector2(120, 0)
 	merchant_row.add_child(m_name)
 	var m_button := Button.new()
-	m_button.text = "Merchant Room (Floor 3)"
+	m_button.text = "Merchant Room"
 	m_button.pressed.connect(_open_merchant_portal)
 	merchant_row.add_child(m_button)
 
@@ -112,5 +112,5 @@ func _open_merchant_portal() -> void:
 		return
 	if games[0].has_method("open_debug_merchant_portal"):
 		games[0].open_debug_merchant_portal()
-		_status.text = "Portal opened: Merchant Room (Floor 3)."
+		_status.text = "Portal opened: Merchant Room."
 	_panel.hide()
