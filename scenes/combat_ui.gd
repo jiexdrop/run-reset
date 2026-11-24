@@ -12,6 +12,7 @@ const FROZEN_ICON        = preload("res://assets/ui/frozen.png")
 const ELECTRIFIED_ICON   = preload("res://assets/ui/energy_full.png")
 const HEART_FULL_POISON  = preload("res://assets/ui/heart_full_poison.png")
 const HEART_EMPTY_POISON = preload("res://assets/ui/heart_empty_poison.png")
+const COIN_ICON          = preload("res://assets/ui/coin.png")
 
 const ICON_SIZE = Vector2(20, 20)
 const HIT_DELAY = 0.15   # pause between hits of a multi-hit attack
@@ -248,9 +249,18 @@ func _setup_floor_label() -> void:
 			badge_parent.remove_child(effect_badge)
 		floor_row.add_child(effect_badge)
 
+	var coin_icon := TextureRect.new()
+	coin_icon.name = "CoinIcon"
+	coin_icon.texture = COIN_ICON
+	coin_icon.custom_minimum_size = Vector2(16, 16)
+	coin_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	coin_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	coin_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	floor_row.add_child(coin_icon)
+
 	_gold_label = Label.new()
 	_gold_label.name = "GoldLabel"
-	_gold_label.text = "🪙 0 Gold"
+	_gold_label.text = "0 Gold"
 	_gold_label.add_theme_font_size_override("font_size", 13)
 	_gold_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
 	floor_row.add_child(_gold_label)
@@ -293,7 +303,7 @@ func refresh_stats() -> void:
 	_build_icon_row(exp_row,    p.get("xp", 0),       p.get("xp_to_next", 10), EXP_FULL,    EXP_EMPTY)
 
 	if is_instance_valid(_gold_label):
-		_gold_label.text = "🪙 %d Gold" % GameState.get_gold()
+		_gold_label.text = "%d Gold" % GameState.get_gold()
 
 	_update_effect_badge(p)
 	_refresh_mob_tooltips()

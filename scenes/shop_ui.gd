@@ -3,7 +3,10 @@ class_name ShopUI
 
 signal closed
 
-const MERCHANT_TEX = preload("res://assets/characters/merchant.png")
+const MERCHANT_TEX  = preload("res://assets/characters/merchant.png")
+const COIN_TEX      = preload("res://assets/ui/coin.png")
+const BAG_TEX       = preload("res://assets/ui/bag.png")
+const MONEY_BAG_TEX = preload("res://assets/ui/money_bag.png")
 
 var _stock: Array = []
 var _gift_claimed: bool = false
@@ -114,17 +117,28 @@ func _build_ui() -> void:
 	g_sb.border_color = Color(0.8, 0.65, 0.25, 0.8)
 	g_sb.set_border_width_all(1)
 	g_sb.set_corner_radius_all(6)
-	g_sb.content_margin_left = 10
+	g_sb.content_margin_left = 8
 	g_sb.content_margin_right = 10
 	g_sb.content_margin_top = 4
 	g_sb.content_margin_bottom = 4
 	gold_panel.add_theme_stylebox_override("panel", g_sb)
 	header.add_child(gold_panel)
 
+	var g_hbox := HBoxContainer.new()
+	g_hbox.add_theme_constant_override("separation", 6)
+	gold_panel.add_child(g_hbox)
+
+	var g_icon := TextureRect.new()
+	g_icon.texture = COIN_TEX
+	g_icon.custom_minimum_size = Vector2(16, 16)
+	g_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	g_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	g_hbox.add_child(g_icon)
+
 	_gold_label = Label.new()
 	_gold_label.add_theme_font_size_override("font_size", 13)
 	_gold_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.35))
-	gold_panel.add_child(_gold_label)
+	g_hbox.add_child(_gold_label)
 
 	var close_btn := Button.new()
 	close_btn.text = "X"
@@ -140,14 +154,20 @@ func _build_ui() -> void:
 	layout.add_child(tab_row)
 
 	_buy_tab_btn = Button.new()
-	_buy_tab_btn.text = "🛒  Buy Wares"
+	_buy_tab_btn.text = "Buy Wares"
+	_buy_tab_btn.icon = BAG_TEX
+	_buy_tab_btn.expand_icon = true
+	_buy_tab_btn.add_theme_constant_override("icon_max_width", 20)
 	_buy_tab_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_buy_tab_btn.custom_minimum_size = Vector2(0, 34)
 	_buy_tab_btn.pressed.connect(func(): _switch_tab("buy"))
 	tab_row.add_child(_buy_tab_btn)
 
 	_sell_tab_btn = Button.new()
-	_sell_tab_btn.text = "💰  Sell Items"
+	_sell_tab_btn.text = "Sell Items"
+	_sell_tab_btn.icon = MONEY_BAG_TEX
+	_sell_tab_btn.expand_icon = true
+	_sell_tab_btn.add_theme_constant_override("icon_max_width", 20)
 	_sell_tab_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_sell_tab_btn.custom_minimum_size = Vector2(0, 34)
 	_sell_tab_btn.pressed.connect(func(): _switch_tab("sell"))
@@ -198,7 +218,7 @@ func _switch_tab(tab: String) -> void:
 func _refresh() -> void:
 	var gold: int = GameState.get_gold()
 	if _gold_label:
-		_gold_label.text = "🪙 %d Gold" % gold
+		_gold_label.text = "%d Gold" % gold
 
 	# Style tab buttons
 	if _buy_tab_btn and _sell_tab_btn:
@@ -311,9 +331,13 @@ func _build_buy_view() -> void:
 
 		if sold:
 			buy_btn.text = "Sold"
+			buy_btn.icon = null
 			buy_btn.disabled = true
 		else:
-			buy_btn.text = "🪙 %d Gold" % cost
+			buy_btn.text = "%d Gold" % cost
+			buy_btn.icon = COIN_TEX
+			buy_btn.expand_icon = true
+			buy_btn.add_theme_constant_override("icon_max_width", 16)
 			var can_afford: bool = (gold >= cost)
 			var has_space: bool = (InventoryState.get_free_space(item_key) >= count)
 			buy_btn.disabled = (not can_afford) or (not has_space)
@@ -445,12 +469,24 @@ func _build_sell_view() -> void:
 	dz_vbox.add_theme_constant_override("separation", 3)
 	drop_box.add_child(dz_vbox)
 
+	var dz_title_row := HBoxContainer.new()
+	dz_title_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	dz_title_row.add_theme_constant_override("separation", 8)
+	dz_vbox.add_child(dz_title_row)
+
+	var dz_icon := TextureRect.new()
+	dz_icon.texture = MONEY_BAG_TEX
+	dz_icon.custom_minimum_size = Vector2(20, 20)
+	dz_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	dz_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	dz_title_row.add_child(dz_icon)
+
 	var dz_title := Label.new()
-	dz_title.text = "⬇  DROP ANY ITEM HERE TO SELL  ⬇"
+	dz_title.text = "DROP ANY ITEM HERE TO SELL"
 	dz_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	dz_title.add_theme_font_size_override("font_size", 14)
 	dz_title.add_theme_color_override("font_color", Color(1.0, 0.9, 0.45))
-	dz_vbox.add_child(dz_title)
+	dz_title_row.add_child(dz_title)
 
 	var dz_sub := Label.new()
 	dz_sub.text = "Drag an item from your Hotbar or Bag and release it here."
@@ -537,11 +573,22 @@ func _build_sell_view() -> void:
 			loc_l.add_theme_color_override("font_color", Color(0.6, 0.6, 0.65))
 			name_col.add_child(loc_l)
 
+			var val_box := HBoxContainer.new()
+			val_box.add_theme_constant_override("separation", 4)
+			h.add_child(val_box)
+
+			var val_icon := TextureRect.new()
+			val_icon.texture = COIN_TEX
+			val_icon.custom_minimum_size = Vector2(14, 14)
+			val_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			val_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			val_box.add_child(val_icon)
+
 			var val_l := Label.new()
-			val_l.text = "+🪙 %d Gold" % total_val
+			val_l.text = "+%d Gold" % total_val
 			val_l.add_theme_font_size_override("font_size", 12)
 			val_l.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
-			h.add_child(val_l)
+			val_box.add_child(val_l)
 
 			var sell_btn := Button.new()
 			sell_btn.text = "Sell"

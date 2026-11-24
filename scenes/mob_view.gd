@@ -204,9 +204,9 @@ func _add_armor_phase_badge() -> bool:
 	badge.add_theme_stylebox_override("panel", style)
 	var lbl := Label.new()
 	if hp > split:
-		lbl.text = "Armored: bombs/bows!"
+		lbl.text = "Armored: ranged!"
 	else:
-		lbl.text = "Exposed: swords!"
+		lbl.text = "Exposed: melee!"
 	lbl.add_theme_font_size_override("font_size", 10)
 	lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.5))
 	badge.add_child(lbl)
