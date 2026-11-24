@@ -21,3 +21,4 @@ Roguelite dungeon exploration
 - Implement an NPC that traded the gomelin ring before the encounter with the gomelin
 - The gomelin ring prevents the gomelin from stealing
 - Implement who drops of the Talisman of last resort
+- Bug: Raptor skeleton cannot be killed if no lemons like skeletons do
