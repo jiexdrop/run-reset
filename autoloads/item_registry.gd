@@ -216,6 +216,13 @@ var _items: Dictionary = {
 		"max_stack": 1,
 		"type": "talisman",
 	},
+	"gomelin_ring": {
+		"name": "Gomelin Ring",
+		"icon": load("res://assets/items/gomelin_ring.png"),
+		"desc": "A gleaming ring of strange craft.\nPrevents the Gomelin from pilfering your items.\nPassive — keep in inventory.",
+		"max_stack": 1,
+		"type": "talisman",
+	},
 
 	# ── Shields ───────────────────────────────────────────────────────────────
 	"wood_shield": {

@@ -1443,9 +1443,12 @@ func _do_mob_turn(mob_id: int) -> void:
 				_player_stunned = true
 				msg += " You are stunned!"
 			MobAttackData.Effect.STEAL:
-				var stolen = _steal_random_item()
-				if stolen != "":
-					msg += " Gomelin steals your %s!" % ItemRegistry.get_item_name(stolen)
+				if InventoryState.has_item("gomelin_ring"):
+					msg += " The Gomelin Ring wards off the pilfer!"
+				else:
+					var stolen = _steal_random_item()
+					if stolen != "":
+						msg += " Gomelin steals your %s!" % ItemRegistry.get_item_name(stolen)
 			MobAttackData.Effect.FREEZE:
 				msg += _apply_freeze_status(p)
 
@@ -1503,9 +1506,12 @@ func _do_mob_turn(mob_id: int) -> void:
 			_player_stunned = true
 			msg += " You are stunned!"
 		MobAttackData.Effect.STEAL:
-			var stolen = _steal_random_item()
-			if stolen != "":
-				msg += " Gomelin steals your %s!" % ItemRegistry.get_item_name(stolen)
+			if InventoryState.has_item("gomelin_ring"):
+				msg += " The Gomelin Ring wards off the pilfer!"
+			else:
+				var stolen = _steal_random_item()
+				if stolen != "":
+					msg += " Gomelin steals your %s!" % ItemRegistry.get_item_name(stolen)
 		MobAttackData.Effect.FREEZE:
 			msg += _apply_freeze_status(p)
 
@@ -1912,6 +1918,8 @@ func _on_bag_closed() -> void:
 	inv_ui.set_drag_enabled(false)
 
 func _steal_random_item() -> String:
+	if InventoryState.has_item("gomelin_ring"):
+		return ""
 	var candidates: Array = []
 	for i in range(InventoryState.HOTBAR_SIZE):
 		if i == InventoryState.equipped_index or i == InventoryState.equipped_shield_index:

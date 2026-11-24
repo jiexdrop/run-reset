@@ -4,6 +4,8 @@ const TILE = preload("uid://ceosbosrytods")
 const BUSH = preload("res://scenes/bush.tscn")
 const GROUND_ITEM = preload("res://scenes/ground_item.tscn")
 const MOB_HINT_TEX = preload("res://assets/ui/mob_indicator.png")
+const MERCHANT_TEX = preload("res://assets/characters/merchant.png")
+const ShopUIClass = preload("res://scenes/shop_ui.gd")
 const DEFAULT_GROUND_ITEM_KEYS: Array[String] = ["bomb", "wood_shield", "health_potion", "energy_potion", "arrow", "arrow", "bow", "spell_find_mobs", "shuriken"]
 const GROUND_ITEM_SPAWN_CHANCE = 0.25
 const MAX_GROUND_ITEMS_PER_FLOOR = 4
@@ -42,6 +44,7 @@ var _target_zoom:     Vector2 = Vector2.ONE
 var _spawned_tiles: Array = []
 var _door_node: Node2D = null
 var _player_marker: Node2D = null
+var _merchant_node: Node2D = null
 var _debug_portal_destination: Dictionary = {}
 
 # Scratch dungeon-generation state (only valid while generate_tiles() runs).
@@ -160,7 +163,89 @@ func _get_mob_spawn_chance() -> float:
 		MOB_SPAWN_CHANCE_START + MOB_SPAWN_CHANCE_STEP * (GameState.level - 1))
 
 
+func is_merchant_floor() -> bool:
+	return GameState.level > 0 and (GameState.level % 3 == 0)
+
+
+func _generate_merchant_floor() -> void:
+	_gen_floor = {}
+	GameState.tiles.clear()
+	GameState.monsters.clear()
+
+	var tile_coords: Array[Vector2i] = [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)]
+	var default_stock: Array = _generate_merchant_stock()
+
+	for pos in tile_coords:
+		var key := _key(pos)
+		_gen_floor[key] = "room"
+		GameState.tiles[key] = {
+			"visible": true,
+			"type": "room",
+			"has_merchant": (pos == Vector2i(1, 0)),
+			"is_exit": (pos == Vector2i(2, 0)),
+			"mob": "",
+			"mob_dead": false,
+			"has_bush": false,
+			"bush_harvested": false,
+			"has_ground_item": false,
+			"item_key": "",
+			"item_count": 0,
+			"item_collected": false,
+		}
+		if pos == Vector2i(1, 0):
+			GameState.tiles[key]["merchant_stock"] = default_stock
+			GameState.tiles[key]["gift_claimed"] = false
+
+	GameState.player_tile = "0,0"
+	_spawn_tiles()
+
+
+func _generate_merchant_stock() -> Array:
+	var stock: Array = []
+	# 1. Consumable (Health or Energy)
+	if randf() < 0.5:
+		stock.append({"item_key": "health_potion", "count": 1, "cost": 2, "sold": false})
+	else:
+		stock.append({"item_key": "energy_potion", "count": 1, "cost": 2, "sold": false})
+
+	# 2. Key item or protective talisman
+	if not InventoryState.has_item("gomelin_ring"):
+		stock.append({"item_key": "gomelin_ring", "count": 1, "cost": 3, "sold": false})
+	elif not InventoryState.has_item("wood_shield"):
+		stock.append({"item_key": "wood_shield", "count": 1, "cost": 3, "sold": false})
+	else:
+		stock.append({"item_key": "talisman_auto_heal", "count": 1, "cost": 5, "sold": false})
+
+	# 3. Combat gear or spell
+	var pool := ["bomb", "steel_sword", "shuriken", "spell_ice", "spell_fire"]
+	var chosen: String = pool[randi() % pool.size()]
+	var count := 1
+	var cost := 3
+	match chosen:
+		"bomb":
+			count = 2
+			cost = 3
+		"steel_sword":
+			count = 1
+			cost = 4
+		"shuriken":
+			count = 6
+			cost = 2
+		"spell_ice":
+			count = 1
+			cost = 3
+		"spell_fire":
+			count = 1
+			cost = 3
+	stock.append({"item_key": chosen, "count": count, "cost": cost, "sold": false})
+	return stock
+
+
 func generate_tiles() -> void:
+	if is_merchant_floor():
+		_generate_merchant_floor()
+		return
+
 	_gen_floor = {}
 
 	var rng = RandomNumberGenerator.new()
@@ -504,6 +589,14 @@ func open_debug_portal(zone: String, zone_stage: int) -> void:
 	spawn_exit_door(true)
 
 
+func open_debug_merchant_portal() -> void:
+	_debug_portal_destination = {"merchant": true}
+	if is_instance_valid(_door_node):
+		_door_node.queue_free()
+		_door_node = null
+	spawn_exit_door(true)
+
+
 func _check_restore_door() -> void:
 	if not GameState.tiles.has("door_spawned"):
 		return
@@ -566,6 +659,8 @@ func _on_door_clicked(_viewport: Node, event: InputEvent, _shape_idx: int) -> vo
 func _get_door_label() -> String:
 	if _debug_portal_destination.is_empty():
 		return "Next Floor"
+	if _debug_portal_destination.get("merchant", false):
+		return "Portal: Merchant"
 	return "Portal: %s %d" % [
 		_debug_portal_destination["zone"].capitalize(),
 		_debug_portal_destination["zone_stage"],
@@ -578,22 +673,29 @@ func _enter_next_level() -> void:
 	GameState.player_tile = "0,0"
 	GameState.level += 1
 	if not _debug_portal_destination.is_empty():
-		GameState.zone = _debug_portal_destination["zone"]
-		GameState.zone_stage = _debug_portal_destination["zone_stage"]
+		if _debug_portal_destination.get("merchant", false):
+			GameState.level = 3
+		else:
+			GameState.zone = _debug_portal_destination["zone"]
+			GameState.zone_stage = _debug_portal_destination["zone_stage"]
+		_debug_portal_destination = {}
 	else:
 
 		# ── Zone cycling ──────────────────────────────────────────────────────
 		# Floors run in fixed-length cycles per zone. Floor 1 is always "default"
 		# (set by GameState's initial values / reset()) — this only advances the
 		# cycle on floors after that.
-		GameState.zone_stage += 1
-		if GameState.zone_stage > ZONE_CYCLE_LENGTH:
-			GameState.zone_stage = 1
-			var choices: Array = ZoneRegistry.get_zone_ids(true)  # exclude "default"
-			# Avoid picking the same zone twice in a row when more than one exists.
-			if choices.size() > 1:
-				choices.erase(GameState.zone)
-			GameState.zone = choices[randi() % choices.size()]
+		# Only advance zone_stage on non-merchant floors so the merchant floor
+		# (appearing every 3 floors) does not skip the zone boss.
+		if not is_merchant_floor():
+			GameState.zone_stage += 1
+			if GameState.zone_stage > ZONE_CYCLE_LENGTH:
+				GameState.zone_stage = 1
+				var choices: Array = ZoneRegistry.get_zone_ids(true)  # exclude "default"
+				# Avoid picking the same zone twice in a row when more than one exists.
+				if choices.size() > 1:
+					choices.erase(GameState.zone)
+				GameState.zone = choices[randi() % choices.size()]
 
 	GameState.mark_dirty()
 	SaveManager.save()
@@ -639,6 +741,9 @@ func _spawn_tiles() -> void:
 				GameState.tiles[key].get("item_key", ""),
 				GameState.tiles[key].get("item_collected", false),
 				int(GameState.tiles[key].get("item_count", 1)))
+
+		if GameState.tiles[key].get("has_merchant", false):
+			_spawn_merchant(key, gx, gy, GameState.tiles[key].get("visible", false))
 
 	# Restore the exit door on load: a new-style floor whose exit tile is
 	# already visible gets its door back immediately.
@@ -695,6 +800,81 @@ func _spawn_ground_item(tile_key: String, gx: int, gy: int, tile_visible: bool,
 		item.visible = tile_node.visible
 	)
 
+
+func _spawn_merchant(tile_key: String, gx: int, gy: int, tile_visible: bool) -> void:
+	if is_instance_valid(_merchant_node):
+		_merchant_node.queue_free()
+	var pos := Vector2(gx, gy) * TILE_SIZE
+	_merchant_node = _build_merchant_node(pos)
+	_merchant_node.visible = tile_visible
+	add_child(_merchant_node)
+
+
+func _build_merchant_node(world_pos: Vector2) -> Node2D:
+	var merchant := Node2D.new()
+	merchant.name = "Merchant"
+	merchant.position = world_pos
+	merchant.z_index = 5
+
+	var sprite := Sprite2D.new()
+	sprite.texture = MERCHANT_TEX
+	sprite.centered = true
+	var display_size := 50.0
+	if sprite.texture:
+		var sz = sprite.texture.get_size()
+		sprite.scale = Vector2(display_size / sz.x, display_size / sz.y)
+	merchant.add_child(sprite)
+
+	var lbl := Label.new()
+	lbl.text = "Merchant"
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.position = Vector2(-40, -45)
+	lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.42))
+	lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.85))
+	lbl.add_theme_constant_override("shadow_offset_x", 1)
+	lbl.add_theme_constant_override("shadow_offset_y", 1)
+	merchant.add_child(lbl)
+
+	var area := Area2D.new()
+	var shape := CollisionShape2D.new()
+	var rect_shp := RectangleShape2D.new()
+	rect_shp.size = Vector2(60, 60)
+	shape.shape = rect_shp
+	area.add_child(shape)
+	merchant.add_child(area)
+	area.input_pickable = true
+	area.input_event.connect(_on_merchant_clicked)
+
+	return merchant
+
+
+func _on_merchant_clicked(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		if not _can_player_act():
+			_deny_action()
+			return
+		open_shop()
+
+
+func open_shop() -> void:
+	var existing = get_tree().get_first_node_in_group("shop_ui")
+	if is_instance_valid(existing):
+		return
+	var stock: Array = []
+	var gift_claimed: bool = false
+	if GameState.tiles.has("1,0"):
+		stock = GameState.tiles["1,0"].get("merchant_stock", [])
+		gift_claimed = GameState.tiles["1,0"].get("gift_claimed", false)
+	if stock.is_empty():
+		stock = _generate_merchant_stock()
+		if GameState.tiles.has("1,0"):
+			GameState.tiles["1,0"]["merchant_stock"] = stock
+
+	var shop_ui = ShopUIClass.new()
+	get_tree().current_scene.add_child(shop_ui)
+	shop_ui.setup(stock, gift_claimed)
+
+
 # ── Player marker ─────────────────────────────────────────────────────────────
 # A static "you are here" ring on the tile the player last stepped onto.
 # Drawn from primitives so no extra art is needed. Z-order on a tile:
@@ -714,6 +894,9 @@ func on_tile_clicked(key: String) -> void:
 	var mob_key: String = tdata.get("mob", "")
 	if mob_key != "" and not tdata.get("mob_dead", false):
 		return   # occupied — you never stand on a live mob
+	if tdata.get("has_merchant", false):
+		open_shop()
+		return
 	set_player_tile(key)
 
 

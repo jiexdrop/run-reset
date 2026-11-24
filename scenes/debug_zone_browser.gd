@@ -66,6 +66,17 @@ func _build_panel() -> void:
 	zones.add_theme_constant_override("separation", 8)
 	scroll.add_child(zones)
 
+	var merchant_row := HBoxContainer.new()
+	zones.add_child(merchant_row)
+	var m_name := Label.new()
+	m_name.text = "Merchant"
+	m_name.custom_minimum_size = Vector2(120, 0)
+	merchant_row.add_child(m_name)
+	var m_button := Button.new()
+	m_button.text = "Merchant Room (Floor 3)"
+	m_button.pressed.connect(_open_merchant_portal)
+	merchant_row.add_child(m_button)
+
 	for zone in ZoneRegistry.get_zone_ids():
 		var row := HBoxContainer.new()
 		zones.add_child(row)
@@ -91,4 +102,15 @@ func _open_portal(zone: String, floor: int) -> void:
 		return
 	games[0].open_debug_portal(zone, floor)
 	_status.text = "Portal opened: %s, floor %d." % [zone.capitalize(), floor]
+	_panel.hide()
+
+
+func _open_merchant_portal() -> void:
+	var games := get_tree().get_nodes_in_group("game")
+	if games.is_empty():
+		_status.text = "No active dungeon found."
+		return
+	if games[0].has_method("open_debug_merchant_portal"):
+		games[0].open_debug_merchant_portal()
+		_status.text = "Portal opened: Merchant Room (Floor 3)."
 	_panel.hide()

@@ -29,9 +29,9 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="px"
-     inkscape:zoom="11.313709"
-     inkscape:cx="357.44248"
-     inkscape:cy="912.30033"
+     inkscape:zoom="4"
+     inkscape:cx="315.5"
+     inkscape:cy="922.125"
      inkscape:window-width="1920"
      inkscape:window-height="1017"
      inkscape:window-x="-8"
@@ -103,7 +103,10 @@
        d="m 359.7326,886.33911 -0.18541,4.30051 2.07856,0.005 v 19.7948 h 16.22287 l 0.92703,-0.92701 0.13905,-17.38166 -2.00742,-1.37427 1.75405,-0.47157 0.362,-4.87506 -2.55799,-0.92557 -15.69864,0.29979 z"
        style="fill:#504416;stroke:#1a1a1a;stroke-width:0.144616;stroke-linecap:round"
        id="path356"
-       sodipodi:nodetypes="ccccccccccccc" /><rect
+       sodipodi:nodetypes="ccccccccccccc"
+       inkscape:export-filename="characters\merchant.png"
+       inkscape:export-xdpi="73.948349"
+       inkscape:export-ydpi="73.948349" /><rect
        style="fill:#dad1b5;fill-opacity:1;stroke-width:2.07201;paint-order:markers fill stroke"
        id="rect3"
        width="1043.0034"
@@ -2083,7 +2086,7 @@
        style="fill:#445016;stroke:#1a1a1a;stroke-width:0.595;stroke-linecap:round"
        d="m 293.13966,912.75468 -10.3125,-6.37499 1.0625,-9.1875 2.0625,-1.8125 -1.6875,-1.4375 0.9375,-6.1875 12.9375,-1.5625 10.25,0.125 0.625,1.25 -0.5,23.62499 z"
        id="path293-3"
-       inkscape:export-filename="player\player.png"
+       inkscape:export-filename="characters\player.png"
        inkscape:export-xdpi="73.948349"
        inkscape:export-ydpi="73.948349" /><path
        style="fill:#88aa00;stroke:#1a1a1a;stroke-width:0.595;stroke-linecap:round"
