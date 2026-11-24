@@ -62,10 +62,6 @@ const BOW_SOUND_PATH := "res://assets/sounds/items/bow.mp3"
 ## exactly when you hear it fire.
 const BOW_RELEASE_DELAY := 1.25
 
-## Extra energy a finishing blow costs in Cistronia while the player is not
-## Electrified (lemons waive it).
-const UNLIFE_FINISHER_SURCHARGE := 2
-
 ## Cistronia "Unlife" finish — clicking a clinging mob kills it outright.
 ## Costs 2 energy; when energy is short the heavy finish costs 3 HP instead
 ## and is never blocked (it may even kill you).
@@ -804,28 +800,6 @@ func _guard_cistronia_lethal(mob: Dictionary, hp_after_hit: int, was_cracked: bo
 	return 1
 
 
-## True when this single-target attack would kill `mob` and the player lacks
-## Electrified, i.e. a finishing blow that pays the unlife surcharge.
-func _needs_unlife_surcharge(mob: Dictionary, atk: Dictionary, type_data: Dictionary) -> bool:
-	if GameState.zone != "cistronia" or _is_electrified():
-		return false
-	var t := String(atk.get("attack_type", ""))
-	if t == "fire_spell" or t == "ice_spell":
-		return false
-	var resistances: Dictionary = mob.get("resistances", {})
-	var element: String = ItemRegistry.get_element(String(atk.get("item_key", ""))) if String(atk.get("item_key", "")) != "" else "physical"
-	var resist_mult: float = resistances.get(element, 1.0)
-	var total: int
-	if t == "bomb_throw":
-		total = max(1, int(round(atk.damage * resist_mult)))
-	else:
-		var hits: int = max(1, type_data.get("hits", 1))
-		var per_hit: int = max(1, int(round(atk.damage * type_data.get("damage_mult", 1.0) / hits)))
-		per_hit = max(1, int(round(per_hit * resist_mult)))
-		total = per_hit * hits
-	return total >= int(mob.get("hp", 0))
-
-
 ## ── Two-phase armor ─────────────────────────────────────────────────────────
 ## Category of a player attack for phase gating: the range classification of
 ## its attack type ("ranged" / "melee" / "other"). Bare Fists use
@@ -899,13 +873,12 @@ func _do_player_attack(mob_id: int, atk_override: Dictionary = {}) -> void:
 		return
 
 	var energy_needed = int(ceil(atk.energy_cost * type_data.get("energy_mult", 1.0)))
-	var surcharge := UNLIFE_FINISHER_SURCHARGE if _needs_unlife_surcharge(target_mob, atk, type_data) else 0
-	energy_needed += surcharge
+	# No unlife surcharge: a lethal hit never finishes the mob anyway — the
+	# Cistronia guard stops it at 1 HP — so demanding extra energy only
+	# blocked the crack. The finish itself is the click-to-finish flow
+	# (2 energy, or 3 HP via the hover hint) or an Electrified strike.
 	if energy_needed > 0 and p.get("energy", 0) < energy_needed:
-		if surcharge > 0:
-			_log("Not enough energy to finish it — unlife costs %d extra energy (or eat a lemon)." % surcharge)
-		else:
-			_log("Not enough energy!")
+		_log("Not enough energy!")
 		return
 
 	p["energy"] = max(0, p.get("energy", 0) - energy_needed)
@@ -1888,7 +1861,7 @@ func _on_inventory_slot_clicked(index: int) -> void:
 		refresh_stats()
 		_log(
 			"Lemon bite! Electrified %d turns\n(+%d energy)." % [zap_turns, energy_restored],
-			"You bite a lemon — sour current courses through you! Restored %d energy, Electrified for %d turns. Electrified strikes finish foes in Cistronia without the extra energy cost." % [energy_restored, zap_turns]
+			"You bite a lemon — sour current courses through you! Restored %d energy, Electrified for %d turns. Electrified strikes finish foes in Cistronia outright — they never cling to unlife." % [energy_restored, zap_turns]
 		)
 		_spend_turn_if_in_combat()
 		return
