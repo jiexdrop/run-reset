@@ -1912,6 +1912,17 @@ func _on_bag_closed() -> void:
 	_bag_ui = null
 	inv_ui.set_drag_enabled(false)
 
+
+## Closes the hotbar bag without toggling it open. Used when another modal
+## (e.g. the shop) takes over the screen, so only one bag is ever visible.
+func close_bag() -> void:
+	if not is_instance_valid(_bag_ui):
+		return
+	_bag_ui.queue_free()
+	_bag_ui = null
+	if inv_ui:
+		inv_ui.set_drag_enabled(false)
+
 func _steal_random_item() -> String:
 	if InventoryState.has_item("gomelin_ring"):
 		return ""

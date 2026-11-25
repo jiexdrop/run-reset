@@ -7,6 +7,12 @@ const MERCHANT_TEX  = preload("res://assets/characters/merchant.png")
 const COIN_TEX      = preload("res://assets/ui/coin.png")
 const BAG_TEX       = preload("res://assets/ui/bag.png")
 const MONEY_BAG_TEX = preload("res://assets/ui/money_bag.png")
+const BagUIScene    = preload("res://scenes/bag_ui.tscn")
+
+## Gap kept between the shop panel and the bag panel when shown side by side.
+const BAG_GAP := 20.0
+## Width of the bag panel — fixed by bag_ui.tscn (Panel offsets -200..200).
+const BAG_PANEL_WIDTH := 400.0
 
 var _stock: Array = []
 var _gift_claimed: bool = false
@@ -19,17 +25,28 @@ var _buy_tab_btn: Button = null
 var _sell_tab_btn: Button = null
 var _content_area: Control = null
 var _feedback_label: Label = null
+var _center: CenterContainer = null
+var _panel: PanelContainer = null
+
+# The bag opened from this shop. It is a child of the shop so it is drawn
+# above the backdrop and freed together with it.
+var _bag_ui: BagUI = null
 
 func _ready() -> void:
 	add_to_group("shop_ui")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
+	# A bag opened from the hotbar lives on its own layer and would stack on
+	# top of this modal — close it so only one bag is ever on screen.
+	_close_world_bag()
+
 	# Enable inventory drag-drop while shop is open
 	_set_drag_enabled(true)
 
 	_build_ui()
 	_refresh()
+	resized.connect(_apply_side_by_side_layout)
 
 
 func setup(stock: Array, gift_claimed: bool = false) -> void:
@@ -60,6 +77,7 @@ func _build_ui() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
+	_center = center
 
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(480, 0)
@@ -76,6 +94,7 @@ func _build_ui() -> void:
 	sb.content_margin_bottom = 14
 	panel.add_theme_stylebox_override("panel", sb)
 	center.add_child(panel)
+	_panel = panel
 
 	var layout := VBoxContainer.new()
 	layout.add_theme_constant_override("separation", 10)
@@ -648,10 +667,71 @@ func _show_feedback(text: String, success: bool) -> void:
 	)
 
 
+## Toggles the bag next to the shop: the shop slides left, the bag appears
+## on its right, and both are centred as a pair.
 func _on_open_bag_pressed() -> void:
+	if is_instance_valid(_bag_ui):
+		_close_bag()
+		return
+
+	_bag_ui = BagUIScene.instantiate()
+	add_child(_bag_ui)   # child of the shop: drawn above the backdrop, freed with it
+	_bag_ui.closed.connect(_on_bag_closed)
+	_apply_side_by_side_layout()
+	# The bag only knows its real size after the next layout pass — re-measure.
+	call_deferred("_apply_side_by_side_layout")
+
+
+## Called when the bag closes itself (its ✕ button) or when we close it here.
+func _on_bag_closed() -> void:
+	_close_bag()
+
+
+func _close_bag() -> void:
+	if is_instance_valid(_bag_ui):
+		_bag_ui.queue_free()   # no-op if it queued itself already
+	_bag_ui = null
+	if _center:
+		_center.offset_left = 0.0
+		_center.offset_right = 0.0
+
+
+## Lays the two panels out side by side — shop left, bag right — keeping the
+## pair centred on screen with BAG_GAP between them.
+func _apply_side_by_side_layout() -> void:
+	if _center == null or _panel == null or not is_instance_valid(_bag_ui):
+		return
+
+	var shop_w: float = _panel.size.x
+	var bag_w: float = BAG_PANEL_WIDTH
+	var bag_panel := _bag_ui.get_node_or_null("Panel") as Control
+	if bag_panel != null and bag_panel.size.x > 1.0:
+		bag_w = bag_panel.size.x
+
+	# Each panel shifts away from the screen middle by half of the *other*
+	# panel plus half the gap, so the pair stays centred as a whole.
+	var shop_shift := -(bag_w + BAG_GAP) * 0.5
+	var bag_shift  :=  (shop_w + BAG_GAP) * 0.5
+
+	# Never push a panel past the screen edge; on windows too narrow to fit
+	# both, they overlap instead (there simply isn't room for the pair).
+	if shop_w <= size.x:
+		shop_shift = clampf(shop_shift, (shop_w - size.x) * 0.5, (size.x - shop_w) * 0.5)
+	if bag_w <= size.x:
+		bag_shift = clampf(bag_shift, (bag_w - size.x) * 0.5, (size.x - bag_w) * 0.5)
+
+	_center.offset_left  = shop_shift
+	_center.offset_right = shop_shift
+	_bag_ui.offset_left  = bag_shift
+	_bag_ui.offset_right = bag_shift
+
+
+## The hotbar bag is owned by CombatUI — ask it to close so this modal's bag
+## doesn't stack on top of a second one.
+func _close_world_bag() -> void:
 	var cui = get_tree().get_first_node_in_group("combat_ui")
-	if cui and cui.has_method("_on_bag_opened"):
-		cui._on_bag_opened()
+	if cui and cui.has_method("close_bag"):
+		cui.close_bag()
 
 
 func _set_drag_enabled(enabled: bool) -> void:

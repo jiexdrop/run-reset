@@ -30,8 +30,8 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="px"
      inkscape:zoom="5.6568542"
-     inkscape:cx="652.30601"
-     inkscape:cy="254.29328"
+     inkscape:cx="628.26438"
+     inkscape:cy="236.08528"
      inkscape:window-width="1920"
      inkscape:window-height="1017"
      inkscape:window-x="-8"
@@ -1878,7 +1878,10 @@
        sodipodi:nodetypes="cccc" /><path
        style="fill:#6c6753;stroke:#f9f9f9;stroke-width:0.444;stroke-linejoin:round;stroke-dasharray:none;paint-order:fill markers stroke"
        d="m 644.08225,268.24234 -3.44085,8.65763 -2.3864,5.16128 0.49948,2.88588 4.4953,1.49843 -0.11099,-1.77592 -3.05237,-0.77697 -0.44398,-2.3309 2.83037,-5.66075 1.38745,-3.71835 z"
-       id="path234-1" /><path
+       id="path234-1"
+       inkscape:export-filename="ui\bag.png"
+       inkscape:export-xdpi="73.948349"
+       inkscape:export-ydpi="73.948349" /><path
        style="fill:#484537;stroke:#f9f9f9;stroke-width:0.444;stroke-linejoin:round;stroke-dasharray:none;paint-order:fill markers stroke"
        d="m 644.30424,268.18685 -1.10996,11.6545 0.111,6.32672 8.82412,1.38744 14.76236,-5.10578 -0.0555,-6.27123 -3.32985,-9.49009 -13.9854,-0.99895 z"
        id="path232-6" /><path
@@ -2268,7 +2271,10 @@
        style="fill:#ffd42a;stroke:#1a1a1a;stroke-width:0.222443;stroke-linecap:round"
        d="m 597.21561,262.71247 c 0,0 -1.68887,-1.94094 -0.50414,-2.84838 1.18472,-0.90745 2.14259,-0.90745 2.52068,-0.45373 0.37811,0.45373 0.73101,1.23514 1.51242,1.08389 0.78142,-0.15123 0.60497,-0.98306 1.41159,-1.20993 0.80661,-0.22685 1.66365,-0.35289 1.96614,0.37811 0.30247,0.73101 0.70579,1.05869 1.41159,0.93265 0.70578,-0.12602 0.57975,-1.43679 1.56283,-1.56282 0.98306,-0.12603 1.43678,0.20165 1.71406,0.78141 0.27728,0.57977 0.52935,1.00828 1.1091,0.85703 0.57976,-0.15124 0.42852,-1.28555 1.13432,-1.43679 0.70579,-0.15123 1.76447,-0.25206 2.09217,0.42852 0.32769,0.68059 0.57976,1.15952 0.3781,2.06697 -0.20165,0.90745 -2.24342,2.01655 -2.26862,2.5711 -0.0252,0.55455 -0.60497,2.9492 1.28556,4.31039 1.89051,1.36117 5.67035,6.73075 5.02868,11.72146 -0.64166,4.99071 -4.13516,8.05644 -7.41477,9.55365 -3.27961,1.49721 -8.48421,1.99628 -12.26289,0 -3.77868,-1.99629 -5.91756,-6.34533 -5.84626,-8.55551 0.0713,-2.21017 -0.21389,-5.56108 1.99628,-8.19902 2.21017,-2.63795 2.824,-4.55785 4.06387,-5.84627 1.60322,-1.666 0.18008,-4.50134 -0.89071,-4.57273 z"
        id="path354"
-       sodipodi:nodetypes="cssssssssssssssssssssc" /><rect
+       sodipodi:nodetypes="cssssssssssssssssssssc"
+       inkscape:export-filename="ui\money_bag.png"
+       inkscape:export-xdpi="73.948349"
+       inkscape:export-ydpi="73.948349" /><rect
        style="fill:#aa4400;stroke:#1a1a1a;stroke-width:0.222443;stroke-linecap:round"
        id="rect354"
        width="14.972136"
